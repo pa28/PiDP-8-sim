@@ -1,29 +1,25 @@
 /*
- * Thread.cpp
+ * CPU.cpp
  *
  *  Created on: Jul 28, 2015
  *      Author: richard
  */
 
-#include "Thread.h"
+#include "CPU.h"
 
 namespace ca
 {
     namespace pdp8
     {
-        void * _threadStart(void *t) {
-            Thread *thread = (Thread*)t;
 
-            return (void *)(thread->run());
-        }
-
-        Thread::Thread()
+        CPU::CPU() :
+                Device("CPU", "CPU")
         {
             // TODO Auto-generated constructor stub
 
         }
 
-        Thread::~Thread()
+        CPU::~CPU()
         {
             // TODO Auto-generated destructor stub
         }

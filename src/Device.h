@@ -1,22 +1,30 @@
 /*
-**
-** Device
-**
-** Richard Buckley July 28, 2015
-**
-*/
+ * Device.h
+ *
+ *  Created on: Jul 28, 2015
+ *      Author: richard
+ */
 
-#includle <string>
+#ifndef DEVICE_H_
+#define DEVICE_H_
 
-namespace ca {
-	namespace pdp8 {
-		class Device {
-		public:
-			Device(string name, string longName);
-			virtual ~Device();
-		
-		protected:
-			string	name, longName;
-		};
-	} // pdp8
-} // ca
+#include <string>
+
+namespace ca
+{
+    namespace pdp8
+    {
+
+        class Device
+        {
+        public:
+            Device(std::string name, std::string longName);
+            virtual ~Device();
+
+            virtual void initialize();
+        };
+
+    } /* namespace pdp8 */
+} /* namespace ca */
+
+#endif /* DEVICE_H_ */

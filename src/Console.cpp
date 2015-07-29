@@ -1,29 +1,25 @@
 /*
- * Thread.cpp
+ * Console.cpp
  *
  *  Created on: Jul 28, 2015
  *      Author: richard
  */
 
-#include "Thread.h"
+#include "Console.h"
 
 namespace ca
 {
     namespace pdp8
     {
-        void * _threadStart(void *t) {
-            Thread *thread = (Thread*)t;
 
-            return (void *)(thread->run());
-        }
-
-        Thread::Thread()
+        Console::Console() :
+                Device("CONS", "Console")
         {
             // TODO Auto-generated constructor stub
 
         }
 
-        Thread::~Thread()
+        Console::~Console()
         {
             // TODO Auto-generated destructor stub
         }

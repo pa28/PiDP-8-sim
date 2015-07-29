@@ -1,23 +1,20 @@
 /*
-**
-** Chassis
-**
-** Richard Buckley July 28, 2015
-**
-*/
+ * Chassis.h
+ *
+ *  Created on: Jul 28, 2015
+ *      Author: richard
+ */
 
-#include <array>
-#include <Console.h>
-#include <Memory.h>
-#include <CPU.h
+#ifndef CHASSIS_H_
+#define CHASSIS_H_
 
 /* Non-IOT device numbers */
 
-#define DEV_CPU			0100							/* cpu */
-#define DEV_MEM			0101							/* core memmory */
-#define DEV_CONSOLE		0102							/* simulator console */
-#define DEV_PANNEL		0103							/* front pannel */
-#define DEV_MAX_COUNT	0104							/* maximum number of devices */
+#define DEV_CPU         0100                            /* cpu */
+#define DEV_MEM         0101                            /* core memmory */
+#define DEV_CONSOLE     0102                            /* simulator console */
+#define DEV_PANNEL      0103                            /* front pannel */
+#define DEV_MAX_COUNT   0104                            /* maximum number of devices */
 
 /* Standard device numbers */
 
@@ -40,20 +37,32 @@
 #define DEV_DTA         076                             /* TC08 */
 #define DEV_TD8E        077                             /* TD8E */
 
-namespace ca {
-	namespace pdp8 {
-		class Chassis {
-		public:
-			Chassis();
-			virtual ~Chassis();
-			
-			CPU &		cpu() { return * deviceList[DEV_CPU]; }
-			Memory &	coreMemory() { return * deviceList[DEV_MEM]; }
-			Console &	console() { return * deviceList[DEV_CONSOLE]; }
-			
-		protected:
-			array<Device*,DEV_MAX_COUNT>	deviceList;
-		};
-	} // pdp8
+#include "CPU.h"
+#include "Memory.h"
+#include "Console.h"
+#include "Panel.h"
 
-} // ca
+namespace ca
+{
+    namespace pdp8
+    {
+
+        class Chassis
+        {
+        public:
+            Chassis();
+            virtual ~Chassis();
+
+            CPU &       cpu() { return * (CPU*)deviceList[DEV_CPU]; }
+            Memory &    coreMemory() { return * (Memory*)deviceList[DEV_MEM]; }
+            Console &   console() { return * (Console*)deviceList[DEV_CONSOLE]; }
+            Panel &     panel() { return * (Panel*)deviceList[DEV_PANNEL]; }
+
+        protected:
+            Device*    deviceList[DEV_MAX_COUNT];
+        };
+
+    } /* namespace pdp8 */
+} /* namespace ca */
+
+#endif /* CHASSIS_H_ */
