@@ -20,6 +20,14 @@ namespace ca
         public:
             Console();
             virtual ~Console();
+			
+			static Console * instance();
+			
+			int printf( const char *format, ... );
+			
+		protected:
+			static Console * _instance;
+			
         };
 
     } /* namespace pdp8 */

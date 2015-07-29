@@ -15,15 +15,23 @@ namespace ca
 {
     namespace pdp8
     {
+		
+		Chassis * Chassis::_instance = NULL;
 
         Chassis::Chassis()
         {
             for (int i = 0; i < DEV_MAX_COUNT; ++i)
                 deviceList[i] = NULL;
 
-            deviceList[DEV_CPU] = new CPU();
-            deviceList[DEV_MEM] = new Memory();
+			// Create and assign devices.
+			
+            deviceList[DEV_CPU] = CPU::instance();
+            deviceList[DEV_MEM] = Memory::instance();
+			deviceList[DEV_CONSOLE] = Console::instance();
+			deviceList[DEV_PANEL] = Panel:instance();
 
+			// Initialize devices
+			
             for (int i = 0; i < DEV_MAX_COUNT; ++i) {
                 if (deviceList[i] != NULL) {
                     deviceList[i]->initialize();
@@ -35,6 +43,14 @@ namespace ca
         {
             // TODO Auto-generated destructor stub
         }
+		
+		Chassis * Chassis::instance() {
+			if (_instance == NULL) {
+				_instance = new Chassis();
+			}
+			
+			return _instance;
+		}
 
     } /* namespace pdp8 */
 } /* namespace ca */

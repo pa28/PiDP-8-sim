@@ -20,6 +20,12 @@ namespace ca
         public:
             CPU();
             virtual ~CPU();
+			
+			static CPU * instance();
+			
+		protected:
+			static CPI * _instance;
+			
         };
 
     } /* namespace pdp8 */

@@ -11,6 +11,8 @@ namespace ca
 {
     namespace pdp8
     {
+		
+		CPU * CPU::_instance = NULL;
 
         CPU::CPU() :
                 Device("CPU", "CPU")
@@ -24,5 +26,13 @@ namespace ca
             // TODO Auto-generated destructor stub
         }
 
+		CPU * CPU::instance() {
+			if (_instance == NULL) {
+				_instance = new CPU();
+			}
+			
+			return _instance;
+		}
+		
     } /* namespace pdp8 */
 } /* namespace ca */

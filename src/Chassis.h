@@ -13,7 +13,7 @@
 #define DEV_CPU         0100                            /* cpu */
 #define DEV_MEM         0101                            /* core memmory */
 #define DEV_CONSOLE     0102                            /* simulator console */
-#define DEV_PANNEL      0103                            /* front pannel */
+#define DEV_PANEL       0103                            /* front pannel */
 #define DEV_MAX_COUNT   0104                            /* maximum number of devices */
 
 /* Standard device numbers */
@@ -53,12 +53,10 @@ namespace ca
             Chassis();
             virtual ~Chassis();
 
-            CPU &       cpu() { return * (CPU*)deviceList[DEV_CPU]; }
-            Memory &    coreMemory() { return * (Memory*)deviceList[DEV_MEM]; }
-            Console &   console() { return * (Console*)deviceList[DEV_CONSOLE]; }
-            Panel &     panel() { return * (Panel*)deviceList[DEV_PANNEL]; }
-
+			static Chassis * instance();
+			
         protected:
+			static	Chassis * _instance;
             Device*    deviceList[DEV_MAX_COUNT];
         };
 

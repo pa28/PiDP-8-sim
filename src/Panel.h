@@ -26,6 +26,9 @@
 
 #define BLOCK_SIZE      (4*1024)
 
+#define LEDSTATUS_COUNT 8
+#define SWITCHSTATUS_COUNT 3
+
 // IO Acces
 struct bcm2835_peripheral {
     unsigned long addr_p;
@@ -41,16 +44,35 @@ namespace ca
     namespace pdp8
     {
 
+		/*******************************************************************************************************************
+		
+			PiDP8 Front Panel Driver.
+		
+			This is a singleton class that maintains a thread which multiplexes simulator status information onto
+			a bank of LEDs for display, and scans a bank of swtiches for input.
+			
+		********************************************************************************************************************/
+		
         class Panel: public Device, Thread
         {
-        public:
             Panel();
+
+        public:
             virtual ~Panel();
+			
+			static Panel * instance();
+			
+			void initialize();
 
             virtual int run();
+			
+			void testLeds(bool ledsOn);		// Turn all LEDs on (if true) or off (if false)
 
         protected:
+			static	Panel * _instance;
             bool    driveLeds;
+			
+			pthread_mutex_t		accessMutex;
         };
 
     } /* namespace pdp8 */

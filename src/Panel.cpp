@@ -39,8 +39,8 @@ struct bcm2835_peripheral gpio; // needs initialisation
 
 long intervl = 300000;      // light each row of leds this long
 
-uint32 switchstatus[3] = { 0 }; // bitfields: 3 rows of up to 12 switches
-uint32 ledstatus[8] = { 0 };    // bitfields: 8 ledrows of up to 12 LEDs
+uint32 switchstatus[SWITCHSTATUS_COUNT] = { 0 }; // bitfields: 3 rows of up to 12 switches
+uint32 ledstatus[LEDSTATUS_COUNT] = { 0 };    // bitfields: 8 ledrows of up to 12 LEDs
 
 // PART 1 - GPIO and RT process stuff ----------------------------------
 
@@ -128,19 +128,53 @@ namespace ca
 {
     namespace pdp8
     {
+		Panel * Panel::_instance = NULL;
 
         Panel::Panel() :
                 Device("PANEL", "Front Panel"),
                 driveLeds(true)
         {
-            // TODO Auto-generated constructor stub
-
+			pthread_mutex_init( &accessMutex, NULL );
         }
 
         Panel::~Panel()
         {
-            // TODO Auto-generated destructor stub
+			pthread_mutex_destroy( &accessMutex );
         }
+		
+		Panel * Panel::instance() {
+			if (_instance == NULL) {
+				_instance = new Panel();
+			}
+			
+			return _instance;
+		}
+		
+		void Panel::testLeds(bool turnOn) {
+			try {
+				Lock	lock(accessMutex);
+				
+				for (int i = 0; i < LEDSTATUS_COUNT; ++i) {
+					ledstatus[i] = turnOn ? 07777 : 0;
+				}
+			} catch (int s) {
+				perror("accessMutex");
+			}
+		}
+		
+		void Panel::transferLedState() {
+			try {
+				Lock	lock(accessMutex);
+				
+				// TODO: Transfer LED state to ledstatus[] and switchstatus[] out.
+			} catch (int s) {
+				perror("accessMutex");
+			}
+		}
+		
+		void Panel::initialize() {
+			start();
+		}
 
         int Panel::run() {
             int i,j,k,switchscan, tmp;
@@ -258,7 +292,9 @@ namespace ca
                     INP_GPIO(cols[i]);          // flip columns to input. Need internal pull-ups enabled.
 
                 // read three rows of switches
-                for (i=0;i<3;i++)
+				bool switchesChanged = false;
+				
+                for (i=0; i < SWITCHSTATUS_COUNT; ++i)
                 {
                     INP_GPIO(rows[i]);//            GPIO_CLR = 1 << rows[i];    // and output 0V to overrule built-in pull-up from column input pin
                     OUT_GPIO(rows[i]);          // turn on one switch row
@@ -274,6 +310,7 @@ namespace ca
                     }
                     INP_GPIO(rows[i]);          // stop sinking current from this row of switches
 
+					switchesChanged |= (switchstatus[i] ^ switchscan) != 0;
                     switchstatus[i] = switchscan;
                 }
             }

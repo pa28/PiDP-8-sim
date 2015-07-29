@@ -21,7 +21,7 @@ namespace ca
             Device(std::string name, std::string longName);
             virtual ~Device();
 
-            virtual void initialize();
+            virtual void initialize() = 0;
         };
 
     } /* namespace pdp8 */

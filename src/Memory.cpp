@@ -12,6 +12,7 @@ namespace ca
     namespace pdp8
     {
 
+		Memory *	Memory::_instance = NULL;
         MemoryCell Memory::errCell(-1);
         MemoryCell Memory::m[MAXMEMSIZE];
         MemoryFlag Memory::flags[MAXMEMSIZE] = { MemFlagClear };
@@ -34,7 +35,8 @@ namespace ca
 
         Memory::Memory() :
             Device("MEM", "Core Memory"),
-            memorySize(MAXMEMSIZE)
+            memorySize(MAXMEMSIZE),
+			exceptionOn(true)
         {
         }
 
@@ -42,9 +44,20 @@ namespace ca
 
         }
 
-        MemoryCell & Memory::operator [] (int ma) {
+		Memory * Memory::instance() {
+			if (_instance == NULL) {
+				_instance = new Memory();
+			}
+			
+			return _instance;
+		}
+		
+        MemoryCell & Memory::operator [] (int ma) throw(MemoryException) {
             if (ma > MAXMEMSIZE) {
                 flagStack.push( std::pair < MemoryFlag, int >(MemFlagMaxSize, ma));
+				if (exceptionOn) {
+					throw MemoryException(MemoryExcpetionMaxSize);
+				}
                 return errCell;
             }
 

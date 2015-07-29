@@ -23,9 +23,5 @@ namespace ca
             // TODO Auto-generated destructor stub
         }
 
-        void Device::initialize() {
-
-        }
-
     } /* namespace pdp8 */
 } /* namespace ca */

@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stack>
 #include <utility>
+#include <exception>
 #include "Device.h"
 
 namespace ca
@@ -21,6 +22,25 @@ namespace ca
         enum MemoryConstants {
             MAXMEMSIZE = 8 * 4096,
         };
+		
+		enum MemoryExceptionCode {
+			MemoryExcpetionMaxSize = 0
+		}
+		class MemoryException : public exception {
+		public:
+			MemoryException(MemoryExceptionCode c) : code(c) {}
+			virtual ~MemoryException() {}
+			virtual const char* what() const throw() {
+				switch (code) {
+					case MemoryExcpetionMaxSize:
+						return "Memory request beyond maximum possable memory size.";
+					default:
+						return "Unknown memory error.";
+				}
+			}
+		protected:
+			MemoryExceptionCode	code;
+		};
 
         enum MemoryFlag {
             MemFlagClear = 0,
@@ -55,11 +75,14 @@ namespace ca
 
         class Memory: public Device
         {
-        public:
             Memory();
-            virtual ~Memory();
 
-            MemoryCell & operator [] (int ma);
+			public:
+            virtual ~Memory();
+			
+			static Memory * instance();
+
+            MemoryCell & operator [] (int ma) throw(MemoryException);
 
             bool flagSet() { return ! flagStack.empty(); }
             int flagStackSize() { return flagStack.size(); }
@@ -67,12 +90,13 @@ namespace ca
 
         protected:
 
+			static Memory *		_instance;
             static MemoryFlag   flags[];
             static MemoryCell   errCell, m[];
 
             int     memorySize;
             std::stack < std::pair < uint32_t, int > >  flagStack;
-
+			bool	exceptionOn;
 
         };
 

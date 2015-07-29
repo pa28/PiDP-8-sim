@@ -5,12 +5,17 @@
  *      Author: richard
  */
 
+
+#include <stdio.h>
+#include <stdarg.h>
+
 #include "Console.h"
 
 namespace ca
 {
     namespace pdp8
     {
+		Console * Console::_instance = NULL;
 
         Console::Console() :
                 Device("CONS", "Console")
@@ -23,6 +28,21 @@ namespace ca
         {
             // TODO Auto-generated destructor stub
         }
+		
+		Console * Console::instance() {
+			if (_instance == NULL) {
+				_instance = new Console();
+			}
+			
+			return _console;
+		}
+		
+		int Console::printf( const char * format, ... ) {
+			va_list args;
+			va_start (args, format);
+			vfprintf (stdout, format, args);
+			va_end (args);
+		}
 
     } /* namespace pdp8 */
 } /* namespace ca */

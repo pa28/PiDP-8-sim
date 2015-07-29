@@ -16,6 +16,17 @@ namespace ca
 {
     namespace pdp8
     {
+		class Lock
+		{
+		public:
+			Lock( pthread_mutex_t * mutex );
+			Lock( pthread_mutex_t & mutex );
+			virtual ~Lock();
+			
+		private:
+			pthread_muxtex_t * mutex;
+			
+		};
 
         class Thread
         {
@@ -26,6 +37,10 @@ namespace ca
             int start();
 
             virtual int run() = 0;
+		
+		protected:
+			pthread_t	thread;
+			
         };
 
     } /* namespace pdp8 */
