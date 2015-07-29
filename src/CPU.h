@@ -17,8 +17,9 @@ namespace ca
 
         class CPU: public Device
         {
-        public:
             CPU();
+
+		public:
             virtual ~CPU();
 			
 			static CPU * instance();

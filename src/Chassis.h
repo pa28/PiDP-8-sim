@@ -49,8 +49,9 @@ namespace ca
 
         class Chassis
         {
-        public:
             Chassis();
+			
+        public:
             virtual ~Chassis();
 
 			static Chassis * instance();

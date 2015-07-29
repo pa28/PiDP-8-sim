@@ -17,8 +17,9 @@ namespace ca
 
         class Console: public Device
         {
-        public:
             Console();
+			
+        public:
             virtual ~Console();
 			
 			static Console * instance();

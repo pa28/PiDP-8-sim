@@ -77,7 +77,7 @@ namespace ca
         {
             Memory();
 
-			public:
+		public:
             virtual ~Memory();
 			
 			static Memory * instance();
