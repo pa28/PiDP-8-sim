@@ -30,7 +30,6 @@ namespace ca
 
         Console::Console() :
                 Device("CONS", "Console"),
-                Thread(),
 				runConsole(false),
 				consoleMode(CommandMode)
         {
@@ -59,7 +58,6 @@ namespace ca
 
 		void Console::initialize() {
 			runConsole = true;
-			start();
 		}
 
 		int Console::run() {

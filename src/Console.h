@@ -9,7 +9,6 @@
 #define CONSOLE_H_
 
 #include "Device.h"
-#include "Thread.h"
 #include "Panel.h"
 
 namespace ca
@@ -23,7 +22,7 @@ namespace ca
 			CommandMode,
 		};
 
-        class Console: public Device, Thread
+        class Console: public Device
         {
             Console();
 
