@@ -17,6 +17,7 @@ namespace ca
     namespace pdp8
     {
 
+        // User input mode to the console.
 		enum ConsoleMode {
 			PanelMode,
 			CommandMode,
