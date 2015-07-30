@@ -5,24 +5,41 @@
  *      Author: richard
  */
 
+#include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include "Chassis.h"
 
 using namespace ca::pdp8;
 
+void sigintHandler(int s) {
+	Panel::instance()->stop();
+	Console::instance()->stop();
+}
+
 int main( int argc, char ** argv ) {
+	int sxfd[2];
+
+	if (pipe(sxfd)) {
+		perror("pipe");
+		exit(1);
+	}
+
+	signal( SIGINT, sigintHandler );
+	
 	Panel *panel = Panel::instance();
 	Console *console = Console::instance();
 	
+	panel->setSwitchFd(sxfd[1]);
+	console->setSwitchFd(sxfd[0]);
+
 	console->initialize();
 	panel->initialize();
 	panel->testLeds(true);
-	panel->setSwitchFd(console->getSwitchFd());
+	sleep(5);
+	panel->testLeds(false);
 
 	sleep(30);
-
-	panel->stop();
-	console->stop();
 
     return 0;
 }
