@@ -23,9 +23,10 @@ namespace ca
             virtual ~CPU();
 			
 			static CPU * instance();
+			virtual void initialize() {}
 			
 		protected:
-			static CPI * _instance;
+			static CPU * _instance;
 			
         };
 

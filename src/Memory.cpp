@@ -67,7 +67,7 @@ namespace ca
                 flag |= flags[ma] & MemFlagBreak;
             }
 
-            if (flags[ma] & MemFlagInitialized == MemFlagClear) {
+            if (flags[ma] & (MemFlagInitialized == MemFlagClear)) {
                 flag |= MemFlagInitialized;
             }
 

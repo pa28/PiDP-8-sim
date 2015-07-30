@@ -28,7 +28,7 @@ namespace ca
             deviceList[DEV_CPU] = CPU::instance();
             deviceList[DEV_MEM] = Memory::instance();
 			deviceList[DEV_CONSOLE] = Console::instance();
-			deviceList[DEV_PANEL] = Panel:instance();
+			deviceList[DEV_PANEL] = Panel::instance();
 
 			// Initialize devices
 			

@@ -25,11 +25,11 @@ namespace ca
 		
 		enum MemoryExceptionCode {
 			MemoryExcpetionMaxSize = 0
-		}
-		class MemoryException : public exception {
+		};
+		class MemoryException : public std::exception {
 		public:
 			MemoryException(MemoryExceptionCode c) : code(c) {}
-			virtual ~MemoryException() {}
+			virtual ~MemoryException() throw() {}
 			virtual const char* what() const throw() {
 				switch (code) {
 					case MemoryExcpetionMaxSize:
@@ -81,6 +81,8 @@ namespace ca
             virtual ~Memory();
 			
 			static Memory * instance();
+
+			virtual void initialize() {}
 
             MemoryCell & operator [] (int ma) throw(MemoryException);
 

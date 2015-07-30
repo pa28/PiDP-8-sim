@@ -25,6 +25,8 @@ namespace ca
 			static Console * instance();
 			
 			int printf( const char *format, ... );
+
+			void initialize() {}
 			
 		protected:
 			static Console * _instance;

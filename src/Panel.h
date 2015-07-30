@@ -64,7 +64,11 @@ namespace ca
 			
 			void initialize();
 
+			 void transferLedState();
+
             virtual int run();
+
+			void stop() { driveLeds = false; }
 			
 			void testLeds(bool ledsOn);		// Turn all LEDs on (if true) or off (if false)
 

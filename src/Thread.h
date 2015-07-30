@@ -24,7 +24,7 @@ namespace ca
 			virtual ~Lock();
 			
 		private:
-			pthread_muxtex_t * mutex;
+			pthread_mutex_t * mutex;
 			
 		};
 

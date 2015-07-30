@@ -34,14 +34,15 @@ namespace ca
 				_instance = new Console();
 			}
 			
-			return _console;
+			return _instance;
 		}
 		
 		int Console::printf( const char * format, ... ) {
 			va_list args;
 			va_start (args, format);
-			vfprintf (stdout, format, args);
+			int n = vfprintf (stdout, format, args);
 			va_end (args);
+			return n;
 		}
 
     } /* namespace pdp8 */
