@@ -10,6 +10,6 @@
 #endif
 
 // Requires fmt be a string literal
-#define debug(l,fmt,...) do{if(l<DEBUG_LEVEL) fprintf(stderr, "%s: " fmt, __PRETTY_FUNCTION__, __VA_ARGS__)} while(0)
+#define debug(l,fmt,...) do{if(l<DEBUG_LEVEL) fprintf(stderr, "%s: " fmt, __PRETTY_FUNCTION__, __VA_ARGS__);} while(0)
 
 #endif	// _PDP8_H_

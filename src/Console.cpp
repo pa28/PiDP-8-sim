@@ -11,6 +11,9 @@
 #include <unistd.h>
 #include <ncurses.h>
 #include <sys/select.h>
+#include <signal.h>
+#include <time.h>
+#include <errno.h>
 
 #define DEBUG_LEVEL 5
 #include "PDP8.h"
@@ -27,6 +30,7 @@ namespace ca
 
         Console::Console() :
                 Device("CONS", "Console"),
+                Thread(),
 				runConsole(false),
 				consoleMode(CommandMode)
         {
@@ -40,15 +44,15 @@ namespace ca
         {
             // TODO Auto-generated destructor stub
         }
-		
+
 		Console * Console::instance() {
 			if (_instance == NULL) {
 				_instance = new Console();
 			}
-			
+
 			return _instance;
 		}
-		
+
 		int Console::printf( const char * format, ... ) {
 			va_list args;
 			va_start (args, format);
@@ -56,37 +60,41 @@ namespace ca
 			va_end (args);
 			return n;
 		}
-		
+
 		void Console::initialize() {
 			runConsole = true;
 			start();
 			Panel::instance()->setSwitchFd(switchPipe[1]);
 		}
-		
+
 		int Console::run() {
 			fd_set	rd_set, wr_set;
-			
+
 			// Setup ncurses
 			initscr();
 			raw();
 			keypad(stdscr, TRUE);
 			noecho();
-			
+
 			while (runConsole) {
-					FD_CLEAR(&rd_set);
-					FD_CLEAR(&wr_set);
-					
+					FD_ZERO(&rd_set);
+					FD_ZERO(&wr_set);
+
 					int	n = 0;
-					
+
 					FD_SET(0, &rd_set); n = 0 + 1;
-					
+
 					if (switchPipe[0] >= 0) {
 						FD_SET(switchPipe[0], &rd_set);
 						n = switchPipe[0] + 1;
 					}
-					
-					int s = pselect( n, &rd_set, &wr_set, NULL, NULL, NULL );
-					
+
+#ifdef HAS_PSELECT
+					int s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
+#else
+                    int s = select( n, &rd_set, NULL, NULL, NULL);
+#endif
+
 					if (s < 0) {
 						switch(errno) {
 						case EBADF:	// invalid FD
@@ -105,8 +113,8 @@ namespace ca
 							processStdin();
 						} else if (FD_ISSET(switchPipe[0], &rd_set)) {
 							// Panel
-							uint32 switchstatus[SWITCHSTATUS_COUNT] = { 0 };
-							int n = read(switchPipe[0], sizeof(switchstatus));
+							uint32_t switchstatus[SWITCHSTATUS_COUNT] = { 0 };
+							int n = read(switchPipe[0], switchstatus, sizeof(switchstatus));
 							if (n == sizeof(switchstatus)) {
 								// handle switches
 							}
@@ -117,14 +125,14 @@ namespace ca
 			}
 			return 0;
 		}
-		
+
 		void Console::processStdin() {
-			int	ch = getchr();
-			
+			int	ch = getch();
+
 			switch (ch) {
-				case KEY_F1:	// Set and clear virtual panel mode
+				case KEY_F(1):	// Set and clear virtual panel mode
 					break;
-				case KEY_F2:	// Set and clear command mode
+				case KEY_F(2):	// Set and clear command mode
 					break;
 				default:
 					switch (consoleMode) {
@@ -137,11 +145,11 @@ namespace ca
 					}
 			}
 		}
-		
+
 		void Console::processPanelMode(int ch) {
 			debug(5, "%d", ch);
 		}
-		
+
 		void Console::processCommandMode(int ch) {
 			debug(5, "%d", ch);
 		}

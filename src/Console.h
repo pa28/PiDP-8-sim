@@ -16,36 +16,36 @@ namespace ca
 {
     namespace pdp8
     {
-		
+
 		enum ConsoleMode {
 			PanelMode,
 			CommandMode,
-		}
+		};
 
-        class Console: public Device
+        class Console: public Device, Thread
         {
             Console();
-			
+
         public:
             virtual ~Console();
-			
+
 			static Console * instance();
-			
+
 			int printf( const char *format, ... );
 
 			void initialize();
-			
+
 			virtual int run();
 			void stop() { runConsole = false; }
 			int	getSwitchFd() { return switchPipe[1]; }
-			
+
 		protected:
 			static	Console * _instance;
 			bool	runConsole;
-			
+
 			int	switchPipe[2];
 			ConsoleMode	consoleMode;
-			
+
 			void processStdin();
 			void processPanelMode(int);
 			void processCommandMode(int);
