@@ -5,9 +5,20 @@
  *      Author: richard
  */
 
+#include <unistd.h>
 #include "Chassis.h"
 
+using namespace ca::pdp8;
+
 int main( int argc, char ** argv ) {
+	Panel *panel = Panel::instance();
+	panel->initialize();
+	panel->testLeds(true);
+
+	sleep(30);
+
+	panel->stop();
+
     return 0;
 }
 

@@ -312,6 +312,11 @@ namespace ca
 
 					switchesChanged |= (switchstatus[i] ^ switchscan) != 0;
                     switchstatus[i] = switchscan;
+
+			if (switchesChanged) {
+				printf( "%d: %04o\n", i, switchscan );
+				switchesChanged = false;
+			}
                 }
             }
 
