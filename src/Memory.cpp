@@ -16,6 +16,8 @@ namespace ca
         MemoryCell Memory::errCell(-1);
         MemoryCell Memory::m[MAXMEMSIZE];
         MemoryFlag Memory::flags[MAXMEMSIZE] = { MemFlagClear };
+        uint16_t    MemoryCell::mb = 0;
+        uint16_t    Memory::ma = 0;
 
         MemoryCell::MemoryCell(int v) :
             m(v)
@@ -26,11 +28,11 @@ namespace ca
         }
 
         MemoryCell::operator int () {
-            return (int)(m);
+            return (int)(mb = m);
         }
 
         int MemoryCell::operator = (int v) {
-            return (int)(m = v & 07777);
+            return (int)(mb = m = v & 07777);
         }
 
         Memory::Memory() :
@@ -48,11 +50,13 @@ namespace ca
 			if (_instance == NULL) {
 				_instance = new Memory();
 			}
-			
+
 			return _instance;
 		}
-		
-        MemoryCell & Memory::operator [] (int ma) throw(MemoryException) {
+
+        MemoryCell & Memory::operator [] (int _ma) throw(MemoryException) {
+            ma = _ma;
+
             if (ma > MAXMEMSIZE) {
                 flagStack.push( std::pair < MemoryFlag, int >(MemFlagMaxSize, ma));
 				if (exceptionOn) {

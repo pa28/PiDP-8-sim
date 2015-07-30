@@ -10,6 +10,8 @@
 
 #include "Device.h"
 #include "Panel.h"
+#include "CPU.h"
+#include "Memory.h"
 
 namespace ca
 {
@@ -21,6 +23,15 @@ namespace ca
 			PanelMode,
 			CommandMode,
 		};
+
+        enum PanelCmdButton {
+            PanelStart = 040,
+            PanelLoadAdr = 020,
+            PanelDeposit = 010,
+            PanelExamine = 004,
+            PanelContinue = 002,
+            PanelStop = 001,
+        };
 
         class Console: public Device
         {
@@ -45,6 +56,9 @@ namespace ca
 
 			int	switchPipe;
 			ConsoleMode	consoleMode;
+
+			Memory  &M;
+			CPU     &cpu;
 
 			void processStdin();
 			void processPanelMode(int);

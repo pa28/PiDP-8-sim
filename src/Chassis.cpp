@@ -26,15 +26,19 @@ int main( int argc, char ** argv ) {
 	}
 
 	signal( SIGINT, sigintHandler );
-	
+
+	Memory *memory = Memory::instance();
+    CPU *cpu = CPU::instance();
 	Panel *panel = Panel::instance();
 	Console *console = Console::instance();
-	
+
 	panel->setSwitchFd(sxfd[1]);
 	console->setSwitchFd(sxfd[0]);
 
 	console->initialize();
 	panel->initialize();
+	cpu->initialize();
+
 	panel->testLeds(true);
 	sleep(5);
 	panel->testLeds(false);
@@ -48,7 +52,7 @@ namespace ca
 {
     namespace pdp8
     {
-		
+
 		Chassis * Chassis::_instance = NULL;
 
         Chassis::Chassis()
@@ -57,14 +61,14 @@ namespace ca
                 deviceList[i] = NULL;
 
 			// Create and assign devices.
-			
+
             deviceList[DEV_CPU] = CPU::instance();
             deviceList[DEV_MEM] = Memory::instance();
 			deviceList[DEV_CONSOLE] = Console::instance();
 			deviceList[DEV_PANEL] = Panel::instance();
 
 			// Initialize devices
-			
+
             for (int i = 0; i < DEV_MAX_COUNT; ++i) {
                 if (deviceList[i] != NULL) {
                     deviceList[i]->initialize();
@@ -76,12 +80,12 @@ namespace ca
         {
             // TODO Auto-generated destructor stub
         }
-		
+
 		Chassis * Chassis::instance() {
 			if (_instance == NULL) {
 				_instance = new Chassis();
 			}
-			
+
 			return _instance;
 		}
 

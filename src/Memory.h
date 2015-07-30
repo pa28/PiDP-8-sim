@@ -22,7 +22,7 @@ namespace ca
         enum MemoryConstants {
             MAXMEMSIZE = 8 * 4096,
         };
-		
+
 		enum MemoryExceptionCode {
 			MemoryExcpetionMaxSize = 0
 		};
@@ -62,6 +62,8 @@ namespace ca
             virtual ~MemoryCell();
 
             operator int();
+            operator unsigned int() { return (unsigned int) operator int(); }
+
             int operator = (int v);
 
             bool operator == (MemoryCell & other) { return m == other.m; }
@@ -71,6 +73,7 @@ namespace ca
         protected:
             uint16_t    m;
 
+            static uint16_t     mb;
         };
 
         class Memory: public Device
@@ -79,7 +82,7 @@ namespace ca
 
 		public:
             virtual ~Memory();
-			
+
 			static Memory * instance();
 
 			virtual void initialize() {}
@@ -90,16 +93,19 @@ namespace ca
             int flagStackSize() { return flagStack.size(); }
             void clearFlackStack() { while (!flagStack.empty()) flagStack.pop(); }
 
+            static uint16_t     MB() { return MemoryCell::mb; }
+            static uint16_t     MA() { return ma; }
+
         protected:
 
 			static Memory *		_instance;
             static MemoryFlag   flags[];
             static MemoryCell   errCell, m[];
+            static uint16_t     ma;
 
             int     memorySize;
             std::stack < std::pair < uint32_t, int > >  flagStack;
 			bool	exceptionOn;
-
         };
 
     } /* namespace pdp8 */

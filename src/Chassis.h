@@ -50,15 +50,17 @@ namespace ca
         class Chassis
         {
             Chassis();
-			
+
         public:
             virtual ~Chassis();
 
 			static Chassis * instance();
-			
+
         protected:
 			static	Chassis * _instance;
             Device*    deviceList[DEV_MAX_COUNT];
+
+
         };
 
     } /* namespace pdp8 */

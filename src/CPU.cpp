@@ -11,11 +11,12 @@ namespace ca
 {
     namespace pdp8
     {
-		
+
 		CPU * CPU::_instance = NULL;
 
         CPU::CPU() :
-                Device("CPU", "CPU")
+                Device("CPU", "CPU"),
+                PC(0), IF(0), DF(0), LAC(0), MQ(0), SC(0)
         {
             // TODO Auto-generated constructor stub
 
@@ -30,9 +31,9 @@ namespace ca
 			if (_instance == NULL) {
 				_instance = new CPU();
 			}
-			
+
 			return _instance;
 		}
-		
+
     } /* namespace pdp8 */
 } /* namespace ca */

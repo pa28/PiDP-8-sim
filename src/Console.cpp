@@ -31,7 +31,10 @@ namespace ca
         Console::Console() :
                 Device("CONS", "Console"),
 				runConsole(false),
-				consoleMode(CommandMode)
+				switchPipe(-1),
+				consoleMode(CommandMode),
+				M(*(Memory::instance())),
+				cpu(*(CPU::instance()))
         {
         }
 
@@ -118,12 +121,35 @@ namespace ca
 								for (int i = 0; i < SWITCHSTATUS_COUNT; ++i) {
 									switchstatus[i] ^= 07777;
 								}
+
 								debug(1,"%d SR:%04o DF:%1o IF:%1o %02o SS:%1o\n", n,
 									switchstatus[0],
 									((switchstatus[1] >> 9) & 07),
 									((switchstatus[1] >> 6) & 07),
-									(switchstatus[2] >> 6),
+									(switchstatus[2] >> 6) & 077,
 									(switchstatus[2] >> 4) & 03);
+
+								switch ((switchstatus[2] >> 6) & 077) {
+								    case PanelStart:
+								        break;
+								    case PanelLoadAdr:
+								        CPU::instance()->setPC(switchstatus[0]);
+                                        CPU::instance()->setDF((switchstatus[1] >> 9) & 07);
+                                        CPU::instance()->setIF((switchstatus[1] >> 6) & 07);
+								        break;
+								    case PanelDeposit:
+								        M[cpu.getIF() << 12 | cpu.getPC()] = switchstatus[0];
+								        cpu.setPC( (cpu.getPC() + 1) & 077777 );
+								        break;
+								    case PanelExamine:
+								        switchstatus[0] = M[cpu.getIF() << 12 | cpu.getPC()];
+                                        cpu.setPC( (cpu.getPC() + 1) & 077777 );
+								        break;
+								    case PanelContinue:
+								        break;
+								    case PanelStop:
+								        break;
+								}
 							}
 						}
 					} else {

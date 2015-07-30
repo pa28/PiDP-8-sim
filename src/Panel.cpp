@@ -95,7 +95,7 @@ void short_wait(void)                   // creates pause required in between clo
 unsigned bcm_host_get_peripheral_address(void)      // find Pi 2 or Pi's gpio base address
 {
    unsigned address = get_dt_ranges("/proc/device-tree/soc/ranges", 4);
-   return address == ~0 ? 0x20000000 : address;
+   return address == (unsigned)~0 ? 0x20000000 : address;
 }
 
 static unsigned get_dt_ranges(const char *filename, unsigned offset)
@@ -141,19 +141,19 @@ namespace ca
         {
 			pthread_mutex_destroy( &accessMutex );
         }
-		
+
 		Panel * Panel::instance() {
 			if (_instance == NULL) {
 				_instance = new Panel();
 			}
-			
+
 			return _instance;
 		}
-		
+
 		void Panel::testLeds(bool turnOn) {
 			try {
 				Lock	lock(accessMutex);
-				
+
 				for (int i = 0; i < LEDSTATUS_COUNT; ++i) {
 					ledstatus[i] = turnOn ? 07777 : 0;
 				}
@@ -161,17 +161,17 @@ namespace ca
 				perror("accessMutex");
 			}
 		}
-		
+
 		void Panel::transferLedState() {
 			try {
 				Lock	lock(accessMutex);
-				
+
 				// TODO: Transfer LED state to ledstatus[] and switchstatus[] out.
 			} catch (int s) {
 				perror("accessMutex");
 			}
 		}
-		
+
 		void Panel::initialize() {
 			start();
 		}
@@ -293,7 +293,7 @@ namespace ca
 
                 // read three rows of switches
 				bool switchesChanged = false;
-				
+
                 for (i=0; i < SWITCHSTATUS_COUNT; ++i)
                 {
                     INP_GPIO(rows[i]);//            GPIO_CLR = 1 << rows[i];    // and output 0V to overrule built-in pull-up from column input pin
@@ -314,7 +314,7 @@ namespace ca
                     switchstatus[i] = switchscan;
 
                 }
-				
+
 				if (switchesChanged && switchFd >= 0) {
 					int n = write( switchFd, switchstatus, sizeof(switchstatus));
 					if (n < 0) {
