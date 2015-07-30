@@ -282,7 +282,7 @@ namespace ca
                     // Toggle ledrow off
                     GPIO_CLR = 1 << ledrows[i]; // superstition
                     INP_GPIO(ledrows[i]);
-        usleep(10);  // waste of cpu cycles but may help against udn2981 ghosting, not flashes though
+					usleep(10);  // waste of cpu cycles but may help against udn2981 ghosting, not flashes though
                 }
 
         //nanosleep ((struct timespec[]){{0, intervl}}, NULL); // test
@@ -313,12 +313,13 @@ namespace ca
 					switchesChanged |= (switchstatus[i] ^ switchscan) != 0;
                     switchstatus[i] = switchscan;
 
-			if (switchesChanged) {
-				printf( "%d: %04o\n", i, switchscan );
-				switchesChanged = false;
-			}
                 }
-            }
+				
+				if (switchesChanged && switchFd >= 0) {
+					int n = write( switchFd, switchstatus, sizeof(switchstatus));
+					printf( "%d %04o %04o %04o\n", n, switchstatus[0],switchstatus[1],switchstatus[2] );
+				}
+		}
 
             //printf("\nFP off\n");
             // at this stage, all cols, rows, ledrows are set to input, so elegant way of closing down.

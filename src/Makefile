@@ -1,7 +1,7 @@
 BINS=pidp8 
 BINSDIR=.
 pidp8_OBJS=Chassis.o Console.o CPU.o Device.o Memory.o Panel.o Thread.o
-pidp8_LIBS=-lpthread
+pidp8_LIBS=-lpthread -lncurses
 
 all: $(BINS)
 

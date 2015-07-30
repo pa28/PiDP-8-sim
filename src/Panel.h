@@ -69,12 +69,14 @@ namespace ca
             virtual int run();
 
 			void stop() { driveLeds = false; }
+			void setSwitchFd(int fd) { if (switchFd >= 0) close(switchFd); switchFd = fd; }
 			
 			void testLeds(bool ledsOn);		// Turn all LEDs on (if true) or off (if false)
 
         protected:
 			static	Panel * _instance;
             bool    driveLeds;
+			int		switchFd;				// Switch status is written here when it changes.
 			
 			pthread_mutex_t		accessMutex;
         };

@@ -12,12 +12,17 @@ using namespace ca::pdp8;
 
 int main( int argc, char ** argv ) {
 	Panel *panel = Panel::instance();
+	Console *console = Console::instance();
+	
+	console->initialize();
 	panel->initialize();
 	panel->testLeds(true);
+	panel->setSwitchFd(console->getSwitchFd());
 
 	sleep(30);
 
 	panel->stop();
+	console->stop();
 
     return 0;
 }
