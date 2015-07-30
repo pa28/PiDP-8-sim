@@ -34,10 +34,6 @@ namespace ca
 				runConsole(false),
 				consoleMode(CommandMode)
         {
-			if (pipe(switchPipe)) {
-				switchPipe[0] = -1;
-				switchPipe[1] = -1;
-			}
         }
 
         Console::~Console()
@@ -64,17 +60,18 @@ namespace ca
 		void Console::initialize() {
 			runConsole = true;
 			start();
-			Panel::instance()->setSwitchFd(switchPipe[1]);
 		}
 
 		int Console::run() {
 			fd_set	rd_set, wr_set;
 
+#ifdef USE_NCURSES
 			// Setup ncurses
 			initscr();
 			raw();
 			keypad(stdscr, TRUE);
 			noecho();
+#endif
 
 			while (runConsole) {
 					FD_ZERO(&rd_set);
@@ -82,11 +79,12 @@ namespace ca
 
 					int	n = 0;
 
-					FD_SET(0, &rd_set); n = 0 + 1;
+					//FD_SET(0, &rd_set); n = 0 + 1;
 
-					if (switchPipe[0] >= 0) {
-						FD_SET(switchPipe[0], &rd_set);
-						n = switchPipe[0] + 1;
+					debug(1, "switchPipe: %d\n", switchPipe);
+					if (switchPipe >= 0) {
+						FD_SET(switchPipe, &rd_set);
+						n = switchPipe + 1;
 					}
 
 #ifdef HAS_PSELECT
@@ -94,6 +92,8 @@ namespace ca
 #else
                     int s = select( n, &rd_set, NULL, NULL, NULL);
 #endif
+
+					debug(1,"select: %d\n", s);
 
 					if (s < 0) {
 						switch(errno) {
@@ -111,12 +111,21 @@ namespace ca
 						if (FD_ISSET(0, &rd_set)) {
 							// stdin
 							processStdin();
-						} else if (FD_ISSET(switchPipe[0], &rd_set)) {
+						} else if (FD_ISSET(switchPipe, &rd_set)) {
 							// Panel
 							uint32_t switchstatus[SWITCHSTATUS_COUNT] = { 0 };
-							int n = read(switchPipe[0], switchstatus, sizeof(switchstatus));
+							int n = read(switchPipe, switchstatus, sizeof(switchstatus));
 							if (n == sizeof(switchstatus)) {
 								// handle switches
+								for (int i = 0; i < SWITCHSTATUS_COUNT; ++i) {
+									switchstatus[i] ^= 07777;
+								}
+								debug(1,"%d SR:%04o DF:%1o IF:%1o %02o SS:%1o\n", n,
+									switchstatus[0],
+									((switchstatus[1] >> 9) & 07),
+									((switchstatus[1] >> 6) & 07),
+									(switchstatus[2] >> 6),
+									(switchstatus[2] >> 4) & 03);
 							}
 						}
 					} else {

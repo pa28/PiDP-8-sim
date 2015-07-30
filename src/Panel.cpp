@@ -317,7 +317,10 @@ namespace ca
 				
 				if (switchesChanged && switchFd >= 0) {
 					int n = write( switchFd, switchstatus, sizeof(switchstatus));
-					printf( "%d %04o %04o %04o\n", n, switchstatus[0],switchstatus[1],switchstatus[2] );
+					if (n < 0) {
+						perror("write to switchFd");
+						printf("fd: %d, size: %d\n", switchFd, sizeof(switchstatus));
+					}
 				}
 		}
 

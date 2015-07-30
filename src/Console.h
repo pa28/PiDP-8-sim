@@ -38,13 +38,13 @@ namespace ca
 
 			virtual int run();
 			void stop() { runConsole = false; }
-			int	getSwitchFd() { return switchPipe[1]; }
+			void setSwitchFd(int fd) { switchPipe = fd; }
 
 		protected:
 			static	Console * _instance;
 			bool	runConsole;
 
-			int	switchPipe[2];
+			int	switchPipe;
 			ConsoleMode	consoleMode;
 
 			void processStdin();
