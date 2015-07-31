@@ -39,10 +39,6 @@ int main( int argc, char ** argv ) {
 	panel->initialize();
 	cpu->initialize();
 
-	panel->testLeds(true);
-	sleep(5);
-	panel->testLeds(false);
-
 	console->run();
 
     return 0;
