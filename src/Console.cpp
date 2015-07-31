@@ -140,10 +140,12 @@ namespace ca
 								    case PanelDeposit:
 								        M[cpu.getIF() | cpu.getPC()] = switchstatus[0];
 								        cpu.setPC( (cpu.getPC() + 1) & 077777 );
+										cpu.setState(DepositState);
 								        break;
 								    case PanelExamine:
 								        switchstatus[0] = M[cpu.getIF() | cpu.getPC()];
                                         cpu.setPC( (cpu.getPC() + 1) & 077777 );
+										cpu.setState(ExamineState);
 								        break;
 								    case PanelContinue:
 								        break;
