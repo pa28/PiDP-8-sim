@@ -63,6 +63,10 @@ namespace ca
 			runConsole = true;
 		}
 
+		void Console::reset() {
+
+		}
+
 		int Console::run() {
 			fd_set	rd_set, wr_set;
 

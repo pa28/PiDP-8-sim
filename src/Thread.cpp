@@ -5,6 +5,7 @@
  *      Author: H Richard Buckley
  */
 
+#include <stdio.h>
 #include "Thread.h"
 #include "Console.h"
 
@@ -17,7 +18,7 @@ namespace ca
 
             return (void *)(thread->run());
         }
-		
+
 		Lock::Lock( pthread_mutex_t * m ) : mutex(m)
 		{
 			int s = pthread_mutex_lock( mutex );
@@ -29,7 +30,7 @@ namespace ca
 					throw LockException(true, s);
 			}
 		}
-		
+
 		Lock::Lock( pthread_mutex_t & m ) : mutex(&m)
 		{
 			int s = pthread_mutex_lock( mutex );
@@ -41,7 +42,7 @@ namespace ca
 					throw LockException(true, s);
 			}
 		}
-		
+
 		Lock::Lock( ConditionWait & cw ) : mutex(&cw.mutex)
 		{
 			int s = pthread_mutex_lock( mutex );
@@ -53,7 +54,7 @@ namespace ca
 					throw LockException(true, s);
 			}
 		}
-		
+
 		Lock::~Lock() {
 			int s = pthread_mutex_unlock( mutex );
 			switch (s) {
@@ -72,7 +73,7 @@ namespace ca
         Thread::~Thread()
         {
         }
-		
+
 		int Thread::start() {
 			int s = pthread_create( &thread, NULL, _threadStart, this );
 			switch (s) {
@@ -81,10 +82,10 @@ namespace ca
 				default:
 					return -1;
 			}
-			
+
 			return 0;
 		}
-		
+
 		ConditionWait::ConditionWait(Thread *t) :
 			thread(*t)
 		{
@@ -96,24 +97,24 @@ namespace ca
 			pthread_mutex_destroy( &mutex );
 			pthread_cond_destroy( &condition );
 		}
-		
+
 		bool ConditionWait::waitOnCondition() {
 			int rc = 0;
 			bool r = false;
-			
+
 			try {
 				Lock	waitLock(mutex);
 				r = !thread.waitCondition();
 				while (!thread.waitCondition() && rc == 0) {
 					rc = pthread_cond_wait( &condition, &mutex );
 				}
-			} catch (LockException le) {
-				fprintf(stdder, le.what());
+			} catch (LockException &le) {
+				fprintf(stderr, le.what());
 			}
-			
+
 			return r;
 		}
-		
+
 		void ConditionWait::releaseOnCondition(bool all) {
 			try {
 				Lock	waitLock(mutex);
@@ -122,8 +123,8 @@ namespace ca
 				} else {
 					pthread_cond_signal( &condition );
 				}
-			} catch (LockException le) {
-				fprintf(stdder, le.what());
+			} catch (LockException &le) {
+				fprintf(stderr, le.what());
 			}
 		}
 

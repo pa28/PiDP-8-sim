@@ -168,6 +168,10 @@ namespace ca
 			start();
 		}
 
+		void Panel::reset() {
+
+		}
+
         int Panel::run() {
             int i,j,k,switchscan, tmp;
 
@@ -244,7 +248,7 @@ namespace ca
             while(driveLeds)
             {
 				ledBlink = (ledBlink + 1) % 0100;
-				
+
                 // prepare for lighting LEDs by setting col pins to output
                 for (i=0;i<12;i++)
                 {   INP_GPIO(cols[i]);          //

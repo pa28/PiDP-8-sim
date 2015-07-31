@@ -65,6 +65,7 @@ namespace ca
 			static Panel * instance();
 
 			void initialize();
+			void reset();
 
             virtual int run();
 

@@ -30,19 +30,19 @@ namespace ca
 			FetchExecute,
 			FetchDeferExecute,
 		};
-		
+
 		enum CPUCondition {
 			CPURunning = 0,
 			CPUIdle,
 			CPUStopped,
 			CPUMemoryBreak,
-		}
-		
-		enum CPUSteping {
+		};
+
+		enum CPUStepping {
 			NotStepping = 0,
 			SingleStep,
 			SingleInstruction,
-		}
+		};
 
         class CPU: public Device, Thread
         {
@@ -53,6 +53,7 @@ namespace ca
 
 			static CPU * instance();
 			virtual void initialize() {}
+			virtual void reset() {}
 
 			uint16_t    getPC() const { return PC; }
 			uint16_t    getIF() const { return IF; }
@@ -72,27 +73,27 @@ namespace ca
 
 			void	setState(CPUState s) { cpuState = s; }
 			void	setStepping(CPUStepping s) { cpuStepping = s; }
-			
+
 			void	cpuContinue();
 			void	cpuStop() { cpuCondition = CPUStopped; }
 			void	cpuMemoryBreak() { cpuCondition = CPUMemoryBreak; }
-			
+
 			virtual int run();
 			virtual void stop() { threadRunning = false; }
 			virtual bool waitCondition();
 
 		protected:
-			static CPU * _instance;
+			static CPU *    _instance;
 
-			uint16_t    PC, IF, DF, LAC, MQ, SC, IR;
-			CPUState	cpuState;
+			uint16_t        PC, IF, DF, LAC, MQ, SC, IR;
+			CPUState	    cpuState;
 			CPUCondition	cpuCondition;
 			CPUStepping		cpuStepping;
-			bool		threadRunning;
-			
+			bool		    threadRunning;
+
 			ConditionWait	runConditionWait;
-			
-			void cycleCpu();
+
+			long cycleCpu();
         };
 
     } /* namespace pdp8 */

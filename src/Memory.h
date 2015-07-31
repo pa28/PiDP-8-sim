@@ -86,6 +86,7 @@ namespace ca
 			static Memory * instance();
 
 			virtual void initialize() {}
+			virtual void reset() {}
 
             MemoryCell & operator [] (int ma) throw(MemoryException);
 

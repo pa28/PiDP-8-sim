@@ -45,6 +45,7 @@ namespace ca
 			int printf( const char *format, ... );
 
 			void initialize();
+			void reset();
 
 			virtual int run();
 			void stop() { runConsole = false; }

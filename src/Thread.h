@@ -21,18 +21,18 @@ namespace ca
 		class LockException : public std::exception {
 		public:
 			LockException(bool l, int c) : locking(l), code(c) {}
-			virtual ~MemoryException() throw() {}
+			virtual ~LockException() throw() {}
 			virtual const char* what() const throw() {
 				if (locking)
 					switch (code) {
 						case EINVAL:
 							return "Lock on invalid mutex.";
 						case EBUSY:
-							return "Already locked."
+							return "Already locked.";
 						case EAGAIN:
-							return "Too many recursive locks."
+							return "Too many recursive locks.";
 						case EDEADLK:
-							return "Thread already owns lock."
+							return "Thread already owns lock.";
 						default:
 							return "Unknown locking error.";
 					}
@@ -41,9 +41,9 @@ namespace ca
 						case EINVAL:
 							return "Unock on invalid mutex.";
 						case EAGAIN:
-							return "Too many recursive locks."
+							return "Too many recursive locks.";
 						case EPERM:
-							return "Thread does not own lock."
+							return "Thread does not own lock.";
 						default:
 							return "Unknown unlocking error.";
 					}
@@ -61,12 +61,12 @@ namespace ca
 			Lock( pthread_mutex_t & mutex );
 			Lock( ConditionWait & conditionWait );
 			virtual ~Lock();
-			
+
 		private:
 			pthread_mutex_t * mutex;
-			
+
 		};
-		
+
         class Thread
         {
         public:
@@ -77,34 +77,31 @@ namespace ca
 
             virtual int run() = 0;
 			virtual void stop() = 0;
-			
+
 			virtual bool waitCondition() { return true; }
-		
+
 		protected:
 			pthread_t	thread;
-			
+
         };
 
 		class ConditionWait
 		{
 			friend class Thread;
 			friend class Lock;
-			
-			ConditionWait(Thread *thread);
-			
+
 		public:
+            ConditionWait(Thread *thread);
 			virtual ~ConditionWait();
-			
+
 			void releaseOnCondition(bool all = false);
-			
+            bool waitOnCondition();
+
 		private:
 			Thread			&	thread;
 			pthread_mutex_t		mutex;
 			pthread_cond_t		condition;
 
-			
-			bool waitOnCondition();
-			
 		};
 
     } /* namespace pdp8 */

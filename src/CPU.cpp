@@ -6,6 +6,7 @@
  */
 
 #include "CPU.h"
+#include <stdio.h>
 #include <time.h>
 
 namespace ca
@@ -20,9 +21,9 @@ namespace ca
                 PC(0), IF(0), DF(0), LAC(0), MQ(0), SC(0), IR(0),
 				cpuState(NoState),
 				cpuCondition(CPUStopped),
+				cpuStepping(NotStepping),
 				threadRunning(false),
 				runConditionWait(this)
-		cpuState(NoState)
         {
             // TODO Auto-generated constructor stub
 
@@ -40,13 +41,13 @@ namespace ca
 
 			return _instance;
 		}
-		
+
 		int CPU::run() {
 			bool throttleTimerReset = true;
 			struct timespec throttleStart, throttleCheck;
 			long	cpuTime = 0;
 			threadRunning = true;
-			
+
 			while (threadRunning) {
 				// If we are going to wait, reset throttling when we get going again.
 				// Wait the thread if the condition is false (the CPU is not running).
@@ -77,7 +78,7 @@ namespace ca
 					} else {
 						if (cpuTime > 1000000) {
 							clock_gettime( CLOCK_MONOTONIC, &throttleCheck );
-							
+
 							time_t d_sec = throttleCheck.tv_sec - throttleStart.tv_sec;
 							long d_nsec = (d_sec * 1000000000) + (throttleCheck.tv_nsec - throttleStart.tv_nsec);
 							if ((cpuTime - d_nsec) > 1000000) {
@@ -89,22 +90,24 @@ namespace ca
 					}
 				}
 			}
+
+			return 0;
 		}
-		
+
 		long CPU::cycleCpu() {
 			return 1000;
 		}
-		
+
 		void CPU::cpuContinue() {
 			try {
 				Lock	lock(runConditionWait);
 				cpuCondition = CPURunning;
-			} catch (LockException le) {
+			} catch (LockException &le) {
 				fprintf(stderr, le.what());
 			}
 			runConditionWait.releaseOnCondition();
 		}
-		
+
 		bool CPU::waitCondition() {
 			return cpuCondition == CPURunning;
 		}
