@@ -29,18 +29,13 @@ namespace ca
 			uint16_t    getPC() const { return PC; }
 			uint16_t    getIF() const { return IF; }
 			uint16_t    getDF() const { return DF; }
-			uint16_t    getAC() const { return LAC & 07777; }
-			uint16_t    getL() const { return LAC & 010000 != 0 ? 1 : 0; }
+			uint16_t    getLAC() const { return LAC & 017777; }
 			uint16_t    getMQ() const { return MQ; }
 			uint16_t    getSC() const { return SC; }
 
 			void    setPC(uint16_t v) { PC = v & 07777; }
-            void    setIF(uint16_t v) { IF = v & 07; }
-            void    setDF(uint16_t v) { DF = v & 07; }
-            void    setAC(uint16_t v) { LAC = (v & 07777) | (LAC & 010000); }
-            void    setL(uint16_t v) { LAC = (v != 0 ? 010000 : 0) | (LAC & 010000); }
-            void    setMQ(uint16_t v) { MQ = v & 07777; }
-            void    setSC(uint16_t v) { SC = v & 037; }
+            void    setIF(uint16_t v) { IF = (v & 07) << 12; }
+            void    setDF(uint16_t v) { DF = (v & 07) << 12; }
 
 		protected:
 			static CPU * _instance;

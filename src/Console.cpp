@@ -138,11 +138,11 @@ namespace ca
                                         CPU::instance()->setIF((switchstatus[1] >> 6) & 07);
 								        break;
 								    case PanelDeposit:
-								        M[cpu.getIF() << 12 | cpu.getPC()] = switchstatus[0];
+								        M[cpu.getIF() | cpu.getPC()] = switchstatus[0];
 								        cpu.setPC( (cpu.getPC() + 1) & 077777 );
 								        break;
 								    case PanelExamine:
-								        switchstatus[0] = M[cpu.getIF() << 12 | cpu.getPC()];
+								        switchstatus[0] = M[cpu.getIF() | cpu.getPC()];
                                         cpu.setPC( (cpu.getPC() + 1) & 077777 );
 								        break;
 								    case PanelContinue:

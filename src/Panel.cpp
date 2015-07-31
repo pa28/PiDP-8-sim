@@ -132,7 +132,8 @@ namespace ca
 
         Panel::Panel() :
                 Device("PANEL", "Front Panel"),
-                driveLeds(true)
+                driveLeds(true),
+                switchFd(-1)
         {
 			pthread_mutex_init( &accessMutex, NULL );
         }
@@ -257,6 +258,8 @@ namespace ca
                     OUT_GPIO(cols[i]);          // Define cols as output
                 }
 
+                getLeds();
+
                 // light up 8 rows of 12 LEDs each
                 for (i=0;i<8;i++)
                 {
@@ -328,6 +331,50 @@ namespace ca
             // at this stage, all cols, rows, ledrows are set to input, so elegant way of closing down.
 
             return 0;
+        }
+
+        void Panel::getLeds() {
+            // pause 6 1<<8
+            // CA 6 1<<11
+            // Break 6 1<<10
+
+            ledstatus[0] = CPU::instance()->getPC();
+            ledstatus[1] = Memory::MA();
+            ledstatus[2] = Memory::MB();
+            ledstatus[3] = CPU::instance()->getLAC();
+            ledstatus[4] = CPU::instance()->getMQ();
+
+            /* ledstatus[5]
+             * AND 11
+             * TAD 10
+             * DCA  9
+             * ISZ  8
+             * JMS  7
+             * JMP  6
+             * IOT  5
+             * OPR  4
+             * Fetch 3
+             * Execute 2
+             * Defer 1
+             * WC 0
+             */
+
+            /* ledstatus[6]
+             * CA 11
+             * Break 10
+             * ION 9
+             * Pause 8
+             * Run 7
+             * SC 6-2
+             */
+
+            /*
+             * ledstatus[7]
+             * DF 1-3
+             * IF 4-6
+             */
+
+            ledstatus[7] = (CPU::instance()->getDF() >> 3) | (CPU::instance()->getIF() >> 6);
         }
 
     } /* namespace pdp8 */
