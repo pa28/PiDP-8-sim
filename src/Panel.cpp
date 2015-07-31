@@ -344,6 +344,27 @@ namespace ca
             ledstatus[3] = CPU::instance()->getLAC();
             ledstatus[4] = CPU::instance()->getMQ();
 
+			ledstatus[5] = 0;
+			switch (CPU::instance()->getState()) {
+				case DepositState:
+					ledstatus[5] |= (1 << (11 - ((ledstatus[2] & 07000) >> 9)));
+					ledstatus[5] |= (1 << 2); // execute
+					break;
+				case ExamineState:
+				case Fetch:
+					ledstatus[5] |= (1 << (11 - ((ledstatus[2] & 07000) >> 9)));
+					ledstatus[5] |= (1 << 3); // fetch
+					break;
+				case Execute:
+					ledstatus[5] |= (1 << 3); // fetch
+					break;
+				case Defer:
+					ledstatus[5] |= (1 << 1); // defer
+					break;
+				default:
+					;
+			}
+
             /* ledstatus[5]
              * AND 11
              * TAD 10
