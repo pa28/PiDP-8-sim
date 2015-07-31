@@ -115,10 +115,15 @@ namespace ca
 		}
 		
 		void ConditionWait::releaseOnCondition(bool all) {
-			if (all) {
-				pthread_cond_broadcast( &condition );
-			} else {
-				pthread_cond_signal( &condition );
+			try {
+				Lock	waitLock(mutex);
+				if (all) {
+					pthread_cond_broadcast( &condition );
+				} else {
+					pthread_cond_signal( &condition );
+				}
+			} catch (LockException le) {
+				fprintf(stdder, le.what());
 			}
 		}
 
