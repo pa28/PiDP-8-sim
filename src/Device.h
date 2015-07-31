@@ -22,6 +22,7 @@ namespace ca
             virtual ~Device();
 
             virtual void initialize() = 0;
+			virtual void reset() = 0;
         };
 
     } /* namespace pdp8 */

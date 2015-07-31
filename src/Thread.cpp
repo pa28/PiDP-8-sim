@@ -26,7 +26,7 @@ namespace ca
 					Console::instance()->printf("Mutex %0X locked\n", mutex);
 					break;
 				default:
-					throw s;
+					throw LockException(true, s);
 			}
 		}
 		
@@ -38,7 +38,7 @@ namespace ca
 					Console::instance()->printf("Mutex %0X locked\n", mutex);
 					break;
 				default:
-					throw s;
+					throw LockException(true, s);
 			}
 		}
 		
@@ -49,7 +49,7 @@ namespace ca
 					Console::instance()->printf("Mutex %0X unlocked\n", mutex);
 					break;
 				default:
-					throw s;
+					throw LockException(false, s);
 			}
 		}
 
@@ -71,6 +71,39 @@ namespace ca
 			}
 			
 			return 0;
+		}
+		
+		ConditionWait::ConditionWait(Thread *t) :
+			thread(*t)
+		{
+			pthread_mutex_init( &mutex, NULL );
+			pthread_cond_init( &condition, NULL );
+		}
+
+		ConditionWait::~ConditionWait() {
+			pthread_mutex_destroy( &mutex );
+			pthread_cond_destroy( &condition );
+		}
+		
+		void ConditionWait::waitOnCondition() {
+			int rc = 0;
+			
+			try {
+				Lock	waitLock(mutex);
+				while (thread.waitCondition() !! rc == 0) {
+					pthread_cond_wait( &condition, &mutex );
+				}
+			} catch (LockException le) {
+				fprintf(stdder, le.what());
+			}
+		}
+		
+		void ConditionWait::releaseOnCondition(bool all) {
+			if (all) {
+				pthread_cond_broadcast( &condition );
+			} else {
+				pthread_cond_signal( &condition );
+			}
 		}
 
     } /* namespace pdp8 */

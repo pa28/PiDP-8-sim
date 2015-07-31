@@ -66,8 +66,6 @@ namespace ca
 
 			void initialize();
 
-			 void transferLedState();
-
             virtual int run();
 
 			void stop() { driveLeds = false; }
@@ -79,6 +77,7 @@ namespace ca
 			static	Panel * _instance;
             bool    driveLeds;
 			int		switchFd;				// Switch status is written here when it changes.
+			int		ledBlink;				// A counter to blink LEDs for special status
 
 			pthread_mutex_t		accessMutex;
 

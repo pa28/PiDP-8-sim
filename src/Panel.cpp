@@ -133,7 +133,8 @@ namespace ca
         Panel::Panel() :
                 Device("PANEL", "Front Panel"),
                 driveLeds(true),
-                switchFd(-1)
+                switchFd(-1),
+				ledBlink(0)
         {
 			pthread_mutex_init( &accessMutex, NULL );
         }
@@ -158,18 +159,8 @@ namespace ca
 				for (int i = 0; i < LEDSTATUS_COUNT; ++i) {
 					ledstatus[i] = turnOn ? 07777 : 0;
 				}
-			} catch (int s) {
-				perror("accessMutex");
-			}
-		}
-
-		void Panel::transferLedState() {
-			try {
-				Lock	lock(accessMutex);
-
-				// TODO: Transfer LED state to ledstatus[] and switchstatus[] out.
-			} catch (int s) {
-				perror("accessMutex");
+			} catch (LockException le) {
+				fprintf(stderr, le.what());
 			}
 		}
 
@@ -252,6 +243,8 @@ namespace ca
 
             while(driveLeds)
             {
+				ledBlink = (ledBlink + 1) % 0100;
+				
                 // prepare for lighting LEDs by setting col pins to output
                 for (i=0;i<12;i++)
                 {   INP_GPIO(cols[i]);          //
@@ -344,27 +337,6 @@ namespace ca
             ledstatus[3] = CPU::instance()->getLAC();
             ledstatus[4] = CPU::instance()->getMQ();
 
-			ledstatus[5] = 0;
-			switch (CPU::instance()->getState()) {
-				case DepositState:
-					ledstatus[5] |= (1 << (11 - ((ledstatus[2] & 07000) >> 9)));
-					ledstatus[5] |= (1 << 2); // execute
-					break;
-				case ExamineState:
-				case Fetch:
-					ledstatus[5] |= (1 << (11 - ((ledstatus[2] & 07000) >> 9)));
-					ledstatus[5] |= (1 << 3); // fetch
-					break;
-				case Execute:
-					ledstatus[5] |= (1 << 3); // fetch
-					break;
-				case Defer:
-					ledstatus[5] |= (1 << 1); // defer
-					break;
-				default:
-					;
-			}
-
             /* ledstatus[5]
              * AND 11
              * TAD 10
@@ -380,6 +352,38 @@ namespace ca
              * WC 0
              */
 
+			ledstatus[5] = 0;
+			switch (CPU::instance()->getState()) {
+				case DepositState:
+					ledstatus[5] |= (1 << (11 - ((ledstatus[2] & 07000) >> 9)));
+					ledstatus[5] |= (1 << 2); // execute
+					break;
+				case ExamineState:
+					ledstatus[5] |= (1 << (11 - ((ledstatus[2] & 07000) >> 9)));
+					ledstatus[5] |= (1 << 3); // fetch
+					break;
+				case Fetch:
+					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
+					ledstatus[5] |= (1 << 3); // fetch
+					break;
+				case Execute:
+					ledstatus[5] |= (1 << 2); // fetch
+					break;
+				case Defer:
+					ledstatus[5] |= (1 << 1); // defer
+					break;
+				case FetchExecute:
+					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
+					ledstatus[5] |= (3 << 2); // fetch and execute
+					break;
+				case FetchDeferExecute:
+					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
+					ledstatus[5] |= (7 << 1); // fetch, defer and execute
+					break;
+				default:
+					;
+			}
+
             /* ledstatus[6]
              * CA 11
              * Break 10
@@ -388,6 +392,20 @@ namespace ca
              * Run 7
              * SC 6-2
              */
+			ledstatus[6] = (CPU::instance()->getSC() << 2);
+			switch (CPU::instance()->getCondition()) {
+				case CPUMemoryBreak:	// Blink the Break LED
+					ledstatus[6] |= ((ledBlink & 040) << 4);
+					break;
+				case CPURunning:		// Turn on the Run LED
+					ledstatus[6] |= (1<<7);
+					break;
+				case CPUIdle:			// Blink the Run LED
+					ledstatus[6] |= ((ledBlink & 020) << 2);
+					break;
+				default:				// Leave all LEDs off
+					;
+			}
 
             /*
              * ledstatus[7]
