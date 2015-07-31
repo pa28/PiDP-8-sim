@@ -2,7 +2,7 @@ BINS=pidp8
 BINSDIR=.
 CFLAGS=-g -Wall -DHAS_PSELECT
 pidp8_OBJS=Chassis.o Console.o CPU.o Device.o Memory.o Panel.o Thread.o
-pidp8_LIBS=-lpthread -lncurses
+pidp8_LIBS=-lpthread -lncurses -lrt
 
 all: $(BINS)
 
