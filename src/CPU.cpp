@@ -16,7 +16,8 @@ namespace ca
 
         CPU::CPU() :
                 Device("CPU", "CPU"),
-                PC(0), IF(0), DF(0), LAC(0), MQ(0), SC(0)
+                PC(0), IF(0), DF(0), LAC(0), MQ(0), SC(0),
+		cpuState(NoState)
         {
             // TODO Auto-generated constructor stub
 

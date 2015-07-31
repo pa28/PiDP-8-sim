@@ -16,6 +16,18 @@ namespace ca
     namespace pdp8
     {
 
+		enum CPUState {
+			NoState,
+			Fetch,
+			Execute,
+			Defer,
+			WordCount,
+			CurrentAddress,
+			Break,
+			DepositState,
+			ExamineState,
+		};
+
         class CPU: public Device
         {
             CPU();
@@ -33,18 +45,23 @@ namespace ca
 			uint16_t    getMQ() const { return MQ; }
 			uint16_t    getSC() const { return SC; }
 
+			CPUState	getState() const { return cpuState; }
+
 			void    setPC(uint16_t v) { PC = v & 07777; }
             void    setIF(uint16_t v) { IF = (v & 07) << 12; }
             void    setDF(uint16_t v) { DF = (v & 07) << 12; }
+
+			void	setState(CPUState s) { cpuState = s; }
 
 		protected:
 			static CPU * _instance;
 
 			uint16_t    PC, IF, DF, LAC, MQ, SC;
-
+			CPUState	cpuState;
         };
 
     } /* namespace pdp8 */
 } /* namespace ca */
 
 #endif /* CPU_H_ */
+/* vim: set ts=4 sw=4  noet autoindent : */
