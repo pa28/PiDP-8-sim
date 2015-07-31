@@ -73,7 +73,7 @@ namespace ca
 			void	setState(CPUState s) { cpuState = s; }
 			void	setStepping(CPUStepping s) { cpuStepping = s; }
 			
-			void	cpuContinue() { cpuCondition = CPURunning; runConditionWait.releaseOnCondition(); }
+			void	cpuContinue();
 			void	cpuStop() { cpuCondition = CPUStopped; }
 			void	cpuMemoryBreak() { cpuCondition = CPUMemoryBreak; }
 			

@@ -58,6 +58,7 @@ namespace ca
 		public:
 			Lock( pthread_mutex_t * mutex );
 			Lock( pthread_mutex_t & mutex );
+			Lock( ConditionWait & conditionWait );
 			virtual ~Lock();
 			
 		private:
@@ -86,6 +87,7 @@ namespace ca
 		class ConditionWait
 		{
 			friend class Thread;
+			friend class Lock;
 			
 			ConditionWait(Thread *thread);
 			
@@ -100,7 +102,7 @@ namespace ca
 			pthread_cond_t		condition;
 
 			
-			void waitOnCondition();
+			bool waitOnCondition();
 			
 		};
 

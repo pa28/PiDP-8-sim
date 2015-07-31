@@ -48,9 +48,9 @@ namespace ca
 			threadRunning = true;
 			
 			while (threadRunning) {
-				throttleTimerReset = !waitCondition();
-					
-				runConditionWait.waitOnCondition();
+				// If we are going to wait, reset throttling when we get going again.
+				// Wait the thread if the condition is false (the CPU is not running).
+				throttleTimerReset = runConditionWait.waitOnCondition();
 				switch (cpuStepping) {
 					case NotStepping:
 					case SingleInstruction:
@@ -93,6 +93,16 @@ namespace ca
 		
 		long CPU::cycleCpu() {
 			return 1000;
+		}
+		
+		void CPU::cpuContinue() {
+			try {
+				Lock	lock(runConditionWait);
+				cpuCondition = CPURunning;
+			} catch (LockException le) {
+				fprintf(stderr, le.what());
+			}
+			runConditionWait.releaseOnCondition();
 		}
 		
 		bool CPU::waitCondition() {

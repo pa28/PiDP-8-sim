@@ -42,6 +42,18 @@ namespace ca
 			}
 		}
 		
+		Lock::Lock( ConditionWait & cw ) : mutex(&cw.mutex)
+		{
+			int s = pthread_mutex_lock( mutex );
+			switch (s) {
+				case 0:
+					Console::instance()->printf("ConditionWait mutex %0X locked\n", mutex);
+					break;
+				default:
+					throw LockException(true, s);
+			}
+		}
+		
 		Lock::~Lock() {
 			int s = pthread_mutex_unlock( mutex );
 			switch (s) {
@@ -85,17 +97,21 @@ namespace ca
 			pthread_cond_destroy( &condition );
 		}
 		
-		void ConditionWait::waitOnCondition() {
+		bool ConditionWait::waitOnCondition() {
 			int rc = 0;
+			bool r = false;
 			
 			try {
 				Lock	waitLock(mutex);
-				while (thread.waitCondition() !! rc == 0) {
-					pthread_cond_wait( &condition, &mutex );
+				r = !thread.waitCondition();
+				while (!thread.waitCondition() && rc == 0) {
+					rc = pthread_cond_wait( &condition, &mutex );
 				}
 			} catch (LockException le) {
 				fprintf(stdder, le.what());
 			}
+			
+			return r;
 		}
 		
 		void ConditionWait::releaseOnCondition(bool all) {
