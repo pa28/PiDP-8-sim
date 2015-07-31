@@ -53,6 +53,7 @@ namespace ca
 			int	code;
 		};
 
+		class ConditionWait;
 		class Lock
 		{
 		public:
