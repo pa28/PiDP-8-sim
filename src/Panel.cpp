@@ -411,6 +411,14 @@ namespace ca
 					;
 			}
 
+			if (CPU::instance()->getStepping() == PanelCommand) {
+				if (ledBlink & 040) {
+					ledstatus[6] |= (1<<7);
+				} else {
+					ledstatus[6] |= (1<<9);
+				}
+			}
+
             /*
              * ledstatus[7]
              * DF 1-3

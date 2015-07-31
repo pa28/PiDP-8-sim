@@ -133,28 +133,47 @@ namespace ca
 									(switchstatus[2] >> 6) & 077,
 									(switchstatus[2] >> 4) & 03);
 
-								switch ((switchstatus[2] >> 6) & 077) {
-								    case PanelStart:
-								        break;
-								    case PanelLoadAdr:
-								        CPU::instance()->setPC(switchstatus[0]);
-                                        CPU::instance()->setDF((switchstatus[1] >> 9) & 07);
-                                        CPU::instance()->setIF((switchstatus[1] >> 6) & 07);
-								        break;
-								    case PanelDeposit:
-								        M[cpu.getIF() | cpu.getPC()] = switchstatus[0];
-								        cpu.setPC( (cpu.getPC() + 1) & 077777 );
-										cpu.setState(DepositState);
-								        break;
-								    case PanelExamine:
-								        switchstatus[0] = M[cpu.getIF() | cpu.getPC()];
-                                        cpu.setPC( (cpu.getPC() + 1) & 077777 );
-										cpu.setState(ExamineState);
-								        break;
-								    case PanelContinue:
-								        break;
-								    case PanelStop:
-								        break;
+								CPU::instance()->setStepping(static_cast<CPUStepping>((switchstatus[2] >> 4) & 03));
+
+								if (CPU::instance()->getStepping() == PanelCommand) {
+									switch ((switchstatus[2] >> 6) & 077) {
+										case PanelStart:
+											break;
+										case PanelLoadAdr:
+											break;
+										case PanelDeposit:
+											break;
+										case PanelExamine:
+											break;
+										case PanelContinue:
+											break;
+										case PanelStop:
+											break;
+									}
+								} else {
+									switch ((switchstatus[2] >> 6) & 077) {
+										case PanelStart:
+											break;
+										case PanelLoadAdr:
+											CPU::instance()->setPC(switchstatus[0]);
+											CPU::instance()->setDF((switchstatus[1] >> 9) & 07);
+											CPU::instance()->setIF((switchstatus[1] >> 6) & 07);
+											break;
+										case PanelDeposit:
+											M[cpu.getIF() | cpu.getPC()] = switchstatus[0];
+											cpu.setPC( (cpu.getPC() + 1) & 077777 );
+											cpu.setState(DepositState);
+											break;
+										case PanelExamine:
+											switchstatus[0] = M[cpu.getIF() | cpu.getPC()];
+											cpu.setPC( (cpu.getPC() + 1) & 077777 );
+											cpu.setState(ExamineState);
+											break;
+										case PanelContinue:
+											break;
+										case PanelStop:
+											break;
+									}
 								}
 							}
 						}
