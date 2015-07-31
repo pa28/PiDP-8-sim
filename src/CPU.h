@@ -40,8 +40,9 @@ namespace ca
 
 		enum CPUStepping {
 			NotStepping = 0,
-			SingleStep,
 			SingleInstruction,
+            SingleStep,
+            PanelCommand,
 		};
 
         class CPU: public Device, Thread
