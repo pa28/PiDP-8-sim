@@ -2,7 +2,7 @@
  * Device.cpp
  *
  *  Created on: Jul 28, 2015
- *      Author: richard
+ *      Author: H Richard Buckley
  */
 
 #include "Device.h"

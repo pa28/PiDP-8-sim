@@ -2,7 +2,7 @@
  * Device.h
  *
  *  Created on: Jul 28, 2015
- *      Author: richard
+ *      Author: H Richard Buckley
  */
 
 #ifndef DEVICE_H_

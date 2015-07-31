@@ -2,7 +2,7 @@
  * CPU.h
  *
  *  Created on: Jul 28, 2015
- *      Author: richard
+ *      Author: H Richard Buckley
  */
 
 #ifndef CPU_H_

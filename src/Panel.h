@@ -2,7 +2,7 @@
  * Panel.h
  *
  *  Created on: Jul 28, 2015
- *      Author: richard
+ *      Author: H Richard Buckley
  */
 
 #ifndef PANEL_H_
