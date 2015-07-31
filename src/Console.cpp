@@ -19,6 +19,7 @@
 #include "PDP8.h"
 
 #include "Console.h"
+#include "Chassis.h"
 
 using namespace std;
 
@@ -31,7 +32,9 @@ namespace ca
         Console::Console() :
                 Device("CONS", "Console"),
 				runConsole(false),
+				stopMode(false),
 				switchPipe(-1),
+				stopCount(0),
 				consoleMode(CommandMode),
 				M(*(Memory::instance())),
 				cpu(*(CPU::instance()))
@@ -92,10 +95,27 @@ namespace ca
 						n = switchPipe + 1;
 					}
 
+					int s;
 #ifdef HAS_PSELECT
-					int s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
+					if (stopMode) {
+                        struct timespec timeout;
+
+                        timeout.tv_sec = 1;
+                        timeout.tv_nsec = 0;
+                        s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
+					} else {
+                        s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
+					}
 #else
-                    int s = select( n, &rd_set, NULL, NULL, NULL);
+                    if (stopMode) {
+                        struct timeval timeout;
+
+                        timeout.tv_sec = 1;
+                        timeout.tv_usec = 0;
+                        s = select( n, &rd_set, NULL, NULL, NULL);
+                    } else {
+                        s = select( n, &rd_set, NULL, NULL, NULL);
+                    }
 #endif
 
 					debug(1,"select: %d\n", s);
@@ -137,6 +157,8 @@ namespace ca
 
 								if (CPU::instance()->getStepping() == PanelCommand) {
 									switch ((switchstatus[2] >> 6) & 077) {
+									    case PanelNoCmd:
+									        break;
 										case PanelStart:
 											break;
 										case PanelLoadAdr:
@@ -148,6 +170,8 @@ namespace ca
 										case PanelContinue:
 											break;
 										case PanelStop:
+										    stopMode = true;
+										    stopCount = 8;
 											break;
 									}
 								} else {
@@ -178,6 +202,12 @@ namespace ca
 							}
 						}
 					} else {
+					    if (stopMode) {
+					        --stopCount;
+					        if (stopCount < 0) {
+					            Chassis::instance()->stop();
+					        }
+					    }
 						// timeout
 					}
 			}

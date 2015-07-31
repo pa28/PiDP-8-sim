@@ -23,6 +23,7 @@ namespace ca
 
             virtual void initialize() = 0;
 			virtual void reset() = 0;
+			virtual void stop() = 0;
         };
 
     } /* namespace pdp8 */

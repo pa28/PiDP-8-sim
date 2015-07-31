@@ -13,33 +13,14 @@
 using namespace ca::pdp8;
 
 void sigintHandler(int s) {
-	Panel::instance()->stop();
-	Console::instance()->stop();
+    Chassis::instance()->stop();
 }
 
 int main( int argc, char ** argv ) {
-	int sxfd[2];
-
-	if (pipe(sxfd)) {
-		perror("pipe");
-		exit(1);
-	}
-
 	signal( SIGINT, sigintHandler );
 
-	Memory *memory = Memory::instance();
-    CPU *cpu = CPU::instance();
-	Panel *panel = Panel::instance();
-	Console *console = Console::instance();
-
-	panel->setSwitchFd(sxfd[1]);
-	console->setSwitchFd(sxfd[0]);
-
-	console->initialize();
-	panel->initialize();
-	cpu->initialize();
-
-	console->run();
+	Chassis *chassis = Chassis::instance();
+	Console::instance()->run();
 
     return 0;
 }
@@ -53,15 +34,25 @@ namespace ca
 
         Chassis::Chassis()
         {
+            int sxfd[2];
+
+            if (pipe(sxfd)) {
+                perror("pipe");
+                exit(1);
+            }
+
             for (int i = 0; i < DEV_MAX_COUNT; ++i)
                 deviceList[i] = NULL;
 
 			// Create and assign devices.
 
-            deviceList[DEV_CPU] = CPU::instance();
             deviceList[DEV_MEM] = Memory::instance();
+            deviceList[DEV_CPU] = CPU::instance();
+            deviceList[DEV_PANEL] = Panel::instance();
 			deviceList[DEV_CONSOLE] = Console::instance();
-			deviceList[DEV_PANEL] = Panel::instance();
+
+		    Panel::instance()->setSwitchFd(sxfd[1]);
+		    Console::instance()->setSwitchFd(sxfd[0]);
 
 			// Initialize devices
 
@@ -83,6 +74,14 @@ namespace ca
 			}
 
 			return _instance;
+		}
+
+		void Chassis::stop() {
+		    for (int i = 0; i < DEV_MAX_COUNT; ++i) {
+		        if (deviceList[i] != NULL) {
+		            deviceList[i]->stop();
+		        }
+		    }
 		}
 
     } /* namespace pdp8 */

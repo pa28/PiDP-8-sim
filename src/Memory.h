@@ -87,6 +87,7 @@ namespace ca
 
 			virtual void initialize() {}
 			virtual void reset() {}
+			virtual void stop() {}
 
             MemoryCell & operator [] (int ma) throw(MemoryException);
 

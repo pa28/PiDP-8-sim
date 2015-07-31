@@ -31,6 +31,7 @@ namespace ca
             PanelExamine = 004,
             PanelContinue = 002,
             PanelStop = 001,
+            PanelNoCmd = 0,
         };
 
         class Console: public Device
@@ -51,11 +52,17 @@ namespace ca
 			void stop() { runConsole = false; }
 			void setSwitchFd(int fd) { switchPipe = fd; }
 
+			bool    getStopMode() const { return stopMode; }
+			int     getStopCount() const { return stopCount; }
+
 		protected:
 			static	Console * _instance;
 			bool	runConsole;
+			bool    stopMode;
 
-			int	switchPipe;
+			int	    switchPipe;
+			int     stopCount;
+
 			ConsoleMode	consoleMode;
 
 			Memory  &M;

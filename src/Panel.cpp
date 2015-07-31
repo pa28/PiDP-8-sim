@@ -6,6 +6,7 @@
  */
 
 #include "Panel.h"
+#include "Chassis.h"
 
 /*
  * gpio.c: the real-time process that handles multiplexing
@@ -416,6 +417,38 @@ namespace ca
 					ledstatus[6] |= (1<<7);
 				} else {
 					ledstatus[6] |= (1<<9);
+				}
+
+				if (Console::instance()->getStopMode()) {
+				    switch (Console::instance()->getStopCount()) {
+				        case 8:
+		                    ledstatus[5] = 0776;
+				            break;
+                        case 7:
+                            ledstatus[5] = 0376;
+                            break;
+                        case 6:
+                            ledstatus[5] = 0176;
+                            break;
+                        case 5:
+                            ledstatus[5] = 076;
+                            break;
+                        case 4:
+                            ledstatus[5] = 036;
+                            break;
+                        case 3:
+                            ledstatus[5] = 016;
+                            break;
+                        case 2:
+                            ledstatus[5] = 06;
+                            break;
+                        case 1:
+                            ledstatus[5] = 02;
+                            break;
+                        case 0:
+                            ledstatus[5] = 0;
+                            break;
+				    }
 				}
 			}
 

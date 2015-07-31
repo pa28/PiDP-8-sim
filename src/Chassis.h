@@ -10,10 +10,10 @@
 
 /* Non-IOT device numbers */
 
-#define DEV_CPU         0100                            /* cpu */
-#define DEV_MEM         0101                            /* core memmory */
-#define DEV_CONSOLE     0102                            /* simulator console */
-#define DEV_PANEL       0103                            /* front pannel */
+#define DEV_MEM         0100                            /* core memmory */
+#define DEV_CPU         0101                            /* cpu */
+#define DEV_PANEL       0102                            /* front pannel */
+#define DEV_CONSOLE     0103                            /* simulator console */
 #define DEV_MAX_COUNT   0104                            /* maximum number of devices */
 
 /* Standard device numbers */
@@ -55,6 +55,8 @@ namespace ca
             virtual ~Chassis();
 
 			static Chassis * instance();
+
+			void    stop();
 
         protected:
 			static	Chassis * _instance;
