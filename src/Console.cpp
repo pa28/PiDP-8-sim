@@ -37,7 +37,8 @@ namespace ca
 				stopCount(0),
 				consoleMode(CommandMode),
 				M(*(Memory::instance())),
-				cpu(*(CPU::instance()))
+				cpu(*(CPU::instance())),
+				consoleTerm( 0, 1)
         {
         }
 
@@ -57,7 +58,8 @@ namespace ca
 		int Console::printf( const char * format, ... ) {
 			va_list args;
 			va_start (args, format);
-			int n = vfprintf (stdout, format, args);
+			//int n = vfprintf (stdout, format, args);
+            int n = consoleTerm.vprintw( format, args );
 			va_end (args);
 			return n;
 		}
