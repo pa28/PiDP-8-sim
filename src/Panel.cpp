@@ -7,6 +7,7 @@
 
 #include "Panel.h"
 #include "Chassis.h"
+#include "Console.h"
 
 /*
  * gpio.c: the real-time process that handles multiplexing
@@ -62,7 +63,7 @@ uint32 ledstatus[LEDSTATUS_COUNT] = { 0 };    // bitfields: 8 ledrows of up to 1
 int map_peripheral(struct bcm2835_peripheral *p)
 {
    if ((p->mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) {
-      printf("Failed to open /dev/mem, try checking permissions.\n");
+      //Console::instance()->printf("Failed to open /dev/mem, try checking permissions.\n");
       return -1;
    }
    p->map = mmap(
@@ -161,7 +162,7 @@ namespace ca
 					ledstatus[i] = turnOn ? 07777 : 0;
 				}
 			} catch (LockException le) {
-				fprintf(stderr, le.what());
+				Console::instance()->printf(le.what());
 			}
 		}
 
@@ -178,17 +179,17 @@ namespace ca
 
             // Find gpio address (different for Pi 2) ----------
             gpio.addr_p = bcm_host_get_peripheral_address() +  + 0x200000;
-            if (gpio.addr_p== 0x20200000) printf("RPi Plus detected\n");
-            else printf("RPi 2 detected\n");
+            if (gpio.addr_p== 0x20200000) Console::instance()->printf("RPi Plus detected\n");
+            else Console::instance()->printf("RPi 2 detected\n");
 
             // set thread to real time priority -----------------
             struct sched_param sp;
             sp.sched_priority = 98; // maybe 99, 32, 31?
             if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sp))
-            { fprintf(stderr, "warning: failed to set RT priority\n"); }
+            { Console::instance()->printf( "warning: failed to set RT priority\n"); }
             // --------------------------------------------------
             if(map_peripheral(&gpio) == -1)
-            {   printf("Failed to map the physical GPIO registers into the virtual memory space.\n");
+            {   Console::instance()->printf("Failed to map the physical GPIO registers into the virtual memory space.\n");
                 return -1;
             }
 
@@ -244,7 +245,7 @@ namespace ca
             short_wait(); // probably unnecessary
             // --------------------------------------------------
 
-            //printf("\nFP on\n");
+            //Console::instance()->printf("\nFP on\n");
 
             while(driveLeds)
             {
