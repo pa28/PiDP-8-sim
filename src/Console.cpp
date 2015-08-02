@@ -38,7 +38,7 @@ namespace ca
 				consoleMode(CommandMode),
 				M(*(Memory::instance())),
 				cpu(*(CPU::instance())),
-				consoleTerm( 0, 1)
+				consoleTerm()
         {
         }
 

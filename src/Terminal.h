@@ -20,27 +20,19 @@ namespace ca
         class Terminal
         {
         public:
-            Terminal( int fd0, int fd1);
+            Terminal();
             virtual ~Terminal();
 
-            int wprintw(WINDOW *w, const char *fmt, ...);
-            int mvwprintw(WINDOW *w, int y, int x, const char *fmt, ...);
-            int printw(const char *fmt, ...);
-            int mvprintw(int y, int x, const char *fmt, ...);
             int vprintw(const char *fmt, va_list list) { return vwprintw(stdscr, fmt, list ); }
             int vmvprintw(int y, int x, const char *fmt, va_list list) { return vmvwprintw(stdscr, y, x, fmt, list); }
             int vwprintw(WINDOW *w, const char *fmt, va_list list);
             int vmvwprintw(WINDOW *w, int y, int x, const char *fmt, va_list list);
 
-            void setTerm() { set_term(screen); }
-
         protected:
-            int     fd0, fd1;
-            FILE    *fin, *fout;
-            SCREEN  *screen;
         };
 
     } /* namespace pdp8 */
 } /* namespace ca */
 
 #endif /* TERMINAL_H_ */
+/* vim: set ts=4 sw=4  noet autoindent : */
