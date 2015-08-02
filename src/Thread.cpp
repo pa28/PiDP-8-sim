@@ -109,7 +109,7 @@ namespace ca
 					rc = pthread_cond_wait( &condition, &mutex );
 				}
 			} catch (LockException &le) {
-				fprintf(stderr, le.what());
+				Console::instance()->printf(le.what());
 			}
 
 			return r;
@@ -124,7 +124,7 @@ namespace ca
 					pthread_cond_signal( &condition );
 				}
 			} catch (LockException &le) {
-				fprintf(stderr, le.what());
+				Console::instance()->printf(le.what());
 			}
 		}
 
