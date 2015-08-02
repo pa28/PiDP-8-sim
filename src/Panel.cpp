@@ -422,28 +422,28 @@ namespace ca
 				if (Console::instance()->getStopMode()) {
 				    switch (Console::instance()->getStopCount()) {
 				        case 8:
-		                    ledstatus[5] = 0776;
+		                    ledstatus[5] = 07760;
 				            break;
                         case 7:
-                            ledstatus[5] = 0376;
+                            ledstatus[5] = 03760;
                             break;
                         case 6:
-                            ledstatus[5] = 0176;
+                            ledstatus[5] = 01760;
                             break;
                         case 5:
-                            ledstatus[5] = 076;
+                            ledstatus[5] = 0760;
                             break;
                         case 4:
-                            ledstatus[5] = 036;
+                            ledstatus[5] = 0360;
                             break;
                         case 3:
-                            ledstatus[5] = 016;
+                            ledstatus[5] = 0160;
                             break;
                         case 2:
-                            ledstatus[5] = 06;
+                            ledstatus[5] = 060;
                             break;
                         case 1:
-                            ledstatus[5] = 02;
+                            ledstatus[5] = 020;
                             break;
                         case 0:
                             ledstatus[5] = 0;

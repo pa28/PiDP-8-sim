@@ -89,7 +89,6 @@ namespace ca
 
 					//FD_SET(0, &rd_set); n = 0 + 1;
 
-					debug(1, "switchPipe: %d\n", switchPipe);
 					if (switchPipe >= 0) {
 						FD_SET(switchPipe, &rd_set);
 						n = switchPipe + 1;
@@ -102,7 +101,7 @@ namespace ca
 
                         timeout.tv_sec = 1;
                         timeout.tv_nsec = 0;
-                        s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
+                        s = pselect( n, &rd_set, NULL, NULL, &timeout, NULL);
 					} else {
                         s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
 					}
@@ -112,13 +111,11 @@ namespace ca
 
                         timeout.tv_sec = 1;
                         timeout.tv_usec = 0;
-                        s = select( n, &rd_set, NULL, NULL, NULL);
+                        s = select( n, &rd_set, NULL, NULL, &timeout);
                     } else {
                         s = select( n, &rd_set, NULL, NULL, NULL);
                     }
 #endif
-
-					debug(1,"select: %d\n", s);
 
 					if (s < 0) {
 						switch(errno) {
@@ -158,6 +155,8 @@ namespace ca
 								if (CPU::instance()->getStepping() == PanelCommand) {
 									switch ((switchstatus[2] >> 6) & 077) {
 									    case PanelNoCmd:
+											stopMode = false;
+											stopCount = 8;
 									        break;
 										case PanelStart:
 											break;
