@@ -29,6 +29,7 @@ namespace ca
             int vmvwprintw(WINDOW *w, int y, int x, const char *fmt, va_list list);
 
         protected:
+			SCREEN	*screen;
         };
 
     } /* namespace pdp8 */

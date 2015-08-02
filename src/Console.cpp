@@ -38,7 +38,7 @@ namespace ca
 				consoleMode(CommandMode),
 				M(*(Memory::instance())),
 				cpu(*(CPU::instance())),
-				consoleTerm()
+				consoleTerm(new Terminal())
         {
         }
 
@@ -59,7 +59,7 @@ namespace ca
 			va_list args;
 			va_start (args, format);
 			//int n = vfprintf (stdout, format, args);
-            int n = consoleTerm.vprintw( format, args );
+            int n = consoleTerm->vprintw( format, args );
 			va_end (args);
 			return n;
 		}
@@ -89,14 +89,15 @@ namespace ca
 
 					int	n = 0;
 
-					//FD_SET(0, &rd_set); n = 0 + 1;
+					FD_SET(0, &rd_set); n = 0 + 1;
 
 					if (switchPipe >= 0) {
 						FD_SET(switchPipe, &rd_set);
-						n = switchPipe + 1;
+						n = max(n,switchPipe + 1);
 					}
 
 					int s;
+//#ifdef NOT_DEF
 #ifdef HAS_PSELECT
 					if (stopMode) {
                         struct timespec timeout;
@@ -203,25 +204,40 @@ namespace ca
 							}
 						}
 					} else {
+						// timeout
 					    if (stopMode) {
 					        --stopCount;
 					        if (stopCount < 0) {
 					            Chassis::instance()->stop();
 					        }
 					    }
-						// timeout
 					}
+//#endif
+
+				//getch();
+				//runConsole = false;
 			}
+			printf("Console exiting.\n");
+			delete consoleTerm;
 			return 0;
 		}
 
 		void Console::processStdin() {
-			int	ch = getch();
+			int	ch;
+			
+			while ((ch = getch()) > 0) {
 
+			printf("ch: %d\n", ch);
 			switch (ch) {
 				case KEY_F(1):	// Set and clear virtual panel mode
+					printf("F1\n");
 					break;
 				case KEY_F(2):	// Set and clear command mode
+					printf("F2\n");
+					break;
+				case 'q':	// Set and clear command mode
+					printf("quit\n");
+					runConsole = false;
 					break;
 				default:
 					switch (consoleMode) {
@@ -232,6 +248,7 @@ namespace ca
 							processCommandMode(ch);
 							break;
 					}
+			}
 			}
 		}
 

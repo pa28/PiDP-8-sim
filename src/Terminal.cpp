@@ -15,6 +15,10 @@ namespace ca
         Terminal::Terminal()
         {
 			initscr();			/* Start curses mode 		  */
+			//screen = newterm( NULL, stdin, stdout );
+			//def_prog_mode();
+
+			timeout(0);
 			raw();
 			noecho();
 			keypad(stdscr,TRUE);
@@ -26,6 +30,7 @@ namespace ca
 
         Terminal::~Terminal()
         {
+			//reset_shell_mode();
 			endwin();			/* End curses mode		  */
         }
 

@@ -69,7 +69,7 @@ namespace ca
 			Memory  &M;
 			CPU     &cpu;
 
-			Terminal    consoleTerm;
+			Terminal    *consoleTerm;
 
 			void processStdin();
 			void processPanelMode(int);
@@ -80,3 +80,4 @@ namespace ca
 } /* namespace ca */
 
 #endif /* CONSOLE_H_ */
+/* vim: set ts=4 sw=4  noet autoindent : */
