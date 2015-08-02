@@ -320,7 +320,7 @@ namespace ca
 					int n = write( switchFd, switchstatus, sizeof(switchstatus));
 					if (n < 0) {
 						perror("write to switchFd");
-						printf("fd: %d, size: %d\n", switchFd, sizeof(switchstatus));
+						Console::instance()->printf("fd: %d, size: %d\n", switchFd, sizeof(switchstatus));
 					}
 				}
 		}

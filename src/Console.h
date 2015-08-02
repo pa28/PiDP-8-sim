@@ -12,6 +12,7 @@
 #include "Panel.h"
 #include "CPU.h"
 #include "Memory.h"
+#include "Terminal.h"
 
 namespace ca
 {
@@ -67,6 +68,8 @@ namespace ca
 
 			Memory  &M;
 			CPU     &cpu;
+
+			Terminal    consoleTerm;
 
 			void processStdin();
 			void processPanelMode(int);

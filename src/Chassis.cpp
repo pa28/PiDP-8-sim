@@ -61,6 +61,8 @@ namespace ca
                     deviceList[i]->initialize();
                 }
             }
+
+            Console::instance()->printf("PiDP-8-sim started.");
         }
 
         Chassis::~Chassis()
