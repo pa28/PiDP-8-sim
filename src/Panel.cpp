@@ -312,18 +312,20 @@ namespace ca
                     }
                     INP_GPIO(rows[i]);          // stop sinking current from this row of switches
 
-					switchesChanged |= (switchstatus[i] ^ switchscan) != 0;
+                    if (((switchstatus[i] ^ switchscan) != 0) && switchFd >= 0) {
+                        uint32_t    switchReport[2];
+
+                        switchReport[0] = i;
+                        switchReport[1] = switchscan;
+                        int n = write( switchFd, switchReport, sizeof(switchReport));
+                        if (n < 0) {
+                            perror("write to switchFd");
+                            Console::instance()->printf("fd: %d, size: %d\n", switchFd, sizeof(switchstatus));
+                        }
+                    }
+
                     switchstatus[i] = switchscan;
-
                 }
-
-				if (switchesChanged && switchFd >= 0) {
-					int n = write( switchFd, switchstatus, sizeof(switchstatus));
-					if (n < 0) {
-						perror("write to switchFd");
-						Console::instance()->printf("fd: %d, size: %d\n", switchFd, sizeof(switchstatus));
-					}
-				}
 		}
 
             //printf("\nFP off\n");

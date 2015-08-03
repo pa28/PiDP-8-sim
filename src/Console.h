@@ -12,18 +12,12 @@
 #include "Panel.h"
 #include "CPU.h"
 #include "Memory.h"
-#include "Terminal.h"
+#include "VirtualPanel.h"
 
 namespace ca
 {
     namespace pdp8
     {
-
-        // User input mode to the console.
-		enum ConsoleMode {
-			PanelMode,
-			CommandMode,
-		};
 
         enum PanelCmdButton {
             PanelStart = 040,
@@ -64,16 +58,11 @@ namespace ca
 			int	    switchPipe;
 			int     stopCount;
 
-			ConsoleMode	consoleMode;
-
 			Memory  &M;
 			CPU     &cpu;
 
-			Terminal    *consoleTerm;
+			VirtualPanel    *consoleTerm;
 
-			void processStdin();
-			void processPanelMode(int);
-			void processCommandMode(int);
         };
 
     } /* namespace pdp8 */

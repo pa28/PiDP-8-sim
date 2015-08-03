@@ -23,9 +23,6 @@ namespace ca
 			noecho();
 			keypad(stdscr,TRUE);
 			scrollok(stdscr,TRUE);
-
-			printw("%d x %d\n", LINES, COLS);
-			refresh();
         }
 
         Terminal::~Terminal()

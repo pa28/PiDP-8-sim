@@ -23,13 +23,16 @@ namespace ca
             Terminal();
             virtual ~Terminal();
 
-            int vprintw(const char *fmt, va_list list) { return vwprintw(stdscr, fmt, list ); }
-            int vmvprintw(int y, int x, const char *fmt, va_list list) { return vmvwprintw(stdscr, y, x, fmt, list); }
+            virtual int vprintw(const char *fmt, va_list list) { return vwprintw(stdscr, fmt, list ); }
+            virtual int vmvprintw(int y, int x, const char *fmt, va_list list) { return vmvwprintw(stdscr, y, x, fmt, list); }
             int vwprintw(WINDOW *w, const char *fmt, va_list list);
             int vmvwprintw(WINDOW *w, int y, int x, const char *fmt, va_list list);
 
-        protected:
-			SCREEN	*screen;
+            virtual void processStdin() = 0;
+
+            virtual int fdOfInput() { return fileno(stdin); }
+            virtual int fdOfOutput() { return fileno(stdout); }
+
         };
 
     } /* namespace pdp8 */

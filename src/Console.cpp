@@ -35,10 +35,9 @@ namespace ca
 				stopMode(false),
 				switchPipe(-1),
 				stopCount(0),
-				consoleMode(CommandMode),
 				M(*(Memory::instance())),
 				cpu(*(CPU::instance())),
-				consoleTerm(new Terminal())
+				consoleTerm(new VirtualPanel())
         {
         }
 
@@ -86,10 +85,11 @@ namespace ca
 			while (runConsole) {
 					FD_ZERO(&rd_set);
 					FD_ZERO(&wr_set);
+                    uint32_t switchstatus[SWITCHSTATUS_COUNT] = { 0 };
 
 					int	n = 0;
 
-					FD_SET(0, &rd_set); n = 0 + 1;
+					FD_SET(consoleTerm->fdOfInput(), &rd_set); n = consoleTerm->fdOfInput() + 1;
 
 					if (switchPipe >= 0) {
 						FD_SET(switchPipe, &rd_set);
@@ -133,25 +133,31 @@ namespace ca
 						}
 					} else if (s > 0) {
 						// one or more fd ready
-						if (FD_ISSET(0, &rd_set)) {
-							// stdin
-							processStdin();
+						if (FD_ISSET(consoleTerm->fdOfInput(), &rd_set)) {
+							consoleTerm->processStdin();
 						} else if (FD_ISSET(switchPipe, &rd_set)) {
 							// Panel
-							uint32_t switchstatus[SWITCHSTATUS_COUNT] = { 0 };
-							int n = read(switchPipe, switchstatus, sizeof(switchstatus));
-							if (n == sizeof(switchstatus)) {
-								// handle switches
-								for (int i = 0; i < SWITCHSTATUS_COUNT; ++i) {
-									switchstatus[i] ^= 07777;
-								}
+						    uint32_t    switchReport[2];
 
-								debug(1,"%d SR:%04o DF:%1o IF:%1o %02o SS:%1o\n", n,
-									switchstatus[0],
-									((switchstatus[1] >> 9) & 07),
-									((switchstatus[1] >> 6) & 07),
-									(switchstatus[2] >> 6) & 077,
-									(switchstatus[2] >> 4) & 03);
+							int n = read(switchPipe, switchReport, sizeof(switchReport));
+							if (n == sizeof(switchReport)) {
+								// handle switches
+							    switchReport[1] ^= 07777;
+
+							    switch (switchReport[0]) {
+							        case 0: // Switch register
+                                        switchstatus[0] = switchReport[1];
+							            debug(1, "SR: %04o\n", switchstatus[0]);
+							            break;
+							        case 1: // DF and IF
+                                        switchstatus[1] = switchReport[1];
+                                        debug(1, "DF: %1o  IF: %1o\n", ((switchstatus[1] >> 9) & 07), ((switchstatus[1] >> 6) & 07) );
+                                        break;
+							        case 2: // Command switches
+                                        switchstatus[2] = switchReport[1];
+                                        debug(1, "Cmd: %02o  SS: %1o\n", (switchstatus[2] >> 6) & 077, (switchstatus[2] >> 4) & 03 );
+                                        break;
+							    }
 
 								CPU::instance()->setStepping(static_cast<CPUStepping>((switchstatus[2] >> 4) & 03));
 
@@ -221,45 +227,6 @@ namespace ca
 			delete consoleTerm;
 			return 0;
 		}
-
-		void Console::processStdin() {
-			int	ch;
-			
-			while ((ch = getch()) > 0) {
-
-			printf("ch: %d\n", ch);
-			switch (ch) {
-				case KEY_F(1):	// Set and clear virtual panel mode
-					printf("F1\n");
-					break;
-				case KEY_F(2):	// Set and clear command mode
-					printf("F2\n");
-					break;
-				case 'q':	// Set and clear command mode
-					printf("quit\n");
-					runConsole = false;
-					break;
-				default:
-					switch (consoleMode) {
-						case PanelMode:
-							processPanelMode(ch);
-							break;
-						case CommandMode:
-							processCommandMode(ch);
-							break;
-					}
-			}
-			}
-		}
-
-		void Console::processPanelMode(int ch) {
-			debug(5, "%d", ch);
-		}
-
-		void Console::processCommandMode(int ch) {
-			debug(5, "%d", ch);
-		}
-
     } /* namespace pdp8 */
 } /* namespace ca */
 /* vim: set ts=4 sw=4  noet autoindent : */
