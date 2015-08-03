@@ -75,6 +75,7 @@ namespace ca
 			int n = vwprintw( vPanel, format, args );
 			wrefresh( vPanel );
 			va_end (args);
+			setCursorLocation();
 			return n;
 		}
 
@@ -96,6 +97,7 @@ namespace ca
 	                cpu.getDF(), cpu.getIF(), cpu.getPC(), M.MA(), M.MB()
                 );
 		    wrefresh( vPanel );
+			setCursorLocation();
 		}
 
         void VirtualPanel::processStdin() {
@@ -104,7 +106,7 @@ namespace ca
             //while ((ch = wgetch( consoleMode == PanelMode ? vPanel : console )) > 0) {
 			while (( ch = getch()) > 0) {
 
-#define DEBUG_CHAR
+//#define DEBUG_CHAR
 #ifdef DEBUG_CHAR
 				if (isgraph(ch)) {
 					wprintw(console, "ch: %c\n", ch);
