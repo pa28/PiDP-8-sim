@@ -60,7 +60,7 @@ namespace ca
 
 		void VirtualPanel::updatePanel(uint32_t sx[3]) {
 		    wmove( vPanel, 1, 5 );
-		    wprintw( vPanel, " Sw Reg   Df If  PC    MA   MB" );
+		    wprintw( vPanel, " Sw Reg    Df If  PC    MA    MB" );
 		    wmove( vPanel, 2, 5 );
 		    wprintw( vPanel, "%1o %1o %04o    %1o  %1o %04o  %04o  %04o",
 	                ((sx[1] >> 9) & 07),
