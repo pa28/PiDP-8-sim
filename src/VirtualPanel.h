@@ -8,6 +8,7 @@
 #ifndef VIRTUALPANEL_H_
 #define VIRTUALPANEL_H_
 
+#include <stdint.h>
 #include "Terminal.h"
 
 namespace ca
@@ -41,8 +42,13 @@ namespace ca
             Memory  &M;
             CPU     &cpu;
 
+			uint32_t	switches[3];
+
+			void updatePanel();
+			void updateSwitchRegister(uint32_t o);
             void processPanelMode(int);
             void processCommandMode(int);
+			void setCursorLocation();
         };
 
     } /* namespace pdp8 */

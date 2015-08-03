@@ -51,6 +51,7 @@ namespace ca
 		int VirtualPanel::vconf( const char *format, va_list list ) {
 			int n = vwprintw( console, format, list );
 			wrefresh( console );
+			setCursorLocation();
 			return n;
 		}
 
@@ -65,13 +66,20 @@ namespace ca
 		}
 
 		void VirtualPanel::updatePanel(uint32_t sx[3]) {
+			switches[0] = sx[0];
+			switches[1] = sx[1];
+			switches[2] = sx[2];
+			updatePanel();
+		}
+
+		void VirtualPanel::updatePanel() {
 		    wmove( vPanel, 1, 5 );
 		    wprintw( vPanel, " Sw Reg    Df If  PC    MA    MB" );
 		    wmove( vPanel, 2, 5 );
 		    wprintw( vPanel, "%1o %1o %04o    %1o  %1o %04o  %04o  %04o",
-	                ((sx[1] >> 9) & 07),
-	                ((sx[1] >> 6) & 07),
-	                sx[0] & 07777,
+	                ((switches[1] >> 9) & 07),
+	                ((switches[1] >> 6) & 07),
+	                switches[0] & 07777,
 	                cpu.getDF(), cpu.getIF(), cpu.getPC(), M.MA(), M.MB()
                 );
 		    wrefresh( vPanel );
@@ -80,22 +88,28 @@ namespace ca
         void VirtualPanel::processStdin() {
             int ch;
 
-            while ((ch = wgetch( consoleMode == PanelMode ? vPanel : console )) > 0) {
+            //while ((ch = wgetch( consoleMode == PanelMode ? vPanel : console )) > 0) {
+			while (( ch = getch()) > 0) {
 
-            wprintw(console, "ch: %d\n", ch);
-			refresh();
+#ifdef DEBUG_CHAR
+				if (isgraph(ch)) {
+					wprintw(console, "ch: %c\n", ch);
+				} else {
+            		wprintw(console, "ch: %04o\n", ch);
+				}
+				wrefresh(console);
+#endif
                 switch (ch) {
                     case KEY_F(1):  // Set and clear virtual panel mode
                         consoleMode = PanelMode;
                         wmove( vPanel, 2, 12);
-                        wrefresh( vPanel );
                     break;
                     case KEY_F(2):  // Set and clear command mode
                         consoleMode = CommandMode;
                         wmove( vPanel, 2, 12);
-                        wrefresh( vPanel );
                         break;
-                    case 'q':   // Set and clear command mode
+                    case KEY_F(3):   // Set and clear command mode
+					case 'q':
                         wprintw(console, "quit\n");
 						refresh();
                         Chassis::instance()->stop();
@@ -111,10 +125,57 @@ namespace ca
                         }
                 }
             }
+			setCursorLocation();
         }
 
+		void VirtualPanel::setCursorLocation() {
+			if (consoleMode == PanelMode) {
+				mvwprintw( vPanel, 2, 12, "");
+				wrefresh(vPanel);
+			} else {
+			}
+		}
+
+		void VirtualPanel::updateSwitchRegister(uint32_t o) {
+			switches[1] = ((switches[1] & 0700) << 3) | ((switches[0] & 07000) >> 3);
+			switches[0] = ((switches[0] << 3) & 07770) | (o & 07);
+			updatePanel();
+		}
+
         void VirtualPanel::processPanelMode(int ch) {
-            debug(5, "%d", ch);
+			uint32_t t;
+			if (ch >= '0' && ch <= '7') {
+				updateSwitchRegister( ch - '0' );
+			} else {
+				switch (ch) {
+				case KEY_DC:
+				case '.':
+					switches[0] = 0;
+					switches[1] = 0;
+					updatePanel();
+					break;
+				case '*':	// Address Load
+					cpu.setPC(switches[0]);
+					cpu.setDF((switches[1] >> 9) & 07);
+					cpu.setIF((switches[1] >> 6) & 07);
+					switches[0] = switches[1] = 0;
+					updatePanel();
+				case 012:	// Enter deposit
+					M[cpu.getIF() | cpu.getPC()] = switches[0];
+					cpu.setPC( (cpu.getPC() + 1) & 07777 );
+					cpu.setState(DepositState);
+					switches[0] = switches[1] = 0;
+					updatePanel();
+					break;
+				case '+':	// Examine
+					t = M[cpu.getIF() | cpu.getPC()];
+					cpu.setPC( (cpu.getPC() + 1) & 07777 );
+					cpu.setState(ExamineState);
+					switches[0] = switches[1] = 0;
+					updatePanel();
+					break;
+				}
+			}
         }
 
         void VirtualPanel::processCommandMode(int ch) {
