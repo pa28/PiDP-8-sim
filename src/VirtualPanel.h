@@ -25,6 +25,10 @@ namespace ca
         class VirtualPanel: public Terminal
         {
         public:
+            enum VirtualPanelConstants {
+                BufferSize = 256,
+            };
+
             VirtualPanel();
             virtual ~VirtualPanel();
 
@@ -44,10 +48,14 @@ namespace ca
 
 			uint32_t	switches[3];
 
+			char *      cmdBuffer;
+			size_t      cmdBufSize, cmdCurLoc;
+
 			void updatePanel();
 			void updateSwitchRegister(uint32_t o);
             void processPanelMode(int);
             void processCommandMode(int);
+            void updateCommandDisplay();
 			void setCursorLocation();
         };
 

@@ -6,6 +6,7 @@
  */
 
 #include <ncurses.h>
+#include <string.h>
 #include "PDP8.h"
 #include "VirtualPanel.h"
 #include "Chassis.h"
@@ -21,9 +22,14 @@ namespace ca
                 command(NULL),
                 consoleMode(PanelMode),
                 M(*(Memory::instance())),
-                cpu(*(CPU::instance()))
+                cpu(*(CPU::instance())),
+                cmdBuffer(NULL),
+                cmdBufSize(0),
+                cmdCurLoc(0)
 
         {
+            cmdBuffer = new char[BufferSize];
+
 			switches[0] = 0;
 			switches[1] = 0;
 			switches[2] = 0;
@@ -37,9 +43,14 @@ namespace ca
 			console = subwin(stdscr, 20, 80, 5, 0);
 			scrollok(console,true);
 			keypad(console,true);
-			wprintw(console,"sim>");
 			wbkgd(console, COLOR_PAIR(2));
 			wrefresh(console);
+
+			command = subwin(stdscr, 1, 80, 25, 0);
+			keypad(command, true);
+			wbkgd(command, COLOR_PAIR(3));
+			updateCommandDisplay();
+            wrefresh(command);
         }
 
         VirtualPanel::~VirtualPanel()
@@ -133,6 +144,8 @@ namespace ca
 				mvwprintw( vPanel, 2, 12, "");
 				wrefresh(vPanel);
 			} else {
+			    mvwprintw( command, 0, strlen(cmdBuffer) + 2, "" );
+			    wrefresh( command );
 			}
 		}
 
@@ -160,6 +173,7 @@ namespace ca
 					cpu.setIF((switches[1] >> 6) & 07);
 					switches[0] = switches[1] = 0;
 					updatePanel();
+					break;
 				case 012:	// Enter deposit
 					M[cpu.getIF() | cpu.getPC()] = switches[0];
 					cpu.setPC( (cpu.getPC() + 1) & 07777 );
@@ -180,6 +194,11 @@ namespace ca
 
         void VirtualPanel::processCommandMode(int ch) {
             debug(5, "%d", ch);
+        }
+
+        void VirtualPanel::updateCommandDisplay() {
+            mvwprintw( command, 0, 0, "> %s", cmdBuffer );
+            setCursorLocation();
         }
 
     } /* namespace pdp8 */
