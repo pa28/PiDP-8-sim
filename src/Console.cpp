@@ -211,6 +211,7 @@ namespace ca
 	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelContinue:
+										    cpu.cpuContinue();
 											break;
 										case PanelStop:
 											break;
