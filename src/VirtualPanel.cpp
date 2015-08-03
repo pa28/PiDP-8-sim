@@ -19,7 +19,7 @@ namespace ca
                 vPanel(NULL),
                 console(NULL),
                 command(NULL),
-                consoleMode(CommandMode),
+                consoleMode(PanelMode),
                 M(*(Memory::instance())),
                 cpu(*(CPU::instance()))
 
@@ -74,18 +74,20 @@ namespace ca
         void VirtualPanel::processStdin() {
             int ch;
 
-            while ((ch = getch()) > 0) {
+            while ((ch = wgetch( consoleMode == PanelMode ? vPanel : console )) > 0) {
 
             wprintw(console, "ch: %d\n", ch);
 			refresh();
                 switch (ch) {
                     case KEY_F(1):  // Set and clear virtual panel mode
-                        wprintw(console, "F1\n");
-						refresh();
-                        break;
+                        consoleMode = PanelMode;
+                        wmove( vPanel, 2, 12);
+                        wrefresh( vPanel );
+                    break;
                     case KEY_F(2):  // Set and clear command mode
-                        wprintw(console, "F2\n");
-						refresh();
+                        consoleMode = CommandMode;
+                        wmove( vPanel, 2, 12);
+                        wrefresh( vPanel );
                         break;
                     case 'q':   // Set and clear command mode
                         wprintw(console, "quit\n");
