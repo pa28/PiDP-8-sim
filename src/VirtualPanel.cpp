@@ -12,6 +12,8 @@
 #include "VirtualPanel.h"
 #include "Chassis.h"
 
+using namespace std;
+
 namespace ca
 {
     namespace pdp8
@@ -24,13 +26,10 @@ namespace ca
                 consoleMode(PanelMode),
                 M(*(Memory::instance())),
                 cpu(*(CPU::instance())),
-                cmdBuffer(NULL),
-                cmdBufSize(0),
-                cmdCurLoc(0)
+                cmdBuffer(),
+                cmdCurLoc(string::npos)
 
         {
-            cmdBuffer = new char[BufferSize];
-
 			switches[0] = 0;
 			switches[1] = 0;
 			switches[2] = 0;
@@ -52,6 +51,8 @@ namespace ca
 			wbkgd(command, COLOR_PAIR(3));
 			updateCommandDisplay();
             wrefresh(command);
+
+			curs_set(0);
         }
 
         VirtualPanel::~VirtualPanel()
@@ -103,6 +104,7 @@ namespace ca
             //while ((ch = wgetch( consoleMode == PanelMode ? vPanel : console )) > 0) {
 			while (( ch = getch()) > 0) {
 
+#define DEBUG_CHAR
 #ifdef DEBUG_CHAR
 				if (isgraph(ch)) {
 					wprintw(console, "ch: %c\n", ch);
@@ -142,10 +144,16 @@ namespace ca
 
 		void VirtualPanel::setCursorLocation() {
 			if (consoleMode == PanelMode) {
+				curs_set(1);
 				mvwprintw( vPanel, 2, 12, "");
 				wrefresh(vPanel);
 			} else {
-			    mvwprintw( command, 0, strlen(cmdBuffer) + 2, "" );
+				curs_set(1);
+				if (cmdCurLoc == string::npos) {
+			    	mvwprintw( command, 0, cmdBuffer.size() + 2, "");
+				} else {
+			    	mvwprintw( command, 0, cmdCurLoc + 2, "");
+				}
 			    wrefresh( command );
 			}
 		}
@@ -194,26 +202,62 @@ namespace ca
         }
 
         void VirtualPanel::processCommandMode(int ch) {
-            if (isgraph(ch) || isspace(ch)) {
-                if (cmdCurLoc == cmdBufSize) {
-                    cmdBuffer[cmdCurLoc++] = ch;
-                    cmdBuffer[cmdCurLoc] = '\0';
-                    cmdBufSize = cmdCurLoc;
-                }
-            } else {
-                switch (ch) {
-                    case 012:
-                        wprintw( console, "> %s\n", cmdBuffer );
-                        wrefresh( console );
-                        break;
-                }
+			switch (ch) {
+				case KEY_HOME:
+					if (cmdBuffer.size() > 0) {
+						cmdCurLoc = 0;
+					}
+					break;
+				case KEY_END:
+					cmdCurLoc = string::npos;
+					break;
+				case KEY_LEFT:
+					if (cmdCurLoc == string::npos && cmdBuffer.size() > 1) {
+						cmdCurLoc = cmdBuffer.size() - 1;
+					} else if (cmdCurLoc > 0) {
+						cmdCurLoc--;
+					}
+					break;
+				case KEY_RIGHT:
+					if (cmdCurLoc != string::npos) {
+						cmdCurLoc++;
+						if (cmdCurLoc >= cmdBuffer.size()) {
+							cmdCurLoc = string::npos;
+						}
+					}
+					break;
+				case 012:
+					wprintw( console, "> %s\n", cmdBuffer.c_str() );
+					wrefresh( console );
+					break;
+				case 025:
+					cmdBuffer.clear();
+					cmdCurLoc = string::npos;
+					break;
+				case KEY_BACKSPACE:
+					if (cmdCurLoc > 0 && (size_t)cmdCurLoc < cmdBuffer.size()) {
+						cmdBuffer.erase( cmdCurLoc, 1 );
+						cmdCurLoc--;
+					} else {
+						cmdBuffer.erase(cmdBuffer.end()-1);
+					}
+					break;
+				default:
+					if (isalnum(ch) || ispunct(ch) || (ch == ' ')) {
+						if (cmdCurLoc == string::npos || (size_t)cmdCurLoc > cmdBuffer.size()) {
+							cmdBuffer.append(1,ch);
+						} else {
+							cmdBuffer.insert(cmdCurLoc, 1, ch);
+							cmdCurLoc++;
+						}
+					}
             }
             updateCommandDisplay();
         }
 
         void VirtualPanel::updateCommandDisplay() {
             werase( command );
-            mvwprintw( command, 0, 0, "> %s", cmdBuffer );
+            mvwprintw( command, 0, 0, "> %s", cmdBuffer.c_str() );
             wrefresh( command );
             setCursorLocation();
         }

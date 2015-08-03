@@ -9,6 +9,7 @@
 #define VIRTUALPANEL_H_
 
 #include <stdint.h>
+#include <string>
 #include "Terminal.h"
 
 namespace ca
@@ -48,8 +49,8 @@ namespace ca
 
 			uint32_t	switches[3];
 
-			char *      cmdBuffer;
-			size_t      cmdBufSize, cmdCurLoc;
+			std::string     cmdBuffer;
+			size_t	      	cmdCurLoc;
 
 			void updatePanel();
 			void updateSwitchRegister(uint32_t o);
