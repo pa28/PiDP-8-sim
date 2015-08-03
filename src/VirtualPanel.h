@@ -32,9 +32,14 @@ namespace ca
 
 			int panelf( int y, int x, const char * format, ... );
 
+			void updatePanel(uint32_t sx[3]);
+
         protected:
             WINDOW      *vPanel, *console, *command;
             ConsoleMode consoleMode;
+
+            Memory  &M;
+            CPU     &cpu;
 
             void processPanelMode(int);
             void processCommandMode(int);

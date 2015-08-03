@@ -62,8 +62,6 @@ namespace ca
 			Memory  &M;
 			CPU     &cpu;
 
-			WINDOW	*console, *vPanel;
-
 			VirtualPanel    *consoleTerm;
 
         };

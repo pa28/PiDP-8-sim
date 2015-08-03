@@ -19,7 +19,10 @@ namespace ca
                 vPanel(NULL),
                 console(NULL),
                 command(NULL),
-                consoleMode(CommandMode)
+                consoleMode(CommandMode),
+                M(*(Memory::instance())),
+                cpu(*(CPU::instance()))
+
         {
 			vPanel=subwin(stdscr,4,80,0,0);
 			scrollok(vPanel,true);
@@ -53,6 +56,19 @@ namespace ca
 			wrefresh( vPanel );
 			va_end (args);
 			return n;
+		}
+
+		void VirtualPanel::updatePanel(uint32_t sx[3]) {
+		    wmove( vPanel, 1, 5 );
+		    wprintw( vPanel, " Sw Reg   Df If  PC    MA   MB" );
+		    wmove( vPanel, 2, 5 );
+		    wprintw( vPanel, "%1o %1o %04o    %1o  %1o %04o  %04o  %04o",
+	                ((sx[1] >> 9) & 07),
+	                ((sx[1] >> 6) & 07),
+	                sx[0] & 07777,
+	                cpu.getDF(), cpu.getIF(), cpu.getPC(), M.MA(), M.MB()
+                );
+		    wrefresh( vPanel );
 		}
 
         void VirtualPanel::processStdin() {

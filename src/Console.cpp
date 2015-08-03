@@ -39,16 +39,10 @@ namespace ca
 				cpu(*(CPU::instance())),
 				consoleTerm(new VirtualPanel())
         {
-
-
-    //printw("Main window.");
-    //refresh();
-    //getch();
         }
 
         Console::~Console()
         {
-            // TODO Auto-generated destructor stub
         }
 
 		Console * Console::instance() {
@@ -62,9 +56,6 @@ namespace ca
 		int Console::printf( const char * format, ... ) {
 			va_list args;
 			va_start (args, format);
-			//int n = vfprintf (stdout, format, args);
-            //int n = consoleTerm->vprintw( format, args );
-			//int n = vwprintw(console, format, args);
 			int n = consoleTerm->vconf(format, args);
 			va_end (args);
 			return n;
@@ -81,14 +72,6 @@ namespace ca
 		int Console::run() {
 			fd_set	rd_set, wr_set;
 
-#ifdef USE_NCURSES
-			// Setup ncurses
-			initscr();
-			raw();
-			keypad(stdscr, TRUE);
-			noecho();
-#endif
-
             uint32_t switchstatus[SWITCHSTATUS_COUNT] = { 0 };
 			while (runConsole) {
 					FD_ZERO(&rd_set);
@@ -96,8 +79,7 @@ namespace ca
 
 					int	n = 0;
 
-					//FD_SET(consoleTerm->fdOfInput(), &rd_set); n = consoleTerm->fdOfInput() + 1;
-					FD_SET(0, &rd_set); n = 1;
+					FD_SET(consoleTerm->fdOfInput(), &rd_set); n = consoleTerm->fdOfInput() + 1;
 
 					if (switchPipe >= 0) {
 						FD_SET(switchPipe, &rd_set);
@@ -105,7 +87,6 @@ namespace ca
 					}
 
 					int s;
-//#ifdef NOT_DEF
 #ifdef HAS_PSELECT
 					if (stopMode) {
                         struct timespec timeout;
@@ -141,8 +122,9 @@ namespace ca
 						}
 					} else if (s > 0) {
 						// one or more fd ready
-						//if (FD_ISSET(consoleTerm->fdOfInput(), &rd_set)) {
-							//consoleTerm->processStdin();
+						if (FD_ISSET(consoleTerm->fdOfInput(), &rd_set)) {
+							consoleTerm->processStdin();
+							/*
 						if (FD_ISSET(0, &rd_set)) {
 							int ch = getch();
 							switch (ch) {
@@ -153,6 +135,7 @@ namespace ca
 								default:
 									Chassis::instance()->stop();
 							}
+							*/
 						} else if (FD_ISSET(switchPipe, &rd_set)) {
 							// Panel
 						    uint32_t    switchReport[2];
@@ -166,23 +149,16 @@ namespace ca
 							        case 0: // Switch register
                                         switchstatus[0] = switchReport[1];
 							            debug(1, "SR: %04o\n", switchstatus[0]);
-										consoleTerm->panelf( 1, 5, " Sw Reg");
-										consoleTerm->panelf( 2, 5, "%1o %1o %04o",
-											((switchstatus[1] >> 9) & 07),
-											((switchstatus[1] >> 6) & 07),
-											switchstatus[0] );
+							            consoleTerm->updatePanel( switchstatus );
 							            break;
 							        case 1: // DF and IF
                                         switchstatus[1] = switchReport[1];
                                         debug(1, "DF: %1o  IF: %1o\n", ((switchstatus[1] >> 9) & 07), ((switchstatus[1] >> 6) & 07) );
-										consoleTerm->panelf( 1, 5, " Sw Reg");
-										consoleTerm->panelf( 2, 5, "%1o %1o %04o",
-											((switchstatus[1] >> 9) & 07),
-											((switchstatus[1] >> 6) & 07),
-											switchstatus[0] );
+                                        consoleTerm->updatePanel( switchstatus );
                                         break;
 							        case 2: // Command switches
                                         switchstatus[2] = switchReport[1];
+                                        //consoleTerm->updatePanel( switchstatus );
                                         debug(1, "Cmd: %02o  SS: %1o\n", (switchstatus[2] >> 6) & 077, (switchstatus[2] >> 4) & 03 );
                                         break;
 							    }
@@ -220,27 +196,19 @@ namespace ca
 											CPU::instance()->setPC(switchstatus[0]);
 											CPU::instance()->setDF((switchstatus[1] >> 9) & 07);
 											CPU::instance()->setIF((switchstatus[1] >> 6) & 07);
-											consoleTerm->panelf( 1, 15, "Df If  PC");
-											consoleTerm->panelf( 2, 15, " %1o  %1o %04o",
-												((switchstatus[1] >> 9) & 07),
-												((switchstatus[1] >> 6) & 07),
-												switchstatus[0] );
+	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelDeposit:
 											M[cpu.getIF() | cpu.getPC()] = switchstatus[0];
 											cpu.setPC( (cpu.getPC() + 1) & 077777 );
 											cpu.setState(DepositState);
-											consoleTerm->panelf( 1, 15, "Df If  PC    MA   MB");
-											consoleTerm->panelf( 2, 15, " %1o  %1o %04o  %04o  %04o",
-												cpu.getDF(), cpu.getIF(), cpu.getPC(), M.MA(), M.MB() );
+	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelExamine:
 											switchReport[1] = M[cpu.getIF() | cpu.getPC()];
 											cpu.setPC( (cpu.getPC() + 1) & 077777 );
 											cpu.setState(ExamineState);
-											consoleTerm->panelf( 1, 15, "Df If  PC    MA   MB");
-											consoleTerm->panelf( 2, 15, " %1o  %1o %04o  %04o  %04o",
-												cpu.getDF(), cpu.getIF(), cpu.getPC(), M.MA(), M.MB() );
+	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelContinue:
 											break;
