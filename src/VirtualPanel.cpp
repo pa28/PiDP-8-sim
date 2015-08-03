@@ -46,7 +46,7 @@ namespace ca
 			wbkgd(console, COLOR_PAIR(2));
 			wrefresh(console);
 
-			command = subwin(stdscr, 1, 80, 25, 0);
+			command = subwin(stdscr, 1, 80, 26, 0);
 			keypad(command, true);
 			wbkgd(command, COLOR_PAIR(3));
 			updateCommandDisplay();
