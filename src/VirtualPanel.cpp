@@ -24,13 +24,19 @@ namespace ca
                 cpu(*(CPU::instance()))
 
         {
+			switches[0] = 0;
+			switches[1] = 0;
+			switches[2] = 0;
+
 			vPanel=subwin(stdscr,4,80,0,0);
 			scrollok(vPanel,true);
+			keypad(vPanel,true);
 			wbkgd(vPanel,COLOR_PAIR(1));
 			wrefresh(vPanel);
 
 			console = subwin(stdscr, 20, 80, 5, 0);
 			scrollok(console,true);
+			keypad(console,true);
 			wprintw(console,"sim>");
 			wbkgd(console, COLOR_PAIR(2));
 			wrefresh(console);
