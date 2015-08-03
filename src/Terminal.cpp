@@ -16,7 +16,7 @@ namespace ca
         {
 			mainwin = initscr();
 			noecho();
-			raw();
+			//raw();
 			timeout(0);
 			keypad(stdscr,true);
 			scrollok(stdscr,true);
