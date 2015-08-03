@@ -12,7 +12,8 @@
 #include "Panel.h"
 #include "CPU.h"
 #include "Memory.h"
-//#include "VirtualPanel.h"
+//#include "Terminal.h"
+#include "VirtualPanel.h"
 
 namespace ca
 {
@@ -63,7 +64,7 @@ namespace ca
 
 			WINDOW	*console, *vPanel;
 
-//			VirtualPanel    *consoleTerm;
+			VirtualPanel    *consoleTerm;
 
         };
 

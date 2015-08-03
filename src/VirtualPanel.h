@@ -28,8 +28,9 @@ namespace ca
             virtual ~VirtualPanel();
 
             virtual void processStdin();
-            virtual int vprintw(const char *fmt, va_list list) { return vwprintw(console, fmt, list ); wrefresh(console); }
-            virtual int vmvprintw(int y, int x, const char *fmt, va_list list) { return vmvwprintw(console, y, x, fmt, list); wrefresh(console); }
+			int vconf(const char * format, va_list args);
+
+			int panelf( int y, int x, const char * format, ... );
 
         protected:
             WINDOW      *vPanel, *console, *command;
@@ -43,3 +44,4 @@ namespace ca
 } /* namespace ca */
 
 #endif /* VIRTUALPANEL_H_ */
+/* vim: set ts=4 sw=4  noet autoindent : */

@@ -21,31 +21,39 @@ namespace ca
                 command(NULL),
                 consoleMode(CommandMode)
         {
-			wclear(stdscr);
+			vPanel=subwin(stdscr,4,80,0,0);
+			scrollok(vPanel,true);
+			wbkgd(vPanel,COLOR_PAIR(1));
+			wrefresh(vPanel);
 
-			printw("Create windows\n");
-			refresh();
-
-            vPanel = subwin(mainwin, 3, 20, 0, 0);
-            console = subwin(mainwin, 20, 80, 3, 0);
-            command = subwin(mainwin, 1, 80, 23, 0);
-
-            scrollok(vPanel,false);
-            scrollok(console,true);
-            scrollok(command,false);
-
-			wclear(vPanel);
-			wclear(console);
-			wclear(command); 
-
-			wprintw(command, 0, 0, "sim>");
-			wrefresh(command);
+			console = subwin(stdscr, 20, 80, 5, 0);
+			scrollok(console,true);
+			wprintw(console,"sim>");
+			wbkgd(console, COLOR_PAIR(2));
+			wrefresh(console);
         }
 
         VirtualPanel::~VirtualPanel()
         {
-            // TODO Auto-generated destructor stub
+			delwin(console);
+    		delwin(vPanel);
         }
+
+		int VirtualPanel::vconf( const char *format, va_list list ) {
+			int n = vwprintw( console, format, list );
+			wrefresh( console );
+			return n;
+		}
+
+		int VirtualPanel::panelf( int y, int x, const char * format, ... ) {
+			va_list args;
+			va_start (args, format);
+			wmove( vPanel, y, x );
+			int n = vwprintw( vPanel, format, args );
+			wrefresh( vPanel );
+			va_end (args);
+			return n;
+		}
 
         void VirtualPanel::processStdin() {
             int ch;
