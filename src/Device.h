@@ -9,6 +9,7 @@
 #define DEVICE_H_
 
 #include <string>
+#include <stdint.h>
 
 namespace ca
 {
@@ -24,6 +25,8 @@ namespace ca
             virtual void initialize() = 0;
 			virtual void reset() = 0;
 			virtual void stop() = 0;
+
+			virtual int32_t dispatch(int32_t IR, int32_t dat) { return 0; }
         };
 
     } /* namespace pdp8 */

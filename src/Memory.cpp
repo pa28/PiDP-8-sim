@@ -54,9 +54,15 @@ namespace ca
         MemoryCell::~MemoryCell() {
         }
 
+        /*
         MemoryCell::operator int () {
             return (int)(mb = m);
         }
+
+        MemoryCell::operator uint16_t () {
+            return (uint16_t)(mb = m);
+        }
+        */
 
         int MemoryCell::operator = (int v) {
             return (int)(mb = m = v & 07777);
@@ -83,7 +89,13 @@ namespace ca
 			return _instance;
 		}
 
-        MemoryCell & Memory::operator [] (int _ma) throw(MemoryException) {
+		/*
+		MemoryCell & Memory::operator [] (uint16_t _ma) throw(MemoryException) {
+		    return operator [] ((int)_ma);
+		}
+		*/
+
+        MemoryCell & Memory::operator [] (int32_t _ma) throw(MemoryException) {
             ma = _ma;
 
             if (ma > MAXMEMSIZE) {
@@ -197,7 +209,7 @@ namespace ca
 				CPU::instance()->setPC(lastOrigin);
 				CPU::instance()->setDF(0);
 				CPU::instance()->setIF(0);
-				int t = m[CPU::instance()->getIF() | CPU::instance()->getPC()];
+				int32_t t = m[CPU::instance()->getIF() | CPU::instance()->getPC()];
 				ma = lastOrigin;
 				CPU::instance()->setState(ExamineState);
                 return r;

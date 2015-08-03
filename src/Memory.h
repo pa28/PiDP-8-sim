@@ -63,8 +63,10 @@ namespace ca
         public:
             virtual ~MemoryCell();
 
-            operator int();
-            operator unsigned int() { return (unsigned int) operator int(); }
+            //operator int();
+            //operator uint16_t();
+            operator int32_t() { return (int32_t)(mb = m); }
+            //operator unsigned int() { return (unsigned int) operator int(); }
 
             int operator = (int v);
 
@@ -92,7 +94,8 @@ namespace ca
 			virtual void reset() {}
 			virtual void stop() {}
 
-            MemoryCell & operator [] (int ma) throw(MemoryException);
+            //MemoryCell & operator [] (int ma) throw(MemoryException);
+            MemoryCell & operator [] (int32_t ma) throw(MemoryException);
 
             bool flagSet() { return ! flagStack.empty(); }
             int flagStackSize() { return flagStack.size(); }

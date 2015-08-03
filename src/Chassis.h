@@ -58,6 +58,8 @@ namespace ca
 
 			void    stop();
 
+			Device  * device(int32_t devNo) { return deviceList[devNo]; }
+
         protected:
 			static	Chassis * _instance;
             Device*    deviceList[DEV_MAX_COUNT];

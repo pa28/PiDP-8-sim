@@ -167,7 +167,7 @@ namespace ca
 		}
 
         void VirtualPanel::processPanelMode(int ch) {
-			uint32_t t;
+			int32_t t;
 			if (ch >= '0' && ch <= '7') {
 				updateSwitchRegister( ch - '0' );
 			} else {
