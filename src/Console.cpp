@@ -15,7 +15,7 @@
 #include <time.h>
 #include <errno.h>
 
-#define DEBUG_LEVEL 5
+//#define DEBUG_LEVEL 5
 #include "PDP8.h"
 
 #include "Console.h"
