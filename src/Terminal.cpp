@@ -14,15 +14,16 @@ namespace ca
 
         Terminal::Terminal()
         {
-			initscr();			/* Start curses mode 		  */
+			mainwin = initscr();			/* Start curses mode 		  */
 			//screen = newterm( NULL, stdin, stdout );
 			//def_prog_mode();
 
-			timeout(0);
-			raw();
+			//timeout(0);
+			//raw();
 			noecho();
-			keypad(stdscr,TRUE);
-			scrollok(stdscr,TRUE);
+    		start_color();
+			keypad(mainwin,true);
+			scrollok(mainwin,false);
         }
 
         Terminal::~Terminal()
@@ -31,11 +32,13 @@ namespace ca
 			endwin();			/* End curses mode		  */
         }
 
+		/*
         int Terminal::vwprintw(WINDOW *w, const char *fmt, va_list list) {
             int n = ::vwprintw(w, fmt, list);
 			refresh();
             return n;
         }
+		*/
 
         int Terminal::vmvwprintw(WINDOW *w, int y, int x, const char *fmt, va_list list) {
             wmove(w, y, x);

@@ -28,8 +28,8 @@ namespace ca
             virtual ~VirtualPanel();
 
             virtual void processStdin();
-            virtual int vprintw(const char *fmt, va_list list) { return vwprintw(console, fmt, list ); }
-            virtual int vmvprintw(int y, int x, const char *fmt, va_list list) { return vmvwprintw(console, y, x, fmt, list); }
+            virtual int vprintw(const char *fmt, va_list list) { return vwprintw(console, fmt, list ); wrefresh(console); }
+            virtual int vmvprintw(int y, int x, const char *fmt, va_list list) { return vmvwprintw(console, y, x, fmt, list); wrefresh(console); }
 
         protected:
             WINDOW      *vPanel, *console, *command;

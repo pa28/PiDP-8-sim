@@ -114,3 +114,4 @@ namespace ca
 } /* namespace ca */
 
 #endif /* MEMORY_H_ */
+/* vim: set ts=4 sw=4  noet autoindent : */

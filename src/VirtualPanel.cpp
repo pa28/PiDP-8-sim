@@ -6,7 +6,7 @@
  */
 
 #include <ncurses.h>
-#include "pdp8.h"
+#include "PDP8.h"
 #include "VirtualPanel.h"
 #include "Chassis.h"
 
@@ -21,21 +21,25 @@ namespace ca
                 command(NULL),
                 consoleMode(CommandMode)
         {
-            vPanel = newwin(3, COLS, 0, 0);
-            console = newwin(LINES-4, COLS, 3, 0);
-            command = newwin(1, COLS, LINES-1, 0);
+			wclear(stdscr);
 
-            raw();
-            noecho();
-            keypad(vPanel,TRUE);
-            scrollok(vPanel,FALSE);
+			printw("Create windows\n");
+			refresh();
 
-            keypad(console,TRUE);
-            scrollok(console,TRUE);
+            vPanel = subwin(mainwin, 3, 20, 0, 0);
+            console = subwin(mainwin, 20, 80, 3, 0);
+            command = subwin(mainwin, 1, 80, 23, 0);
 
-            keypad(command,TRUE);
-            scrollok(command,FALSE);
+            scrollok(vPanel,false);
+            scrollok(console,true);
+            scrollok(command,false);
 
+			wclear(vPanel);
+			wclear(console);
+			wclear(command); 
+
+			wprintw(command, 0, 0, "sim>");
+			wrefresh(command);
         }
 
         VirtualPanel::~VirtualPanel()
@@ -49,15 +53,19 @@ namespace ca
             while ((ch = getch()) > 0) {
 
             wprintw(console, "ch: %d\n", ch);
+			refresh();
                 switch (ch) {
                     case KEY_F(1):  // Set and clear virtual panel mode
                         wprintw(console, "F1\n");
+						refresh();
                         break;
                     case KEY_F(2):  // Set and clear command mode
                         wprintw(console, "F2\n");
+						refresh();
                         break;
                     case 'q':   // Set and clear command mode
                         wprintw(console, "quit\n");
+						refresh();
                         Chassis::instance()->stop();
                         break;
                     default:
@@ -83,3 +91,4 @@ namespace ca
 
     } /* namespace pdp8 */
 } /* namespace ca */
+/* vim: set ts=4 sw=4  noet autoindent : */

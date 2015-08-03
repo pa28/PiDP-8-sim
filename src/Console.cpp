@@ -36,9 +36,30 @@ namespace ca
 				switchPipe(-1),
 				stopCount(0),
 				M(*(Memory::instance())),
-				cpu(*(CPU::instance())),
-				consoleTerm(new VirtualPanel())
+				cpu(*(CPU::instance()))
+				//consoleTerm(new VirtualPanel())
         {
+
+    initscr();
+    noecho();
+    start_color();
+    init_pair(1,COLOR_YELLOW,COLOR_BLUE);
+    init_pair(2,COLOR_BLACK,COLOR_WHITE);
+    init_pair(3,COLOR_BLUE,COLOR_WHITE); 
+    vPanel=subwin(stdscr,4,80,0,0);
+    scrollok(vPanel,true);
+    wbkgd(vPanel,COLOR_PAIR(1));
+    wrefresh(vPanel);
+
+	console = subwin(stdscr, 20, 80, 5, 0);
+	scrollok(console,true);
+	wprintw(console,"sim>");
+	wbkgd(console, COLOR_PAIR(2));
+	wrefresh(console);
+
+    //printw("Main window.");
+    //refresh();
+    //getch();
         }
 
         Console::~Console()
@@ -58,7 +79,9 @@ namespace ca
 			va_list args;
 			va_start (args, format);
 			//int n = vfprintf (stdout, format, args);
-            int n = consoleTerm->vprintw( format, args );
+            //int n = consoleTerm->vprintw( format, args );
+			int n = vwprintw(console, format, args);
+			wrefresh(console);
 			va_end (args);
 			return n;
 		}
@@ -82,14 +105,15 @@ namespace ca
 			noecho();
 #endif
 
+            uint32_t switchstatus[SWITCHSTATUS_COUNT] = { 0 };
 			while (runConsole) {
 					FD_ZERO(&rd_set);
 					FD_ZERO(&wr_set);
-                    uint32_t switchstatus[SWITCHSTATUS_COUNT] = { 0 };
 
 					int	n = 0;
 
-					FD_SET(consoleTerm->fdOfInput(), &rd_set); n = consoleTerm->fdOfInput() + 1;
+					//FD_SET(consoleTerm->fdOfInput(), &rd_set); n = consoleTerm->fdOfInput() + 1;
+					FD_SET(0, &rd_set); n = 1;
 
 					if (switchPipe >= 0) {
 						FD_SET(switchPipe, &rd_set);
@@ -133,8 +157,10 @@ namespace ca
 						}
 					} else if (s > 0) {
 						// one or more fd ready
-						if (FD_ISSET(consoleTerm->fdOfInput(), &rd_set)) {
-							consoleTerm->processStdin();
+						//if (FD_ISSET(consoleTerm->fdOfInput(), &rd_set)) {
+							//consoleTerm->processStdin();
+						if (FD_ISSET(0, &rd_set)) {
+							Chassis::instance()->stop();
 						} else if (FD_ISSET(switchPipe, &rd_set)) {
 							// Panel
 						    uint32_t    switchReport[2];
@@ -148,16 +174,30 @@ namespace ca
 							        case 0: // Switch register
                                         switchstatus[0] = switchReport[1];
 							            debug(1, "SR: %04o\n", switchstatus[0]);
+										mvwprintw(vPanel, 1, 5, " Sw Reg");
+										mvwprintw(vPanel, 2, 5, "%1o %1o %04o",
+											((switchstatus[1] >> 9) & 07),
+											((switchstatus[1] >> 6) & 07),
+											switchstatus[0] );
+										wrefresh(vPanel);
 							            break;
 							        case 1: // DF and IF
                                         switchstatus[1] = switchReport[1];
                                         debug(1, "DF: %1o  IF: %1o\n", ((switchstatus[1] >> 9) & 07), ((switchstatus[1] >> 6) & 07) );
+										mvwprintw(vPanel, 1, 5, " Sw Reg");
+										mvwprintw(vPanel, 2, 5, "%1o %1o %04o",
+											((switchstatus[1] >> 9) & 07),
+											((switchstatus[1] >> 6) & 07),
+											switchstatus[0] );
+										wrefresh(vPanel);
                                         break;
 							        case 2: // Command switches
                                         switchstatus[2] = switchReport[1];
                                         debug(1, "Cmd: %02o  SS: %1o\n", (switchstatus[2] >> 6) & 077, (switchstatus[2] >> 4) & 03 );
                                         break;
 							    }
+
+								debug(1, "Sx: %04o %04o %04o\n", switchstatus[0],  switchstatus[2], switchstatus[2]);
 
 								CPU::instance()->setStepping(static_cast<CPUStepping>((switchstatus[2] >> 4) & 03));
 
@@ -190,16 +230,30 @@ namespace ca
 											CPU::instance()->setPC(switchstatus[0]);
 											CPU::instance()->setDF((switchstatus[1] >> 9) & 07);
 											CPU::instance()->setIF((switchstatus[1] >> 6) & 07);
+											mvwprintw(vPanel, 1, 15, "Df If  PC");
+											mvwprintw(vPanel, 2, 15, " %1o  %1o %04o",
+												((switchstatus[1] >> 9) & 07),
+												((switchstatus[1] >> 6) & 07),
+												switchstatus[0] );
+											wrefresh(vPanel);
 											break;
 										case PanelDeposit:
 											M[cpu.getIF() | cpu.getPC()] = switchstatus[0];
 											cpu.setPC( (cpu.getPC() + 1) & 077777 );
 											cpu.setState(DepositState);
+											mvwprintw(vPanel, 1, 15, "Df If  PC    MA   MB");
+											mvwprintw(vPanel, 2, 15, " %1o  %1o %04o  %04o  %04o",
+												cpu.getDF(), cpu.getIF(), cpu.getPC(), M.MA(), M.MB() );
+											wrefresh(vPanel);
 											break;
 										case PanelExamine:
-											switchstatus[0] = M[cpu.getIF() | cpu.getPC()];
+											switchReport[1] = M[cpu.getIF() | cpu.getPC()];
 											cpu.setPC( (cpu.getPC() + 1) & 077777 );
 											cpu.setState(ExamineState);
+											mvwprintw(vPanel, 1, 15, "Df If  PC    MA   MB");
+											mvwprintw(vPanel, 2, 15, " %1o  %1o %04o  %04o  %04o",
+												cpu.getDF(), cpu.getIF(), cpu.getPC(), M.MA(), M.MB() );
+											wrefresh(vPanel);
 											break;
 										case PanelContinue:
 											break;
@@ -224,7 +278,10 @@ namespace ca
 				//runConsole = false;
 			}
 			printf("Console exiting.\n");
-			delete consoleTerm;
+	delwin(console);
+    delwin(vPanel);
+    endwin();
+			//delete consoleTerm;
 			return 0;
 		}
     } /* namespace pdp8 */
