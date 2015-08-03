@@ -62,6 +62,8 @@ namespace ca
                 }
             }
 
+			Memory::instance()->loadFile("/home/pi/pidp8/palbart/DeepThought.bin");
+
             Console::instance()->printf("PiDP-8-sim started.");
         }
 
