@@ -6,6 +6,7 @@
  */
 
 #include <ncurses.h>
+#include <ctype.h>
 #include <string.h>
 #include "PDP8.h"
 #include "VirtualPanel.h"
@@ -193,11 +194,27 @@ namespace ca
         }
 
         void VirtualPanel::processCommandMode(int ch) {
-            debug(5, "%d", ch);
+            if (isgraph(ch) || isspace(ch)) {
+                if (cmdCurLoc == cmdBufSize) {
+                    cmdBuffer[cmdCurLoc++] = ch;
+                    cmdBuffer[cmdCurLoc] = '\0';
+                    cmdBufSize = cmdCurLoc;
+                }
+            } else {
+                switch (ch) {
+                    case 012:
+                        wprintw( console, "> %s\n", cmdBuffer );
+                        wrefresh( console );
+                        break;
+                }
+            }
+            updateCommandDisplay();
         }
 
         void VirtualPanel::updateCommandDisplay() {
+            werase( command );
             mvwprintw( command, 0, 0, "> %s", cmdBuffer );
+            wrefresh( command );
             setCursorLocation();
         }
 
