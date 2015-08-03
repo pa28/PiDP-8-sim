@@ -32,6 +32,7 @@
  */
 
 #include "Memory.h"
+#include "Console.h"
 
 namespace ca
 {
@@ -64,7 +65,9 @@ namespace ca
         Memory::Memory() :
             Device("MEM", "Core Memory"),
             memorySize(MAXMEMSIZE),
-			exceptionOn(true)
+			exceptionOn(true),
+			lastOrigin(0),
+			lastField(0)
         {
         }
 
@@ -140,7 +143,7 @@ namespace ca
                 do {                                                /* skip leader */
                     if ((hi = sim_bin_getc (fi, &newf)) == EOF) {
                         if (sections_read != 0) {
-                            printf ("%d sections sucessfully read\n\r", sections_read);
+                            Console::instance()->printf ("%d sections sucessfully read\n\r", sections_read);
                             return 0;
                         } else {
                             return 1;
@@ -157,7 +160,7 @@ namespace ca
                     if (hi == 0200) {                               /* end of tape? */
                         if ((csum - wd) & 07777) {                  /* valid csum? */
                             if (sections_read != 0)
-                                printf ("%d sections sucessfully read\n\r", sections_read);
+                                Console::instance()->printf ("%d sections sucessfully read\n\r", sections_read);
                             return 2;
                         }
                         //if (!(sim_switches & SWMASK ('A')))        /* Load all sections? */
@@ -166,8 +169,11 @@ namespace ca
                         break;
                     }
                     csum = csum + t + lo;                           /* add to csum */
-                    if (wd > 07777)                                 /* chan 7 set? */
+                    if (wd > 07777) {                               /* chan 7 set? */
                         origin = wd & 07777;                        /* new origin */
+						if (lastOrigin == 0)
+							lastOrigin = origin;
+					}
                     else {                                          /* no, data */
                         if ((field | origin) >= memorySize)
                             return 3;
@@ -183,9 +189,17 @@ namespace ca
         int Memory::loadFile( const char * fileName ) {
             FILE    *fp = fopen( fileName, "r" );
             if (fp) {
+				lastField = lastOrigin = 0;
                 clearMemory();
                 int r = sim_load_bin( fp );
                 fclose( fp );
+                Console::instance()->printf ("Last secion %1o%04o\n", lastField, lastOrigin);
+				CPU::instance()->setPC(lastOrigin);
+				CPU::instance()->setDF(0);
+				CPU::instance()->setIF(0);
+				int t = m[CPU::instance()->getIF() | CPU::instance()->getPC()];
+				ma = lastOrigin;
+				CPU::instance()->setState(ExamineState);
                 return r;
             }
 
@@ -200,3 +214,4 @@ namespace ca
 
     } /* namespace pdp8 */
 } /* namespace ca */
+/* vim: set ts=4 sw=4  noet autoindent : */

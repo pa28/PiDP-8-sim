@@ -14,6 +14,7 @@
 #include <utility>
 #include <exception>
 #include "Device.h"
+#include "CPU.h"
 
 namespace ca
 {
@@ -117,6 +118,9 @@ namespace ca
 			int32_t    sim_bin_getc (FILE *fi, uint32_t *newf);
 
 			void    clearMemory();
+
+			uint32_t	lastOrigin;
+			uint32_t	lastField;
         };
 
     } /* namespace pdp8 */
