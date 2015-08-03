@@ -8,6 +8,7 @@
 #ifndef MEMORY_H_
 #define MEMORY_H_
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stack>
 #include <utility>
@@ -72,8 +73,9 @@ namespace ca
 
         protected:
             uint16_t    m;
-
             static uint16_t     mb;
+
+            void    clear() { m = 0; }
         };
 
         class Memory: public Device
@@ -98,6 +100,8 @@ namespace ca
             static uint16_t     MB() { return MemoryCell::mb; }
             static uint16_t     MA() { return ma; }
 
+            int     loadFile(const char *fileName);
+
         protected:
 
 			static Memory *		_instance;
@@ -108,6 +112,11 @@ namespace ca
             int     memorySize;
             std::stack < std::pair < uint32_t, int > >  flagStack;
 			bool	exceptionOn;
+
+			int     sim_load_bin( FILE * fp );
+			int32_t    sim_bin_getc (FILE *fi, uint32_t *newf);
+
+			void    clearMemory();
         };
 
     } /* namespace pdp8 */
