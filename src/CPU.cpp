@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <time.h>
 
-//#define DEBUG_LEVEL 5
+#define DEBUG_LEVEL 5
 #include "PDP8.h"
 
 namespace ca
