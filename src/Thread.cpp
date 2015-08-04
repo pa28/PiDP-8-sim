@@ -9,7 +9,7 @@
 #include "Thread.h"
 #include "Console.h"
 
-#define DEBUG_LEVEL 5
+//#define DEBUG_LEVEL 5
 #include "PDP8.h"
 
 namespace ca
@@ -27,7 +27,7 @@ namespace ca
 			int s = pthread_mutex_lock( mutex );
 			switch (s) {
 				case 0:
-					Console::instance()->printf("Mutex %0X locked\n", mutex);
+					debug(1, "Mutex %0X locked\n", mutex);
 					break;
 				default:
 					throw LockException(true, s);
@@ -39,7 +39,7 @@ namespace ca
 			int s = pthread_mutex_lock( mutex );
 			switch (s) {
 				case 0:
-					Console::instance()->printf("Mutex %0X locked\n", mutex);
+					debug(1, "Mutex %0X locked\n", mutex);
 					break;
 				default:
 					throw LockException(true, s);
@@ -51,7 +51,7 @@ namespace ca
 			int s = pthread_mutex_lock( mutex );
 			switch (s) {
 				case 0:
-					Console::instance()->printf("ConditionWait mutex %0X locked\n", mutex);
+					debug(1, "ConditionWait mutex %0X locked\n", mutex);
 					break;
 				default:
 					throw LockException(true, s);
@@ -62,7 +62,7 @@ namespace ca
 			int s = pthread_mutex_unlock( mutex );
 			switch (s) {
 				case 0:
-					Console::instance()->printf("Mutex %0X unlocked\n", mutex);
+					debug(1, "Mutex %0X unlocked\n", mutex);
 					break;
 				default:
 					throw LockException(false, s);
