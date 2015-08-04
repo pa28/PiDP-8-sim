@@ -62,7 +62,7 @@ namespace ca
                 }
             }
 
-			Memory::instance()->loadFile("/home/pi/pidp8/palbart/DeepThought.bin");
+			Memory::instance()->loadFile("/nas/pi/PiDP-8-sim/Test.bin");
 
             Console::instance()->printf("PiDP-8-sim started.\n");
         }
