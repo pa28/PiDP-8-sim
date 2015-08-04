@@ -66,18 +66,26 @@ namespace ca
 			long	cpuTime = 0;
 			threadRunning = true;
 
+			runConditionWait.waitOnCondition();
+
 			while (threadRunning) {
 				// If we are going to wait, reset throttling when we get going again.
 				// Wait the thread if the condition is false (the CPU is not running).
 			    // This call is the opportunity to trap on break or illegal instructions.
-				throttleTimerReset = runConditionWait.waitOnCondition();
-				debug(1, "waitContition %d\n", waitCondition());
+				if (cpuStepping == PanelCommand || reason != STOP_NO_REASON) {
+					if (cpuStepping == PanelCommand || reason > STOP_IDLE) {
+						cpuCondition = CPUStopped;
+					}
+					throttleTimerReset = runConditionWait.waitOnCondition();
+					debug(1, "cpuStepping %d, reason %d\n", cpuStepping, reason);
+				}
 				cpuTime += cycleCpu();
 				if (cpuStepping == NotStepping) {
 					if (throttleTimerReset) {
 						cpuTime = 0;
 						clock_gettime( CLOCK_MONOTONIC, &throttleStart );
 						throttleTimerReset = false;
+					/*
 					} else {
 						if (cpuTime > 1000000) {
 							clock_gettime( CLOCK_MONOTONIC, &throttleCheck );
