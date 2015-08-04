@@ -94,7 +94,9 @@ namespace ca
 	                ((switches[1] >> 9) & 07),
 	                ((switches[1] >> 6) & 07),
 	                switches[0] & 07777,
-	                cpu.getDF(), cpu.getIF(), cpu.getPC(), M.MA(), M.MB()
+	                (cpu.getDF() >> 12) & 07,
+					(cpu.getIF() >> 12) & 07,
+					cpu.getPC(), M.MA(), M.MB()
                 );
 		    wrefresh( vPanel );
 			setCursorLocation();
