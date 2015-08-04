@@ -98,6 +98,7 @@ namespace ca
             bool waitOnCondition();
 
 		private:
+			bool				test;
 			Thread			&	thread;
 			pthread_mutex_t		mutex;
 			pthread_cond_t		condition;
@@ -108,3 +109,4 @@ namespace ca
 } /* namespace ca */
 
 #endif /* THREAD_H_ */
+/* vim: set ts=4 sw=4  noet autoindent : */

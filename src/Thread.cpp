@@ -90,7 +90,8 @@ namespace ca
 		}
 
 		ConditionWait::ConditionWait(Thread *t) :
-			thread(*t)
+			thread(*t),
+			test(false)
 		{
 			pthread_mutex_init( &mutex, NULL );
 			pthread_cond_init( &condition, NULL );
@@ -103,13 +104,13 @@ namespace ca
 
 		bool ConditionWait::waitOnCondition() {
 			int rc = 0;
-			bool r = false;
+			bool r = test = false;
 
 			try {
 				Lock	waitLock(mutex);
-				r = !thread.waitCondition();
-				while (!thread.waitCondition() && rc == 0) {
+				while (!test && rc == 0) {
 					debug(1, "waiting %d\n", r);
+					r = true;
 					rc = pthread_cond_wait( &condition, &mutex );
 				}
 			} catch (LockException &le) {
@@ -124,6 +125,7 @@ namespace ca
 			try {
 				Lock	waitLock(mutex);
 				debug(1, "release %d\n", all);
+				test = true;
 				if (all) {
 					pthread_cond_broadcast( &condition );
 				} else {
