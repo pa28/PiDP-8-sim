@@ -136,3 +136,4 @@ namespace ca
 
     } /* namespace pdp8 */
 } /* namespace ca */
+/* vim: set ts=4 sw=4  noet autoindent : */
