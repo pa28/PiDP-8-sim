@@ -110,7 +110,6 @@ namespace ca
             reason = STOP_NO_REASON;
             int32_t device, pulse, temp, iot_data;
 
-			debug(1, "reason %d\n", reason);
             cpuState = Fetch;
 
             MA = IF | PC;               // compute memory address
@@ -121,6 +120,7 @@ namespace ca
 
             // End of the Fetch state
             if (cpuStepping == SingleStep) {
+				cpuCondition = CPUStopped;
                 throttleTimerReset = runConditionWait.waitOnCondition();
             }
 
@@ -143,6 +143,7 @@ namespace ca
 
                     // End of the Defer state
                     if (cpuStepping == SingleStep) {
+						cpuCondition = CPUStopped;
                         throttleTimerReset = runConditionWait.waitOnCondition();
                     }
                 }
@@ -839,9 +840,11 @@ namespace ca
             // End of the Execute state
             // TODO: This is also where idle detection will pause the CPU
             if (cpuStepping == SingleStep || cpuStepping == SingleInstruction) {
+				cpuCondition = CPUStopped;
                 throttleTimerReset = runConditionWait.waitOnCondition();
             }
 
+			cpuCondition = CPURunning;
             cpuState = NoState;
 		}
 
