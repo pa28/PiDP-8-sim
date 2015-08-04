@@ -36,7 +36,8 @@ namespace ca
 				cpuStepping(NotStepping),
 				threadRunning(false),
 				reason(STOP_NO_REASON),
-				runConditionWait(this)
+				runConditionWait(this),
+				throttleTimerReset(false)
         {
             // TODO Auto-generated constructor stub
 
@@ -55,8 +56,12 @@ namespace ca
 			return _instance;
 		}
 
+		/*
+		 * By waiting on the run condition between CPU execution states, and at the end of the cycle,
+		 * the run loop does not have to do anything with cpuStepping.
+		 */
 		int CPU::run() {
-			bool throttleTimerReset = true;
+			throttleTimerReset = true;
 			struct timespec throttleStart, throttleCheck;
 			long	cpuTime = 0;
 			threadRunning = true;
@@ -64,27 +69,11 @@ namespace ca
 			while (threadRunning) {
 				// If we are going to wait, reset throttling when we get going again.
 				// Wait the thread if the condition is false (the CPU is not running).
+			    // This call is the opportunity to trap on break or illegal instructions.
 				throttleTimerReset = runConditionWait.waitOnCondition();
 				debug(1, "waitContition %d\n", waitCondition());
-				switch (cpuStepping) {
-					case NotStepping:
-					case SingleInstruction:
-						cpuState = FetchExecute;
-						break;
-					case SingleStep:
-						switch (cpuState) {
-							case Fetch:			// Let the cpuCycle function decide what state to be in
-							case Defer:
-							case Execute:
-								break;
-							default:			// But if comming out of a non-running condition start with a fetch.
-								cpuState = Fetch;
-						}
-				}
 				cpuTime += cycleCpu();
-				if (cpuStepping != NotStepping) {
-					cpuCondition = CPUStopped;
-				} else {
+				if (cpuStepping == NotStepping) {
 					if (throttleTimerReset) {
 						cpuTime = 0;
 						clock_gettime( CLOCK_MONOTONIC, &throttleStart );
@@ -113,13 +102,20 @@ namespace ca
             int32_t device, pulse, temp, iot_data;
 
 			debug(1, "reason %d\n", reason);
-            cpuState = FetchExecute;
+            cpuState = Fetch;
 
             MA = IF | PC;               // compute memory address
             IR = M[MA];                 // fetch instruction
             PC = (PC + 1) & 07777;      // increment PC
 
             // TODO: clear ION delay
+
+            // End of the Fetch state
+            if (cpuStepping == SingleStep) {
+                throttleTimerReset = runConditionWait.waitOnCondition();
+            }
+
+            cpuState = Execute;
 
             if ( (IR & 07000) <= 05000 ) {                                 // memory access function
                 if ( IR & 0200 ) {      // current page
@@ -129,13 +125,20 @@ namespace ca
                 }
 
                 if ( IR & 0400 ) {      // indirect
-                    cpuState = FetchDeferExecute;
+                    cpuState = Defer;
                     if ((MA & 07770) != 00010) { // not autoincrement
                         MA = DF | M[MA];
                     } else {
                         MA = DF | (M[MA] = (M[MA] + 1) & 07777);
                     }
+
+                    // End of the Defer state
+                    if (cpuStepping == SingleStep) {
+                        throttleTimerReset = runConditionWait.waitOnCondition();
+                    }
                 }
+
+                cpuState = Execute;
 
                 switch ( IR & 07000 ) {
                     case 00000: // AND
@@ -400,7 +403,7 @@ namespace ca
                         }                                           /* end switch device */
                                                                     /* end case IOT */
                     }                                               /* end switch opcode */
-                } else {                                // OPR
+            } else {                                // OPR
 
 
             /* Opcode 7, OPR group 1 */
@@ -823,7 +826,14 @@ namespace ca
                                 }                                           /* end switch */
                             break;                                          /* end case 7 */
                         }
-                }
+            }
+            // End of the Execute state
+            // TODO: This is also where idle detection will pause the CPU
+            if (cpuStepping == SingleStep || cpuStepping == SingleInstruction) {
+                throttleTimerReset = runConditionWait.waitOnCondition();
+            }
+
+            cpuState = NoState;
 		}
 
 		void CPU::cpuContinue() {

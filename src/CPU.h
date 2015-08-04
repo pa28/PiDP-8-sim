@@ -200,6 +200,8 @@ namespace ca
 
 			ConditionWait	runConditionWait;
 
+			bool throttleTimerReset;
+
 			long cycleCpu();
 
             void reset_all(int i) { /* TODO: call chassis reset all */ }
