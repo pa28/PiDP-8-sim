@@ -98,6 +98,7 @@ namespace ca
 								nanosleep( &throttleCheck, NULL );
 							}
 						}
+					*/
 					}
 				}
 			}
