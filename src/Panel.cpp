@@ -461,9 +461,11 @@ namespace ca
              * ledstatus[7]
              * DF 1-3
              * IF 4-6
+			 * L  5
              */
 
             ledstatus[7] = (CPU::instance()->getDF() >> 3) | (CPU::instance()->getIF() >> 6);
+			ledstatus[7] |= (CPU::instance()->getLAC() & 010000) >> 7;
         }
 
     } /* namespace pdp8 */
