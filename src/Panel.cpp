@@ -375,9 +375,11 @@ namespace ca
 					ledstatus[5] |= (1 << 3); // fetch
 					break;
 				case Execute:
+					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
 					ledstatus[5] |= (1 << 2); // fetch
 					break;
 				case Defer:
+					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
 					ledstatus[5] |= (1 << 1); // defer
 					break;
 				case FetchExecute:
