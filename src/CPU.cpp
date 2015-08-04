@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <time.h>
 
+#define DEBUG_LEVEL 5
+#include "PDP8.h"
+
 namespace ca
 {
     namespace pdp8
@@ -62,6 +65,7 @@ namespace ca
 				// If we are going to wait, reset throttling when we get going again.
 				// Wait the thread if the condition is false (the CPU is not running).
 				throttleTimerReset = runConditionWait.waitOnCondition();
+				debug(1, "waitContition %d\n", waitCondition());
 				switch (cpuStepping) {
 					case NotStepping:
 					case SingleInstruction:
@@ -108,6 +112,7 @@ namespace ca
             reason = STOP_NO_REASON;
             int32_t device, pulse, temp, iot_data;
 
+			debug(1, "reason %d\n", reason);
             cpuState = FetchExecute;
 
             MA = IF | PC;               // compute memory address
@@ -822,13 +827,18 @@ namespace ca
 		}
 
 		void CPU::cpuContinue() {
+			/*
+			debug(1, "%d\n", waitCondition());
 			try {
 				Lock	lock(runConditionWait);
 				cpuCondition = CPURunning;
+				debug(1, "%d\n", waitCondition());
 			} catch (LockException &le) {
 				fprintf(stderr, le.what());
 			}
 			runConditionWait.releaseOnCondition();
+			*/
+			cycleCpu();
 		}
 
 		bool CPU::waitCondition() {
@@ -837,3 +847,4 @@ namespace ca
 
     } /* namespace pdp8 */
 } /* namespace ca */
+/* vim: set ts=4 sw=4  noet autoindent : */

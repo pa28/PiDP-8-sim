@@ -9,6 +9,9 @@
 #include "Thread.h"
 #include "Console.h"
 
+#define DEBUG_LEVEL 5
+#include "PDP8.h"
+
 namespace ca
 {
     namespace pdp8
@@ -106,18 +109,21 @@ namespace ca
 				Lock	waitLock(mutex);
 				r = !thread.waitCondition();
 				while (!thread.waitCondition() && rc == 0) {
+					debug(1, "waiting %d\n", r);
 					rc = pthread_cond_wait( &condition, &mutex );
 				}
 			} catch (LockException &le) {
 				Console::instance()->printf(le.what());
 			}
 
+			debug(1, "returning %d\n", r);
 			return r;
 		}
 
 		void ConditionWait::releaseOnCondition(bool all) {
 			try {
 				Lock	waitLock(mutex);
+				debug(1, "release %d\n", all);
 				if (all) {
 					pthread_cond_broadcast( &condition );
 				} else {

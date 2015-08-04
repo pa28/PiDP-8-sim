@@ -15,7 +15,7 @@
 #include <time.h>
 #include <errno.h>
 
-//#define DEBUG_LEVEL 5
+#define DEBUG_LEVEL 5
 #include "PDP8.h"
 
 #include "Console.h"
@@ -211,7 +211,9 @@ namespace ca
 	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelContinue:
+											debug(1, "PanelContinue\n", 0);
 										    cpu.cpuContinue();
+	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelStop:
 											break;
