@@ -141,7 +141,7 @@ namespace ca
             virtual ~CPU();
 
 			static CPU * instance();
-			virtual void initialize() {}
+			virtual void initialize() { start(); }
 			virtual void reset() {}
 
 			uint16_t    getPC() const { return PC; }

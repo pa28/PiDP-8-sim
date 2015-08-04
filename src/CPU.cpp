@@ -827,7 +827,6 @@ namespace ca
 		}
 
 		void CPU::cpuContinue() {
-			/*
 			debug(1, "%d\n", waitCondition());
 			try {
 				Lock	lock(runConditionWait);
@@ -837,8 +836,6 @@ namespace ca
 				fprintf(stderr, le.what());
 			}
 			runConditionWait.releaseOnCondition();
-			*/
-			cycleCpu();
 		}
 
 		bool CPU::waitCondition() {
