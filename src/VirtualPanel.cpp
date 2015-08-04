@@ -87,16 +87,19 @@ namespace ca
 		}
 
 		void VirtualPanel::updatePanel() {
+            werase( vPanel );
 		    wmove( vPanel, 1, 5 );
-		    wprintw( vPanel, " Sw Reg    Df If  PC    MA    MB" );
+		    wprintw( vPanel, " Sw Reg    Df If  PC    MA    MB   L  AC" );
 		    wmove( vPanel, 2, 5 );
-		    wprintw( vPanel, "%1o %1o %04o    %1o  %1o %04o  %04o  %04o",
+		    wprintw( vPanel, "%1o %1o %04o    %1o  %1o %04o  %04o  %04o  %1o %04o",
 	                ((switches[1] >> 9) & 07),
 	                ((switches[1] >> 6) & 07),
 	                switches[0] & 07777,
 	                (cpu.getDF() >> 12) & 07,
 					(cpu.getIF() >> 12) & 07,
-					cpu.getPC(), M.MA(), M.MB()
+					cpu.getPC(), M.MA() & 07777, M.MB(),
+					cpu.getLAC() >> 12,
+					cpu.getLAC() & 07777
                 );
 		    wrefresh( vPanel );
 			setCursorLocation();
