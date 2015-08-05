@@ -305,15 +305,15 @@ namespace ca
                     nanosleep ((struct timespec[]){{0, intervl/100}}, NULL); // probably unnecessary long wait, maybe put above this loop also
 
                     switchscan=0;
-                    for (j=0;j<12;j++)          // 12 switches in each row
-                    {   tmp = GPIO_READ(cols[j]);
-                    if (tmp!=0)
+                    for (j=0;j<12;j++) {         // 12 switches in each row
+						tmp = GPIO_READ(cols[j]);
+                    	if (tmp!=0)
                             switchscan += 1<<j;
                     }
                     INP_GPIO(rows[i]);          // stop sinking current from this row of switches
 
                     if (((switchstatus[i] ^ switchscan) != 0) && switchFd >= 0) {
-                        uint32_t    switchReport[2];
+                        int    switchReport[2];
 
                         switchReport[0] = i;
                         switchReport[1] = switchscan;
