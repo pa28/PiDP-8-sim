@@ -138,7 +138,7 @@ namespace ca
 							*/
 						} else if (FD_ISSET(switchPipe, &rd_set)) {
 							// Panel
-						    int32_t    switchReport[2];
+						    int    switchReport[2];
 
 							int n = read(switchPipe, switchReport, sizeof(switchReport));
 							if (n == sizeof(switchReport)) {
