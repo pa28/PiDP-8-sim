@@ -1,19 +1,28 @@
-BINS=pidp8
-BINSDIR=.
-CFLAGS=-g -Wall -DHAS_PSELECT
-pidp8_OBJS=Chassis.o Console.o CPU.o Device.o Memory.o Panel.o Thread.o Terminal.o VirtualPanel.o
-pidp8_LIBS=-lpthread -lncurses -lrt
+CXX        := g++
+LD         := $(CXX)
+BINS       := pidp8
+BINSDIR    := .
+CFLAGS     := -g -Wall -DHAS_PSELECT
+pidp8_SRCS := Chassis.cpp Console.cpp CPU.cpp Device.cpp Memory.cpp Panel.cpp Thread.cpp Terminal.cpp VirtualPanel.cpp
+pidp8_OBJS := $(patsubst %.cpp,%.o,$(pidp8_SRCS))
+pidp8_LIBS := -lpthread -lncurses -lrt
+pidp8_DEPS := $(pidp8_OBJS:.o=.d)
+
+OBJS := $(pidp8_OBJS)
+DEPS := $(pidp8_DEPS)
 
 all: $(BINS)
 
 clean:
-	rm -f $(BINS) $(pidp8_OBJS)
+	$(RM) $(BINS) $(OBJS) $(DEPS)
 
 pidp8: $(pidp8_OBJS)
-	g++ $(CFLAGS) -o $@ $(pidp8_OBJS) $(pidp8_LIBS)
+	$(CXX) $(CFLAGS) -o $@ $(pidp8_OBJS) $(pidp8_LIBS)
 
 nc: nc.cpp
-	g++  $(CFLAGS) -o $@ $< $(pidp8_LIBS)
+	$(CXX)  $(CFLAGS) -o $@ $< $(pidp8_LIBS)
 
 %.o: %.cpp
-	g++ $(CFLAGS) -c $<
+	$(CXX) -c -MMD -MP $< -o $@ $(CFLAGS)
+
+-include $(DEPS)
