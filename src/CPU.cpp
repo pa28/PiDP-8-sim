@@ -844,11 +844,11 @@ namespace ca
                 throttleTimerReset = runConditionWait.waitOnCondition();
             }
 
-			cpuCondition = CPURunning;
             cpuState = NoState;
 		}
 
 		void CPU::cpuContinue() {
+			cpuCondition = CPURunning;
 			debug(1, "%d\n", waitCondition());
 			try {
 				Lock	lock(runConditionWait);
