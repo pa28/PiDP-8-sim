@@ -72,7 +72,7 @@ namespace ca
 				// If we are going to wait, reset throttling when we get going again.
 				// Wait the thread if the condition is false (the CPU is not running).
 			    // This call is the opportunity to trap on break or illegal instructions.
-				if (cpuStepping == PanelCommand || reason != STOP_NO_REASON) {
+				if (cpuStepping == PanelCommand || reason != STOP_NO_REASON || cpuCondition == CPUStopped) {
 					if (cpuStepping == PanelCommand || reason > STOP_IDLE) {
 						cpuCondition = CPUStopped;
 					}
