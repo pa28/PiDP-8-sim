@@ -85,20 +85,22 @@ namespace ca
 						cpuTime = 0;
 						clock_gettime( CLOCK_MONOTONIC, &throttleStart );
 						throttleTimerReset = false;
-					/*
 					} else {
-						if (cpuTime > 1000000) {
+						if (cpuTime > 10000000) {
 							clock_gettime( CLOCK_MONOTONIC, &throttleCheck );
 
 							time_t d_sec = throttleCheck.tv_sec - throttleStart.tv_sec;
 							long d_nsec = (d_sec * 1000000000) + (throttleCheck.tv_nsec - throttleStart.tv_nsec);
+                            debug( 2, "cputime %ld tc %ld, d_sec %ld d_nsec %ld\n", cpuTime, throttleCheck.tv_nsec, d_sec, d_nsec );
+                            cpuTime = 0;
+                            /*
 							if ((cpuTime - d_nsec) > 1000000) {
 								throttleCheck.tv_sec = 0;
 								throttleCheck.tv_nsec = cpuTime - d_nsec;
 								nanosleep( &throttleCheck, NULL );
 							}
+							*/
 						}
-					*/
 					}
 				}
 			}
@@ -107,6 +109,7 @@ namespace ca
 		}
 
 		long CPU::cycleCpu() {
+		    long cycleTime = 0;
             reason = STOP_NO_REASON;
             int32_t device, pulse, temp, iot_data;
 
@@ -152,17 +155,21 @@ namespace ca
 
                 switch ( IR & 07000 ) {
                     case 00000: // AND
+                        cycleTime = 3000;
                         LAC = LAC & (M[MA] | 010000);
                         break;
                     case 01000: // TAD
+                        cycleTime = 3000;
                         LAC = (LAC + M[MA]) & 017777;
                         break;
                     case 02000: // ISZ
+                        cycleTime = 3000;
                         M[MA] = (M[MA] + 1) & 07777;               /* field must exist */
                         if (M.MB() == 0)
                             PC = (PC + 1) & 07777;
                         break;
                     case 03000: // DCA
+                        cycleTime = 3000;
                         M[MA] = LAC & 07777;
                         LAC = LAC & 010000;
                         break;
@@ -176,6 +183,7 @@ namespace ca
                            clearing the interrupt inhibit flag, storing of the return address in the first
                            word of the subroutine) happens. When the TSC8-75 is disabled, the JMS is performed
                            as usual. */
+                        cycleTime = 3000;
                         if (UF) {                                       /* user mode? */
                             tsc_ir = IR;                                /* save instruction */
                             tsc_cdf = 0;                                /* clear flag */
@@ -194,6 +202,7 @@ namespace ca
                         }
                         break;
                     case 05000: // JMP
+                        cycleTime = 1500;
                         /* Opcode 4, JMS.  From Bernhard Baehr's description of the TSC8-75:
 
                            (In user mode) the current JMS opcode is moved to the ERIOT register, the ECDF
@@ -237,6 +246,7 @@ namespace ca
                         break;
                 }
             } else if ( (IR & 07000) == 06000) {    // IOT
+                cycleTime = 4250;
 
                 /* Opcode 6, IOT.  From Bernhard Baehr's description of the TSC8-75:
 
@@ -417,6 +427,7 @@ namespace ca
 
 
             /* Opcode 7, OPR group 1 */
+                cycleTime = 1500;
 
                     switch ((IR >> 7) & 037) {
                         case 034:case 035:                                  /* OPR, group 1 */
@@ -854,7 +865,7 @@ namespace ca
             cpuState = NoState;
 
             // TODO: return the number of nanoseconds the cycle should have taken on the real machine.
-            return 1000;
+            return cycleTime;
 		}
 
 		void CPU::cpuContinue() {

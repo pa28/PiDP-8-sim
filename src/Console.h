@@ -12,7 +12,7 @@
 #include "Panel.h"
 #include "CPU.h"
 #include "Memory.h"
-//#include "Terminal.h"
+#include "Thread.h"
 #include "VirtualPanel.h"
 
 namespace ca
@@ -63,6 +63,7 @@ namespace ca
 			CPU     &cpu;
 
 			VirtualPanel    *consoleTerm;
+            pthread_mutex_t     mutex;
 
         };
 

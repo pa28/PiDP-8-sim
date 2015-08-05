@@ -79,6 +79,16 @@ namespace ca
 			return n;
 		}
 
+        int VirtualPanel::printw( const char * format, ... ) {
+            va_list args;
+            va_start (args, format);
+            int n = vwprintw( console, format, args );
+            wrefresh( console );
+            va_end (args);
+            setCursorLocation();
+            return n;
+        }
+
 		void VirtualPanel::updatePanel(uint32_t sx[3]) {
 			switches[0] = sx[0];
 			switches[1] = sx[1];

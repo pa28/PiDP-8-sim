@@ -39,10 +39,12 @@ namespace ca
 				cpu(*(CPU::instance())),
 				consoleTerm(new VirtualPanel())
         {
+            pthread_mutex_init( &mutex, NULL );
         }
 
         Console::~Console()
         {
+            pthread_mutex_destroy( &mutex );
         }
 
 		Console * Console::instance() {
@@ -54,10 +56,15 @@ namespace ca
 		}
 
 		int Console::printf( const char * format, ... ) {
-			va_list args;
-			va_start (args, format);
-			int n = consoleTerm->vconf(format, args);
-			va_end (args);
+		    int n = -1;
+		    try {
+                va_list args;
+                va_start (args, format);
+                int n = consoleTerm->vconf(format, args);
+                va_end (args);
+		    } catch (LockException &le ) {
+		        consoleTerm->printw( le.what() );
+		    }
 			return n;
 		}
 

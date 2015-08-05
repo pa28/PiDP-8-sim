@@ -34,9 +34,10 @@ namespace ca
             virtual ~VirtualPanel();
 
             virtual void processStdin();
-			int vconf(const char * format, va_list args);
 
+			int vconf(const char * format, va_list args);
 			int panelf( int y, int x, const char * format, ... );
+            int printw( const char *foramt, ... );
 
 			void updatePanel(uint32_t sx[3]);
 
