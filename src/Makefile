@@ -19,9 +19,6 @@ clean:
 pidp8: $(pidp8_OBJS)
 	$(CXX) $(CFLAGS) -o $@ $(pidp8_OBJS) $(pidp8_LIBS)
 
-nc: nc.cpp
-	$(CXX)  $(CFLAGS) -o $@ $< $(pidp8_LIBS)
-
 %.o: %.cpp
 	$(CXX) -c -MMD -MP $< -o $@ $(CFLAGS)
 
