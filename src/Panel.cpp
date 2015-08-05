@@ -161,7 +161,7 @@ namespace ca
 				for (int i = 0; i < LEDSTATUS_COUNT; ++i) {
 					ledstatus[i] = turnOn ? 07777 : 0;
 				}
-			} catch (LockException le) {
+			} catch (LockException &le) {
 				Console::instance()->printf(le.what());
 			}
 		}

@@ -91,7 +91,7 @@ namespace ca
 			friend class Lock;
 
 		public:
-            ConditionWait(Thread *thread);
+            ConditionWait();
 			virtual ~ConditionWait();
 
 			void releaseOnCondition(bool all = false);
@@ -99,7 +99,6 @@ namespace ca
 
 		private:
 			bool				test;
-			Thread			&	thread;
 			pthread_mutex_t		mutex;
 			pthread_cond_t		condition;
 

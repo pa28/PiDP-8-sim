@@ -36,7 +36,7 @@ namespace ca
 				cpuStepping(NotStepping),
 				threadRunning(false),
 				reason(STOP_NO_REASON),
-				runConditionWait(this),
+				runConditionWait(),
 				throttleTimerReset(false)
         {
             // TODO Auto-generated constructor stub
@@ -688,6 +688,7 @@ namespace ca
                                     break;
                                     }
                                 LAC = LAC | SC;                             /* mode A: SCA then */
+                                // no break
                             case 001:                                       /* mode B: ACS */
                                 if (emode) {
                                     SC = LAC & 037;
@@ -712,6 +713,7 @@ namespace ca
                                     break;
                                     }
                                 LAC = LAC | SC;                             /* mode A: SCA then */
+                                // no break
                             case 002:                                       /* MUY */
                                 MA = IF | PC;
                                 if (emode) {                                /* mode B: defer */
@@ -730,6 +732,7 @@ namespace ca
                                 if (emode)
                                     break;
                                 LAC = LAC | SC;                             /* mode A: SCA then */
+                                // no break
                             case 003:                                       /* DVI */
                                 MA = IF | PC;
                                 if (emode) {                                /* mode B: defer */
@@ -758,6 +761,7 @@ namespace ca
                                     break;
                                     }
                                 LAC = LAC | SC;                             /* mode A: SCA then */
+                                // no break
                             case 004:                                       /* NMI */
                                 temp = (LAC << 12) | MQ;                    /* preserve link */
                                 for (SC = 0; ((temp & 017777777) != 0) &&
@@ -777,6 +781,7 @@ namespace ca
                                     break;
                                     }
                                 LAC = LAC | SC;                             /* mode A: SCA then */
+                                // no break
                             case 5:                                         /* SHL */
                                 SC = (M[IF | PC] & 037) + (emode ^ 1);      /* shift+1 if mode A */
                                 if (SC > 25)                                /* >25? result = 0 */
@@ -796,6 +801,7 @@ namespace ca
                                     break;
                                     }
                                 LAC = LAC | SC;                             /* mode A: SCA then */
+                                // no break
                             case 6:                                         /* ASR */
                                 SC = (M[IF | PC] & 037) + (emode ^ 1);      /* shift+1 if mode A */
                                 temp = ((LAC & 07777) << 12) | MQ;          /* sext from AC0 */
@@ -820,6 +826,7 @@ namespace ca
                                     break;
                                     }
                                 LAC = LAC | SC;                             /* mode A: SCA then */
+                                // no break
                             case 7:                                         /* LSR */
                                 SC = (M[IF | PC] & 037) + (emode ^ 1);      /* shift+1 if mode A */
                                 temp = ((LAC & 07777) << 12) | MQ;          /* clear link */
@@ -845,6 +852,9 @@ namespace ca
             }
 
             cpuState = NoState;
+
+            // TODO: return the number of nanoseconds the cycle should have taken on the real machine.
+            return 1000;
 		}
 
 		void CPU::cpuContinue() {

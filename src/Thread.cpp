@@ -69,7 +69,8 @@ namespace ca
 			}
 		}
 
-        Thread::Thread()
+        Thread::Thread() :
+                thread(0)
         {
         }
 
@@ -89,8 +90,7 @@ namespace ca
 			return 0;
 		}
 
-		ConditionWait::ConditionWait(Thread *t) :
-			thread(*t),
+		ConditionWait::ConditionWait() :
 			test(false)
 		{
 			pthread_mutex_init( &mutex, NULL );
