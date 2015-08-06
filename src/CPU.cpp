@@ -91,15 +91,13 @@ namespace ca
 
 							time_t d_sec = throttleCheck.tv_sec - throttleStart.tv_sec;
 							long d_nsec = (d_sec * 1000000000) + (throttleCheck.tv_nsec - throttleStart.tv_nsec);
-                            debug( 2, "cputime %ld tc %ld, d_sec %ld d_nsec %ld\n", cpuTime, throttleCheck.tv_nsec, d_sec, d_nsec );
-                            cpuTime = 0;
-                            /*
+                            debug( 20, "cputime %ld, d_nsec %ld\n", cpuTime, cpuTime - d_nsec );
 							if ((cpuTime - d_nsec) > 1000000) {
 								throttleCheck.tv_sec = 0;
 								throttleCheck.tv_nsec = cpuTime - d_nsec;
 								nanosleep( &throttleCheck, NULL );
 							}
-							*/
+							throttleTimerReset = true;
 						}
 					}
 				}
