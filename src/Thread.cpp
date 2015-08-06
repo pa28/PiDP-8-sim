@@ -58,6 +58,18 @@ namespace ca
 			}
 		}
 
+		Lock::Lock( Mutex & m ) : mutex(&m.mutex)
+		{
+			int s = pthread_mutex_lock( mutex );
+			switch (s) {
+				case 0:
+					debug(1, "ConditionWait mutex %0X locked\n", mutex);
+					break;
+				default:
+					throw LockException(true, s);
+			}
+		}
+
 		Lock::~Lock() {
 			int s = pthread_mutex_unlock( mutex );
 			switch (s) {
