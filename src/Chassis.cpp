@@ -7,13 +7,16 @@
 
 #include <stdlib.h>
 #include <unistd.h>
-#include <signal.h>
 #include "Chassis.h"
 
 using namespace ca::pdp8;
 
 void sigintHandler(int s) {
     Chassis::instance()->stop();
+}
+
+void timerHandler(int s) {
+	Chassis::instance()->timerHandler();
 }
 
 int main( int argc, char ** argv ) {
@@ -40,7 +43,13 @@ namespace ca
                 perror("pipe");
                 exit(1);
             }
-
+			
+			struct sigaction sa;
+			
+			memset( &sa, 0, sizeof(sa));
+			sa.sa_handler = &timerHandler;
+			sigaction( SIGALRM, &sa, NULL);
+			
             for (int i = 0; i < DEV_MAX_COUNT; ++i)
                 deviceList[i] = NULL;
 
@@ -86,6 +95,21 @@ namespace ca
 		            deviceList[i]->stop();
 		        }
 		    }
+		}
+		
+		void Chassis::setTimerFreq( bool f120 ) {
+			struct itimerval timer;
+			timer.it_value.tv_sec = 0;
+			timer.it_value.tv_usec = (f120 ? 8333 : 10000);	// 120Hz 10000 for 100Hz
+			
+			timer.it_interval.tv_sec = 0;
+			timer.it_interval.tv_usec = (f120 ? 8333 : 10000);
+			
+			setitimer( ITIMER_REAL, &timer, NULL );			
+		}
+		
+		void Chassis::timerHandler() {
+			CPU::instance()->timerTick();
 		}
 
     } /* namespace pdp8 */

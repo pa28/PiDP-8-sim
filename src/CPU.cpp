@@ -116,8 +116,9 @@ namespace ca
 						cpuTime = 0;
 						clock_gettime( CLOCK_MONOTONIC, &throttleStart );
 						throttleTimerReset = false;
+						testTick()
 					} else {
-						if (cpuTime > 10000000) {
+						if ( testTick() ) {
 							clock_gettime( CLOCK_MONOTONIC, &throttleCheck );
 
 							time_t d_sec = throttleCheck.tv_sec - throttleStart.tv_sec;
@@ -905,13 +906,35 @@ namespace ca
 				cpuCondition = CPURunning;
 				debug(1, "%d\n", waitCondition());
 			} catch (LockException &le) {
-				fprintf(stderr, le.what());
+				Console::instance()->printf(le.what());
 			}
 			runConditionWait.releaseOnCondition();
 		}
 
 		bool CPU::waitCondition() {
 			return cpuCondition == CPURunning;
+		}
+		
+		void CPU::timerTick() {
+			try {
+				Lock	lock(timerTickMutex);
+				timerTickFlag = true;
+			} catch ( LockException &le ) {
+				Console::instance()->printf(le.what());
+			}
+		}
+		
+		bool CPU::testTick( bool clear ) {
+			bool r = false;
+			
+			try {
+				Lock	lock(timerTickMutex);
+				r = timerTickFlag;
+				if (clear)
+					timerTickFlag = false;
+			} catch ( LockException &le ) {
+				Console::instance()->printf(le.what());
+			}
 		}
 
     } /* namespace pdp8 */

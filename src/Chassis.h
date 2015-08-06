@@ -37,6 +37,9 @@
 #define DEV_DTA         076                             /* TC08 */
 #define DEV_TD8E        077                             /* TD8E */
 
+#include <signal.h>
+#include <time.h>
+
 #include "CPU.h"
 #include "Memory.h"
 #include "Console.h"
@@ -52,19 +55,20 @@ namespace ca
             Chassis();
 
         public:
-            virtual ~Chassis();
+            virtual 	~Chassis();
 
-			static Chassis * instance();
+			static 		Chassis * instance();
 
-			void    stop();
+			void    	stop();
+			void		timerHandler();
 
-			Device  * device(int32_t devNo) { return deviceList[devNo]; }
+			Device  * 	device(int32_t devNo) { return deviceList[devNo]; }
+			
+			void		setTimerFreq( bool f120 = true );
 
         protected:
-			static	Chassis * _instance;
-            Device*    deviceList[DEV_MAX_COUNT];
-
-
+			static		Chassis * _instance;
+            Device*    	deviceList[DEV_MAX_COUNT];
         };
 
     } /* namespace pdp8 */
