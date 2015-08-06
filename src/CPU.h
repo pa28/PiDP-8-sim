@@ -132,7 +132,25 @@ namespace ca
 		    STOP_IOT_REASON,
 		    STOP_HLT,
 		};
-
+			
+		#define REGISTERS \						
+			X(PC, PC, 8, 12, 0, 12 ) \			
+			X(MQ, MQ, 8, 12, 0, 12 ) \			
+			X(IR, IR, 8, 12, 0, 12 ) \			
+			X(IB, IB, 8, 12, 0, 12 ) \			
+			X(OSR, OSR, 8, 12, 0, 12 ) \
+			X(LAC, LAC, 8, 13, 0, 13 ) \
+			X(L, LAC, 8, 1, 12, 1 ) \
+			X(AC, LAC, 8, 12, 0, 12 ) \
+			X(DF, DF, 8, 3, 12, 3 ) \
+			X(IF, IF, 8, 3, 12, 3 )
+			
+		#define MODIFIERS \
+			X(IDLE, cpuLoadControl, IDLE_DETECT_MASK, IDLE_DETECT_MASK ) \
+			X(NOIDLE, cpuLoadControl, 0, IDLE_DETECT_MASK ) \
+			X(THROTTLE, cpuLoadControl, THROTTLE_MASK, THROTTLE_MASK ) \
+			X(NOTHROTTLE, cpuLoadControl, 0, THROTTLE_MASK )
+			
         class CPU: public Device, Thread
         {
             CPU();
@@ -144,18 +162,21 @@ namespace ca
 			virtual void initialize() { start(); }
 			virtual void reset() {}
 
-			uint16_t    getPC() const { return PC; }
-			uint16_t    getIF() const { return IF; }
-			uint16_t    getDF() const { return DF; }
-			uint16_t    getLAC() const { return LAC & 017777; }
-			uint16_t    getMQ() const { return MQ; }
-			uint16_t    getSC() const { return SC; }
-			uint16_t	getIR() const { return IR; }
-
-			void    setPC(uint16_t v) { PC = v & 07777; }
-            void    setIF(uint16_t v) { IF = (v & 07) << 12; }
-            void    setDF(uint16_t v) { DF = (v & 07) << 12; }
-
+			#define X(nm,loc,r,w,o,d)	Index ## nm,
+			enum RegisterIndex {
+				REGISTERS
+				RegisterCount,
+			};
+			#undef X
+			
+			#define X(nm,loc,r,w,o,d)	int32_t get ## nm () const { return register[Index ## nm].get(bool normal = false); }
+			REGISTERS
+			#undef X
+			
+			#define X(nm,loc,r,w,o,d)	void get ## nm (int32_t v) { register[Index ## nm].set(v, bool normal = false); }
+			REGISTERS
+			#undef X
+			
 			CPUState		getState() const { return cpuState; }
 			CPUCondition	getCondition() const { return cpuCondition; }
 			CPUStepping		getStepping() const { return cpuStepping; }
@@ -166,6 +187,8 @@ namespace ca
 			void	cpuContinue();
 			void	cpuStop() { cpuCondition = CPUStopped; }
 			void	cpuMemoryBreak() { cpuCondition = CPUMemoryBreak; }
+			void	timerTick();
+			bool	testTick(bool clear = true);
 
 			virtual int run();
 			virtual void stop() { threadRunning = false; }
@@ -175,28 +198,13 @@ namespace ca
 			static CPU *    _instance;
 			//Memory &        M;
 
-			int32_t        PC, IF, DF, LAC, MQ, SC, IR, MA;
-	        int32_t IB;                                           /* Instruction Buffer */
-	        int32_t SF;                                           /* Save Field */
-	        int32_t emode;                                        /* EAE mode */
-	        int32_t gtf;                                          /* EAE gtf flag */
-	        int32_t UB;                                           /* User mode Buffer */
-	        int32_t UF;                                           /* User mode Flag */
-	        int32_t OSR;                                          /* Switch Register */
-	        int32_t tsc_ir;                                       /* TSC8-75 IR */
-	        int32_t tsc_pc;                                       /* TSC8-75 PC */
-	        int32_t tsc_cdf;                                      /* TSC8-75 CDF flag */
-	        int32_t tsc_enb;                                      /* TSC8-75 enabled */
-	        int32_t int_req;                                      /* intr requests */
-	        int32_t dev_done;                                     /* dev done flags */
-	        int32_t int_enable;                                   /* intr enables */
-
-
 	        CPUState	    cpuState;
 			CPUCondition	cpuCondition;
 			CPUStepping		cpuStepping;
 			bool		    threadRunning;
 			CpuStopReason   reason;
+			bool			timerTickFlag;
+			Mutex			timerTickMutex;
 
 			ConditionWait	runConditionWait;
 

@@ -22,15 +22,46 @@ namespace ca
         Memory & M = *Memory::instance();
 		CPU * CPU::_instance = NULL;
 
+#ifndef NOT_DEF
+		int32_t PC = 0;										// Program Counter
+		int32_t IF = 0;										// Instruction Field
+		int32_t DF = 0;										// Data Field
+		int32_t LAC = 0;									// Link Accumulator
+		int32_t MQ = 0;										// Multiplier Quotient
+		int32_t SC = 0;										// Step Counter
+		int32_t IR = 0;										// Instruction Register
+		int32_t MA = 0;										// Memory Address
+		int32_t IB = 0;                                     /* Instruction Buffer */
+#endif
+		int32_t SF = 0;                                     /* Save Field */
+		int32_t emode = 0;                                  /* EAE mode */
+		int32_t gtf = 0;                                    /* EAE gtf flag */
+		int32_t UB = 0;                                     /* User mode Buffer */
+		int32_t UF = 0;                                     /* User mode Flag */
+		int32_t OSR = 0;                                    /* Switch Register */
+		int32_t tsc_ir = 0;                                 /* TSC8-75 IR */
+		int32_t tsc_pc = 0;                                 /* TSC8-75 PC */
+		int32_t tsc_cdf = 0;                                /* TSC8-75 CDF flag */
+		int32_t tsc_enb = 0;                                /* TSC8-75 enabled */
+		int32_t int_req = 0;                                /* intr requests */
+		int32_t dev_done = 0;                               /* dev done flags */
+		int32_t int_enable = INT_INIT_ENABLE;               /* intr enables */
+
+		#define X(nm,loc,r,w,o,d) { #nm, &(loc), (r), (w), (o), (d) },
+		Register	cpuRegisters[] = {
+			REGISTERS
+		};
+		#undef X
+		
+		#define X(nm,loc,v,m) { #nm, &(loc), (v), (m) },
+		Modifiers	cpuModifiers[] = {
+			MODIFIERS
+		}
+		#undef X
+		
         CPU::CPU() :
-                Device("CPU", "Central Processing Unit"),
+                Device("CPU", "Central Processing Unit", cpuRegisters, sizeof(cpuRegisters), cpuModifiers, sizeof(cpuModifiers))
                 //M(*Memory::instance()),
-                PC(0), IF(0), DF(0), LAC(0), MQ(0), SC(0), IR(0), MA(0), IB(0), SF(0),
-                emode(0), gtf(0),
-                UB(0), UF(0), OSR(0), tsc_ir(0), tsc_pc(0), tsc_cdf(0), tsc_enb(0),
-                int_req(0),
-                dev_done(0),
-                int_enable(INT_INIT_ENABLE),
 				cpuState(NoState),
 				cpuCondition(CPUStopped),
 				cpuStepping(NotStepping),
