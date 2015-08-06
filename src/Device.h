@@ -12,20 +12,22 @@
 #include <iostream>
 #include <stdint.h>
 
+using namespace std;
+
 namespace ca
 {
     namespace pdp8
     {
-		
+
 		class Register
 		{
 		public:
 			Register( const char *nm, int32_t *l, int32_t r, int32_t w, int32_t o, int32_t d);
 			virtual ~Register() {}
-		
+
 			int32_t				get(bool normal = false) const;
 			void				set(int32_t v, bool normal = false);
-			
+
 			ostream&			printOn(ostream &strm) const;
 			istream&			scanFrom(istream &strm);
 
@@ -36,13 +38,14 @@ namespace ca
 			uint32_t            width;                          /* width */
 			uint32_t            offset;                         /* starting bit */
 			uint32_t            depth;                          /* save depth */
-			
+			uint32_t            mask;
+
 			static int32_t		nmask[];
 		};
-		
-		ostream & operator << (ostream & s, const Register &r) { return r.printOn(s); }
-		istream & operator >> (istream & s, Register &r) { return r.scanFrom(s); }
-		
+
+		inline ostream & operator << (ostream & s, const Register &r) { return r.printOn(s); }
+		inline istream & operator >> (istream & s, Register &r) { return r.scanFrom(s); }
+
 		class Modifier
 		{
 		public:
@@ -51,18 +54,18 @@ namespace ca
 				{
 				}
 			virtual ~Modifier() {}
-		
+
 		protected:
-			string				name
+			string				name;
 			int32_t				*loc;
 			int32_t				value;
 			int32_t				mask;
 		};
-		
+
 		class Device
         {
         public:
-            Device(std::string name, std::string longName, Register *reg, int numReg, Modifier *mod, int numMod);
+            Device(std::string name, std::string longName, Register *reg = NULL, int numReg = 0, Modifier *mod = NULL, int numMod = 0);
             virtual ~Device();
 
             virtual void initialize() = 0;
@@ -70,13 +73,13 @@ namespace ca
 			virtual void stop() = 0;
 
 			virtual int32_t dispatch(int32_t IR, int32_t dat) { return 0; }
-			
+
 		protected:
 			string		name, longName;
 			int			nReg, nMod;
 			Register	*registers;
 			Modifier	*modifiers;
-			
+
         };
 
     } /* namespace pdp8 */

@@ -46,27 +46,29 @@ namespace ca
 		int32_t int_req = 0;                                /* intr requests */
 		int32_t dev_done = 0;                               /* dev done flags */
 		int32_t int_enable = INT_INIT_ENABLE;               /* intr enables */
+		int32_t cpuLoadControl = 0;
 
-		#define X(nm,loc,r,w,o,d) { #nm, &(loc), (r), (w), (o), (d) },
-		Register	cpuRegisters[] = {
+		Register	CPU::cpuRegisters[] = {
+#define X(nm,loc,r,w,o,d) { #nm, &(loc), (r), (w), (o), (d) },
 			REGISTERS
+#undef X
 		};
-		#undef X
-		
-		#define X(nm,loc,v,m) { #nm, &(loc), (v), (m) },
-		Modifiers	cpuModifiers[] = {
+
+		Modifier	cpuModifiers[] = {
+#define X(nm,loc,v,m) { #nm, &(loc), (v), (m) },
 			MODIFIERS
-		}
-		#undef X
-		
+#undef X
+		};
+
         CPU::CPU() :
-                Device("CPU", "Central Processing Unit", cpuRegisters, sizeof(cpuRegisters), cpuModifiers, sizeof(cpuModifiers))
+                Device("CPU", "Central Processing Unit", cpuRegisters, sizeof(cpuRegisters), cpuModifiers, sizeof(cpuModifiers)),
                 //M(*Memory::instance()),
 				cpuState(NoState),
 				cpuCondition(CPUStopped),
 				cpuStepping(NotStepping),
 				threadRunning(false),
 				reason(STOP_NO_REASON),
+				timerTickFlag(false),
 				runConditionWait(),
 				throttleTimerReset(false)
         {
@@ -116,7 +118,7 @@ namespace ca
 						cpuTime = 0;
 						clock_gettime( CLOCK_MONOTONIC, &throttleStart );
 						throttleTimerReset = false;
-						testTick()
+						testTick();
 					} else {
 						if ( testTick() ) {
 							clock_gettime( CLOCK_MONOTONIC, &throttleCheck );
@@ -914,7 +916,7 @@ namespace ca
 		bool CPU::waitCondition() {
 			return cpuCondition == CPURunning;
 		}
-		
+
 		void CPU::timerTick() {
 			try {
 				Lock	lock(timerTickMutex);
@@ -923,10 +925,10 @@ namespace ca
 				Console::instance()->printf(le.what());
 			}
 		}
-		
+
 		bool CPU::testTick( bool clear ) {
 			bool r = false;
-			
+
 			try {
 				Lock	lock(timerTickMutex);
 				r = timerTickFlag;

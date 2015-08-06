@@ -38,7 +38,7 @@
 #define DEV_TD8E        077                             /* TD8E */
 
 #include <signal.h>
-#include <time.h>
+#include <sys/time.h>
 
 #include "CPU.h"
 #include "Memory.h"
@@ -63,7 +63,7 @@ namespace ca
 			void		timerHandler();
 
 			Device  * 	device(int32_t devNo) { return deviceList[devNo]; }
-			
+
 			void		setTimerFreq( bool f120 = true );
 
         protected:

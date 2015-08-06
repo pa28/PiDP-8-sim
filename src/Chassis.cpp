@@ -43,13 +43,13 @@ namespace ca
                 perror("pipe");
                 exit(1);
             }
-			
+
 			struct sigaction sa;
-			
+
 			memset( &sa, 0, sizeof(sa));
-			sa.sa_handler = &timerHandler;
+			sa.sa_handler = &::timerHandler;
 			sigaction( SIGALRM, &sa, NULL);
-			
+
             for (int i = 0; i < DEV_MAX_COUNT; ++i)
                 deviceList[i] = NULL;
 
@@ -96,18 +96,18 @@ namespace ca
 		        }
 		    }
 		}
-		
+
 		void Chassis::setTimerFreq( bool f120 ) {
 			struct itimerval timer;
 			timer.it_value.tv_sec = 0;
 			timer.it_value.tv_usec = (f120 ? 8333 : 10000);	// 120Hz 10000 for 100Hz
-			
+
 			timer.it_interval.tv_sec = 0;
 			timer.it_interval.tv_usec = (f120 ? 8333 : 10000);
-			
-			setitimer( ITIMER_REAL, &timer, NULL );			
+
+			setitimer( ITIMER_REAL, &timer, NULL );
 		}
-		
+
 		void Chassis::timerHandler() {
 			CPU::instance()->timerTick();
 		}

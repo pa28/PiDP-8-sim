@@ -132,25 +132,29 @@ namespace ca
 		    STOP_IOT_REASON,
 		    STOP_HLT,
 		};
-			
-		#define REGISTERS \						
-			X(PC, PC, 8, 12, 0, 12 ) \			
-			X(MQ, MQ, 8, 12, 0, 12 ) \			
-			X(IR, IR, 8, 12, 0, 12 ) \			
-			X(IB, IB, 8, 12, 0, 12 ) \			
+
+		#define REGISTERS \
+			X(PC, PC, 8, 12, 0, 12 ) \
+			X(MQ, MQ, 8, 12, 0, 12 ) \
+			X(IR, IR, 8, 12, 0, 12 ) \
+			X(IB, IB, 8, 12, 0, 12 ) \
 			X(OSR, OSR, 8, 12, 0, 12 ) \
 			X(LAC, LAC, 8, 13, 0, 13 ) \
 			X(L, LAC, 8, 1, 12, 1 ) \
 			X(AC, LAC, 8, 12, 0, 12 ) \
 			X(DF, DF, 8, 3, 12, 3 ) \
-			X(IF, IF, 8, 3, 12, 3 )
-			
+			X(IF, IF, 8, 3, 12, 3 ) \
+			X(SC, SC, 8, 5, 0, 5 )
+
+        #define IDLE_DETECT_MASK    0x1
+        #define THROTTLE_MASK       0X2
+
 		#define MODIFIERS \
 			X(IDLE, cpuLoadControl, IDLE_DETECT_MASK, IDLE_DETECT_MASK ) \
 			X(NOIDLE, cpuLoadControl, 0, IDLE_DETECT_MASK ) \
 			X(THROTTLE, cpuLoadControl, THROTTLE_MASK, THROTTLE_MASK ) \
 			X(NOTHROTTLE, cpuLoadControl, 0, THROTTLE_MASK )
-			
+
         class CPU: public Device, Thread
         {
             CPU();
@@ -168,15 +172,16 @@ namespace ca
 				RegisterCount,
 			};
 			#undef X
-			
-			#define X(nm,loc,r,w,o,d)	int32_t get ## nm () const { return register[Index ## nm].get(bool normal = false); }
+			//
+			//
+			#define X(nm,loc,r,w,o,d)	int32_t get ## nm (bool normal = false) const { return cpuRegisters[Index ## nm].get(normal); }
 			REGISTERS
 			#undef X
-			
-			#define X(nm,loc,r,w,o,d)	void get ## nm (int32_t v) { register[Index ## nm].set(v, bool normal = false); }
+
+			#define X(nm,loc,r,w,o,d)	void set ## nm (int32_t v, bool normal = false) { cpuRegisters[Index ## nm].set(v, normal); }
 			REGISTERS
 			#undef X
-			
+
 			CPUState		getState() const { return cpuState; }
 			CPUCondition	getCondition() const { return cpuCondition; }
 			CPUStepping		getStepping() const { return cpuStepping; }
@@ -196,6 +201,8 @@ namespace ca
 
 		protected:
 			static CPU *    _instance;
+			static Register cpuRegisters[];
+
 			//Memory &        M;
 
 	        CPUState	    cpuState;
