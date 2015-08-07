@@ -151,10 +151,10 @@ namespace ca
         #define THROTTLE_MASK       0X2
 
 		#define MODIFIERS \
-			X(IDLE, cpuLoadControl, IDLE_DETECT_MASK, IDLE_DETECT_MASK ) \
-			X(NOIDLE, cpuLoadControl, 0, IDLE_DETECT_MASK ) \
-			X(THROTTLE, cpuLoadControl, THROTTLE_MASK, THROTTLE_MASK ) \
-			X(NOTHROTTLE, cpuLoadControl, 0, THROTTLE_MASK )
+			X(IDLE, ModifierValue, cpuLoadControl, IDLE_DETECT_MASK, IDLE_DETECT_MASK ) \
+			X(NOIDLE, ModifierValue, cpuLoadControl, 0, IDLE_DETECT_MASK ) \
+			X(THROTTLE, ModifierValue, cpuLoadControl, THROTTLE_MASK, THROTTLE_MASK ) \
+			X(NOTHROTTLE, ModifierValue, cpuLoadControl, 0, THROTTLE_MASK )
 
         class CPU: public Device, Thread
         {

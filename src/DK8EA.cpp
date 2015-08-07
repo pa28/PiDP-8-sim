@@ -119,7 +119,7 @@ namespace ca
 				int32   tmp;
 
 				case 0:                                             /* CLSF */
-					clkpi_flags = AC & 077;                         /* Set programmable flags */
+					clk_flags = AC & 077;                         /* Set programmable flags */
 					return AC;
 
 				case 1:                                             /* CLEI */
@@ -141,19 +141,19 @@ namespace ca
 					return AC;
 
 				case 4:                                             /* CLSI */
-					tmp = clkpi_buf0;
-					clkpi_buf0 = AC;
-					clkpi_cnt0 = AC;
+					tmp = clk_buf0;
+					clk_buf0 = AC;
+					clk_cnt0 = AC;
 					return tmp;
 
 				case 5:                                             /* CLSM */
-					tmp = clkpi_buf1;
-					clkpi_buf1 = AC;
-					clkpi_cnt1 = AC;
+					tmp = clk_buf1;
+					clk_buf1 = AC;
+					clk_cnt1 = AC;
 					return tmp;
 
 				case 6:                                             /* RAND */
-					if (clkpi_rand == 0) {
+					if (clk_rand == 0) {
 						if (read(hwrng, &AC, sizeof(AC))) {
 							AC &= 07777;
 						} else {
@@ -166,8 +166,8 @@ namespace ca
 					return AC;
 
 				case 7:                                             /* CLRF */
-					AC = clkpi_flags & 07777;
-					clkpi_flags = AC &00077;
+					AC = clk_flags & 07777;
+					clk_flags = AC &00077;
 					return AC;
 
 				default:
@@ -179,71 +179,63 @@ namespace ca
 		}
 			
 		void DK8EA::tick() {
-			int32 t;
-
-			switch(clkpi_clk_mode) {
+			// TODO: change dev_done and int_req updates.
+			switch(clk_mode) {
 				case 0:                                                 /* DK8EA */
+					clk_flags |= (CLK_FLAG_FUNDAMENTAL);
 					dev_done = dev_done | INT_CLK;                          /* set done */
 					int_req = INT_UPDATE;                                   /* update interrupts */
-					clkpi_flags |= (CLK_FLAG_FUNDAMENTAL);
-					t = sim_rtcn_calb (clkpi_tps, TMR_CLK);                 /* calibrate clock */
-					sim_activate (&clkpi_unit, t);                          /* reactivate unit */
-					tmxr_poll = t;                                          /* set mux poll */
-					return SCPE_OK;
+					break;
 				case 1:                                                 /* DK8EAPi */
-					if (clkpi_flags & CLK_INT_FUNDAMENTAL) {
+					if (clk_flags & CLK_INT_FUNDAMENTAL) {
+						clk_flags |= (CLK_FLAG_FUNDAMENTAL);
 						dev_done = dev_done | INT_CLK;                      /* set done */
 						int_req = INT_UPDATE;                               /* update interrupts */
-						clkpi_flags |= (CLK_FLAG_FUNDAMENTAL);
 					}
-					if (clkpi_flags & CLK_OPR_SEQ) {
-						if (clkpi_cnt0 == 0) {
-							if (clkpi_cnt1 == 0) {
-								clkpi_cnt0 = clkpi_buf0;                         /* reload base counter */
-								clkpi_cnt1 = clkpi_buf1;                         /* reload multiplier */
+					if (clk_flags & CLK_OPR_SEQ) {
+						if (clk_cnt0 == 0) {
+							if (clk_cnt1 == 0) {
+								clk_cnt0 = clk_buf0;                         /* reload base counter */
+								clk_cnt1 = clk_buf1;                         /* reload multiplier */
 							} else {
-								clkpi_cnt1 --;
-								if (clkpi_cnt1 == 0) {
+								clk_cnt1 --;
+								if (clk_cnt1 == 0) {
+									clk_flags |= (CLK_FLAG_MULT);
 									dev_done = dev_done | INT_CLK;                      /* set done */
 									int_req = INT_UPDATE;                               /* update interrupts */
-									clkpi_flags |= (CLK_FLAG_MULT);
 								}
 							}
 						} else {
-							clkpi_cnt0 --;
-							if (clkpi_cnt0 == 0) {
+							clk_cnt0 --;
+							if (clk_cnt0 == 0) {
+								clk_flags |= (CLK_FLAG_BASE);
 								dev_done = dev_done | INT_CLK;                      /* set done */
 								int_req = INT_UPDATE;                               /* update interrupts */
-								clkpi_flags |= (CLK_FLAG_BASE);
 							}
 						}
 					} else {
-						if (clkpi_cnt0 == 0) {
-							if (clkpi_flags & CLK_INT_BASE) {
+						if (clk_cnt0 == 0) {
+							if (clk_flags & CLK_INT_BASE) {
+								clk_flags |= (CLK_FLAG_BASE);
 								dev_done = dev_done | INT_CLK;                      /* set done */
 								int_req = INT_UPDATE;                               /* update interrupts */
-								clkpi_flags |= (CLK_FLAG_BASE);
 							}
-							if (clkpi_cnt1 == 0) {
-								if (clkpi_flags & CLK_INT_MULT) {
+							if (clk_cnt1 == 0) {
+								if (clk_flags & CLK_INT_MULT) {
+									clk_flags |= (CLK_FLAG_MULT);
 									dev_done = dev_done | INT_CLK;                      /* set done */
 									int_req = INT_UPDATE;                               /* update interrupts */
-									clkpi_flags |= (CLK_FLAG_MULT);
 								}
-								clkpi_cnt0 = clkpi_buf0;                         /* reload base counter */
-								clkpi_cnt1 = clkpi_buf1;                         /* reload multiplier */
+								clk_cnt0 = clk_buf0;                         /* reload base counter */
+								clk_cnt1 = clk_buf1;                         /* reload multiplier */
 							} else {
-								clkpi_cnt0 = clkpi_buf0;
-								clkpi_cnt1 --;
+								clk_cnt0 = clk_buf0;
+								clk_cnt1 --;
 							}
 						} else {
-							clkpi_cnt0 --;
+							clk_cnt0 --;
 						}
 					}
-					t = sim_rtcn_calb (clkpi_tps, TMR_CLK);                 /* calibrate clock */
-					sim_activate (&clkpi_unit, t);                          /* reactivate unit */
-					tmxr_poll = t;                                          /* set mux poll */
-					return SCPE_OK;
 				}
 
 		}

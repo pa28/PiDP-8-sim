@@ -46,18 +46,24 @@ namespace ca
 		inline ostream & operator << (ostream & s, const Register &r) { return r.printOn(s); }
 		inline istream & operator >> (istream & s, Register &r) { return r.scanFrom(s); }
 
+		enum ModifierType {
+			ModifierValue
+			ModifierFunction
+		}
+
 		class Modifier
 		{
 		public:
-			Modifier(const char *nm, int32_t *l, int32_t v, int32_t m) :
-				name(nm), loc(l), value(v), mask(m)
+			Modifier(const char *nm, ModifierType t, void *l, int32_t v, int32_t m) :
+				name(nm), type(t), loc(l), value(v), mask(m)
 				{
 				}
 			virtual ~Modifier() {}
 
 		protected:
 			string				name;
-			int32_t				*loc;
+			ModifierType		type;
+			void				*loc;
 			int32_t				value;
 			int32_t				mask;
 		};
