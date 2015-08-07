@@ -7,6 +7,10 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+
+#define DEBUG_LEVEL 5
+#include "PDP8.h"
 #include "Chassis.h"
 
 using namespace ca::pdp8;
