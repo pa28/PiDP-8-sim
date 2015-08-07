@@ -22,6 +22,11 @@ namespace ca
 			X(BUF1, clk_buf1, 8, 12, 0, 12 ) \
 			X(CNT0, clk_cnt0, 8, 12, 0, 12 ) \
 			X(CNT1, clk_cnt1, 8, 12, 0, 12 )
+			
+		enum DK8EA_Constants {
+			DK8EA_Mode_A = 0,
+			DK8EA_Mode_P = 1,
+		};
 
 		class DK8EA : public Device
 		{
