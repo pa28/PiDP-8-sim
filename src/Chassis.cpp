@@ -74,6 +74,8 @@ namespace ca
 			Memory::instance()->loadFile("/nas/pi/PiDP-8-sim/Test.bin");
 
             Console::instance()->printf("PiDP-8-sim started.\n");
+
+			setTimerFreq(false);
         }
 
         Chassis::~Chassis()
