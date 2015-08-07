@@ -118,14 +118,15 @@ namespace ca
 						cpuTime = 0;
 						clock_gettime( CLOCK_MONOTONIC, &throttleStart );
 						throttleTimerReset = false;
-						testTick();
 					} else {
-						if ( testTick() ) {
+						if ( timerTickFlag ) {
 							clock_gettime( CLOCK_MONOTONIC, &throttleCheck );
 
 							time_t d_sec = throttleCheck.tv_sec - throttleStart.tv_sec;
 							long d_nsec = (d_sec * 1000000000) + (throttleCheck.tv_nsec - throttleStart.tv_nsec);
-                            debug( 20, "cputime %ld, d_nsec %ld\n", cpuTime, cpuTime - d_nsec );
+							debug( 20, "%ld.%09ld\n", throttleCheck.tv_sec, throttleCheck.tv_nsec);
+							debug( 20, "%ld.%09ld\n", throttleStart.tv_sec, throttleStart.tv_nsec);
+                            debug( 20, "cputime %ld, d_nsec %ld\n", cpuTime, d_nsec );
 							if ((cpuTime - d_nsec) > 1000000) {
 								throttleCheck.tv_sec = 0;
 								throttleCheck.tv_nsec = cpuTime - d_nsec;
@@ -135,6 +136,7 @@ namespace ca
 						}
 					}
 				}
+				timerTickFlag = false;
 			}
 
 			return 0;
@@ -927,8 +929,9 @@ namespace ca
 		}
 
 		bool CPU::testTick( bool clear ) {
-			bool r = false;
 
+			/*
+			bool r = false;
 			try {
 				Lock	lock(timerTickMutex);
 				r = timerTickFlag;
@@ -937,6 +940,12 @@ namespace ca
 			} catch ( LockException &le ) {
 				Console::instance()->printf(le.what());
 			}
+			*/
+
+			bool r = timerTickFlag;
+			if (clear)
+				timerTickFlag = false;
+			return r;
 		}
 
     } /* namespace pdp8 */
