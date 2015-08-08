@@ -232,6 +232,7 @@ namespace ca
 						}
 					} else {
 						// timeout
+						debug(1, "Timeout mode %d, count %d\n", stopMode, stopCount );
 					    if (stopMode) {
 					        --stopCount;
 					        if (stopCount < 0) {
