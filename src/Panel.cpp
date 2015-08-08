@@ -410,10 +410,8 @@ namespace ca
 					ledstatus[6] |= ((ledBlink & 040) << 4);
 					break;
 				case CPURunning:		// Turn on the Run LED
-					ledstatus[6] |= (1<<7);
-					break;
 				case CPUIdle:			// Blink the Run LED
-					ledstatus[6] |= ((ledBlink & 020) << 2);
+					ledstatus[6] |= (1<<7);
 					break;
 				default:				// Leave all LEDs off
 					;
