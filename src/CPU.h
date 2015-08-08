@@ -144,7 +144,8 @@ namespace ca
 			X(AC, LAC, 8, 12, 0, 12 ) \
 			X(DF, DF, 8, 3, 12, 3 ) \
 			X(IF, IF, 8, 3, 12, 3 ) \
-			X(SC, SC, 8, 5, 0, 5 )
+			X(SC, SC, 8, 5, 0, 5 ) \
+			X(ION, int_req, 8, 1, INT_V_ION, 1 )
 
         #define IDLE_DETECT_MASK    0x1
         #define THROTTLE_MASK       0X2

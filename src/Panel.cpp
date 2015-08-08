@@ -336,15 +336,17 @@ namespace ca
         }
 
         void Panel::getLeds() {
+			CPU	& cpu(*CPU::instance());
+			
             // pause 6 1<<8
             // CA 6 1<<11
             // Break 6 1<<10
 
-            ledstatus[0] = CPU::instance()->getPC();
+            ledstatus[0] = cpu.getPC();
             ledstatus[1] = Memory::MA();
             ledstatus[2] = Memory::MB();
-            ledstatus[3] = CPU::instance()->getLAC();
-            ledstatus[4] = CPU::instance()->getMQ();
+            ledstatus[3] = cpu.getAC();
+            ledstatus[4] = cpu.getMQ();
 
             /* ledstatus[5]
              * AND 11
@@ -362,7 +364,7 @@ namespace ca
              */
 
 			ledstatus[5] = 0;
-			switch (CPU::instance()->getState()) {
+			switch (cpu.getState()) {
 				case DepositState:
 					ledstatus[5] |= (1 << (11 - ((ledstatus[2] & 07000) >> 9)));
 					ledstatus[5] |= (1 << 2); // execute
@@ -372,23 +374,23 @@ namespace ca
 					ledstatus[5] |= (1 << 3); // fetch
 					break;
 				case Fetch:
-					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
+					ledstatus[5] |= (1 << (11 - ((cpu.getIR() & 07000) >> 9)));
 					ledstatus[5] |= (1 << 3); // fetch
 					break;
 				case Execute:
-					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
+					ledstatus[5] |= (1 << (11 - ((cpu.getIR() & 07000) >> 9)));
 					ledstatus[5] |= (1 << 2); // fetch
 					break;
 				case Defer:
-					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
+					ledstatus[5] |= (1 << (11 - ((cpu.getIR() & 07000) >> 9)));
 					ledstatus[5] |= (1 << 1); // defer
 					break;
 				case FetchExecute:
-					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
+					ledstatus[5] |= (1 << (11 - ((cpu.getIR() & 07000) >> 9)));
 					ledstatus[5] |= (3 << 2); // fetch and execute
 					break;
 				case FetchDeferExecute:
-					ledstatus[5] |= (1 << (11 - ((CPU::instance()->getIR() & 07000) >> 9)));
+					ledstatus[5] |= (1 << (11 - ((cpu.getIR() & 07000) >> 9)));
 					ledstatus[5] |= (7 << 1); // fetch, defer and execute
 					break;
 				default:
@@ -403,8 +405,8 @@ namespace ca
              * Run 7
              * SC 6-2
              */
-			ledstatus[6] = (CPU::instance()->getSC() << 2);
-			switch (CPU::instance()->getCondition()) {
+			ledstatus[6] = (cpu.getSC() << 2);
+			switch (cpu.getCondition()) {
 				case CPUMemoryBreak:	// Blink the Break LED
 					ledstatus[6] |= ((ledBlink & 020) << 5);
 					break;
@@ -417,9 +419,10 @@ namespace ca
 				default:				// Leave all LEDs off
 					;
 			}
+			ledstatus[6] |= (cpu.getION(true) << 9);
 
-			if (CPU::instance()->getStepping() == PanelCommand) {
-				if (ledBlink & 020) {
+			if (cpu.getStepping() == PanelCommand) {
+				if (ledBlink & 040) {
 					ledstatus[6] |= (1<<7);
 				} else {
 					ledstatus[6] |= (1<<9);
@@ -465,8 +468,8 @@ namespace ca
 			 * L  5
              */
 
-            ledstatus[7] = (CPU::instance()->getDF() >> 3) | (CPU::instance()->getIF() >> 6);
-			ledstatus[7] |= (CPU::instance()->getLAC() & 010000) >> 7;
+            ledstatus[7] = (cpu.getDF() >> 3) | (cpu.getIF() >> 6);
+			ledstatus[7] |= (cpu.getL(true)) >> 7;
         }
 
     } /* namespace pdp8 */
