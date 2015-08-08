@@ -280,17 +280,17 @@ namespace ca
                                     }                                       /* end JMP */
                                 }
                             }
-
-                            if (testReasonIdle()) {
-                                throttleTimerReset = runConditionWait.waitOnCondition();
-                                reason = STOP_NO_REASON;
-                            }
                         }
 
                         IF = IB;                                        /* change IF */
                         UF = UB;                                        /* change UF */
                         int_req = int_req | INT_NO_CIF_PENDING;         /* clr intr inhibit */
                         PC = MA;
+
+						if (testReasonIdle()) {
+							throttleTimerReset = runConditionWait.waitOnCondition();
+							reason = STOP_NO_REASON;
+						}
 
                         break;
                 }
