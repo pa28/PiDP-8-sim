@@ -112,8 +112,8 @@ namespace ca
 					if (cpuStepping == PanelCommand || reason > STOP_IDLE) {
 						cpuCondition = CPUStopped;
 					}
+					debug(1, "cpuStepping %d, reason %d, cpuCondition %d\n", cpuStepping, reason, cpuCondition);
 					throttleTimerReset = runConditionWait.waitOnCondition();
-					debug(1, "cpuStepping %d, reason %d\n", cpuStepping, reason);
 				}
 				cpuTime += cycleCpu();
 #ifdef THROTTLEING
@@ -268,15 +268,15 @@ namespace ca
                                     if ( (no == OP_KSF) ||              // next instruction is KSF
                                             (no == OP_CLSC)             // next instruction is CLSC
                                             )  {
-                                        //reason = STOP_IDLE;
-                                        setReasonIdle();
+                                        reason = STOP_IDLE;
+                                        //setReasonIdle();
                                     }
-                                } else if (MA == ((PC - 1) & 07777)) {  // JMP .
+                                } else if ((MA & 07777) == ((PC - 1) & 07777)) {  // JMP .
                                     if (!(int_req & INT_ION)) {             /*    iof? */
                                         reason = STOP_ENDLESS_LOOP;         /* then infinite loop */
                                     } else if (!(int_req & INT_ALL)) {      /*    ion, not intr? */
-                                        //reason = STOP_IDLE;
-                                        setReasonIdle();
+                                        reason = STOP_IDLE;
+                                        //setReasonIdle();
                                     }                                       /* end JMP */
                                 }
                             }
@@ -287,7 +287,7 @@ namespace ca
                         int_req = int_req | INT_NO_CIF_PENDING;         /* clr intr inhibit */
                         PC = MA;
 
-						if (testReasonIdle()) {
+						if (reason == STOP_IDLE) {
 							throttleTimerReset = runConditionWait.waitOnCondition();
 							reason = STOP_NO_REASON;
 						}

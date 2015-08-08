@@ -192,6 +192,7 @@ namespace ca
 
 			void	setState(CPUState s) { cpuState = s; }
 			void	setStepping(CPUStepping s) { cpuStepping = s; }
+			void	setCondition(CPUCondition c) { cpuCondition = c; }
 
 			void	cpuContinue();
 			void    cpuContinueFromIdle();

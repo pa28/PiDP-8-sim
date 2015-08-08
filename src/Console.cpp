@@ -203,6 +203,7 @@ namespace ca
 											break;
 										case PanelContinue:
 											debug(1, "PanelContinue\n", 0);
+											cpu.setCondition(CPURunning);
 										    cpu.cpuContinue();
 	                                        consoleTerm->updatePanel( switchstatus );
 											break;
@@ -227,7 +228,7 @@ namespace ca
 
 		void Console::oneSecond() {
             // timeout
-            debug(1, "Timeout mode %d, count %d\n", stopMode, stopCount );
+            debug(10, "Timeout mode %d, count %d\n", stopMode, stopCount );
             if (stopMode) {
                 --stopCount;
                 if (stopCount < 0) {
