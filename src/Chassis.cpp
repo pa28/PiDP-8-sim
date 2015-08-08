@@ -79,7 +79,7 @@ namespace ca
 
             Console::instance()->printf("PiDP-8-sim started.\n");
 
-			setTimerFreq(false);
+			setTimerFreq(true);
         }
 
         Chassis::~Chassis()
@@ -106,10 +106,10 @@ namespace ca
 		void Chassis::setTimerFreq( bool f120 ) {
 			struct itimerval timer;
 			timer.it_value.tv_sec = 0;
-			timer.it_value.tv_usec = (f120 ? 8333 : 100000);	// 120Hz 10000 for 100Hz
+			timer.it_value.tv_usec = (f120 ? 8333 : 10000);	// 120Hz 10000 for 100Hz
 
 			timer.it_interval.tv_sec = 0;
-			timer.it_interval.tv_usec = (f120 ? 8333 : 100000);
+			timer.it_interval.tv_usec = (f120 ? 8333 : 10000);
 
 			setitimer( ITIMER_REAL, &timer, NULL );
 		}

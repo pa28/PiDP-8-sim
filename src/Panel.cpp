@@ -39,7 +39,7 @@ static unsigned get_dt_ranges(const char *filename, unsigned offset); // Pi 2 de
 
 struct bcm2835_peripheral gpio; // needs initialisation
 
-long intervl = 300000;      // light each row of leds this long
+long intervl = 325000;      // light each row of leds this long
 
 uint32 switchstatus[SWITCHSTATUS_COUNT] = { 0 }; // bitfields: 3 rows of up to 12 switches
 uint32 ledstatus[LEDSTATUS_COUNT] = { 0 };    // bitfields: 8 ledrows of up to 12 LEDs
@@ -284,7 +284,8 @@ namespace ca
                     // Toggle ledrow off
                     GPIO_CLR = 1 << ledrows[i]; // superstition
                     INP_GPIO(ledrows[i]);
-					usleep(10);  // waste of cpu cycles but may help against udn2981 ghosting, not flashes though
+					//usleep(10);  // waste of cpu cycles but may help against udn2981 ghosting, not flashes though
+                    nanosleep ((struct timespec[]){{0, intervl}}, NULL);
                 }
 
         //nanosleep ((struct timespec[]){{0, intervl}}, NULL); // test
@@ -405,20 +406,20 @@ namespace ca
 			ledstatus[6] = (CPU::instance()->getSC() << 2);
 			switch (CPU::instance()->getCondition()) {
 				case CPUMemoryBreak:	// Blink the Break LED
-					ledstatus[6] |= ((ledBlink & 040) << 4);
+					ledstatus[6] |= ((ledBlink & 020) << 5);
 					break;
 				case CPURunning:		// Turn on the Run LED
 					ledstatus[6] |= (1<<7);
 					break;
 				case CPUIdle:			// Blink the Run LED
-					ledstatus[6] |= ((ledBlink & 020) << 2);
+					ledstatus[6] |= ((ledBlink & 010) << 3);
 					break;
 				default:				// Leave all LEDs off
 					;
 			}
 
 			if (CPU::instance()->getStepping() == PanelCommand) {
-				if (ledBlink & 040) {
+				if (ledBlink & 020) {
 					ledstatus[6] |= (1<<7);
 				} else {
 					ledstatus[6] |= (1<<9);
