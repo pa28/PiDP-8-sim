@@ -150,6 +150,7 @@ namespace ca
             reason = STOP_NO_REASON;
             int32_t device, pulse, temp, iot_data;
 
+			debug(10, "int_req %o, INT_PENDING %o\n", int_req, INT_PENDING);
             if (int_req > INT_PENDING) {                        /* interrupt? */
                 int_req = int_req & ~INT_ION;                   /* interrupts off */
                 SF = (UF << 6) | (IF >> 9) | (DF >> 12);        /* form save field */
