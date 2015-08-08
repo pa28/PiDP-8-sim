@@ -920,7 +920,8 @@ namespace ca
 		void CPU::setReasonIdle() {
             try {
                 Lock    lock(idleMutex);
-                reason = STOP_IDLE;
+                //reason = STOP_IDLE;
+				cpuCondition = CPUIdle;
                 debug(10, "%d\n", reason);
             } catch (LockException &le) {
                 Console::instance()->printf(le.what());
@@ -931,7 +932,8 @@ namespace ca
             bool r = false;
             try {
                 Lock    lock(idleMutex);
-                r = reason == STOP_IDLE;
+                //r = reason == STOP_IDLE;
+				r = cpuCondition == CPUIdle || cpuCondition == CPURunning;
                 debug(10, "%d\n", r);
             } catch (LockException &le) {
                 Console::instance()->printf(le.what());
@@ -940,14 +942,14 @@ namespace ca
         }
 
 		void CPU::cpuContinueFromIdle() {
-		    if (testReasonIdle()) {
+		    if (cpuStepping == NotStepping && (cpuCondition == CPUIdle || cpuCondition == CPURunning)) {
 		        cpuContinue();
 		    }
 		}
 
 		void CPU::cpuContinue() {
-			cpuCondition = CPURunning;
-			debug(1, "%d\n", waitCondition());
+			debug(10, "%d\n", waitCondition());
+			/*
 			try {
 				Lock	lock(runConditionWait);
 				cpuCondition = CPURunning;
@@ -955,7 +957,9 @@ namespace ca
 			} catch (LockException &le) {
 				Console::instance()->printf(le.what());
 			}
+			*/
 			runConditionWait.releaseOnCondition();
+			cpuCondition = CPURunning;
 		}
 
 		bool CPU::waitCondition() {
