@@ -141,6 +141,7 @@ namespace ca
                                         switchstatus[0] = switchReport[1];
 							            debug(1, "SR: %04o\n", switchstatus[0]);
 							            consoleTerm->updatePanel( switchstatus );
+										CPU::instance()->setOSR(switchstatus[0]);
 							            break;
 							        case 1: // DF and IF
                                         switchstatus[1] = switchReport[1];
