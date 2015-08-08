@@ -164,7 +164,8 @@ namespace ca
             IR = M[MA];                 // fetch instruction
             PC = (PC + 1) & 07777;      // increment PC
 
-            // TODO: clear ION delay
+			int_req = int_req | INT_NO_ION_PENDING;             /* clear ION delay */
+
 
             // End of the Fetch state
             if (cpuStepping == SingleStep) {
