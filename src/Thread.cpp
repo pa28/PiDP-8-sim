@@ -137,11 +137,13 @@ namespace ca
 			try {
 				Lock	waitLock(mutex);
 				debug(1, "release %d\n", all);
-				test = true;
-				if (all) {
-					pthread_cond_broadcast( &condition );
-				} else {
-					pthread_cond_signal( &condition );
+				if (!test) {
+					if (all) {
+						pthread_cond_broadcast( &condition );
+					} else {
+						pthread_cond_signal( &condition );
+					}
+					test = true;
 				}
 			} catch (LockException &le) {
 				Console::instance()->printf(le.what());
