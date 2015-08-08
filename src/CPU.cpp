@@ -72,16 +72,16 @@ namespace ca
 				timerTickFlag(false),
 				timerTickMutex(),
 				idleMutex(),
-				runConditionWait(),
 				throttleTimerReset(false)
         {
-            // TODO Auto-generated constructor stub
-
+            pthread_mutex_init( &mutexCondition, NULL );
+            pthread_cond_init( &condition, NULL );
         }
 
         CPU::~CPU()
         {
-            // TODO Auto-generated destructor stub
+            pthread_mutex_destroy( &mutexCondition );
+            pthread_cond_destroy( &condition );
         }
 
 		CPU * CPU::instance() {
@@ -102,8 +102,6 @@ namespace ca
 			long	cpuTime = 0;
 			threadRunning = true;
 
-			runConditionWait.waitOnCondition();
-
 			while (threadRunning) {
 				// If we are going to wait, reset throttling when we get going again.
 				// Wait the thread if the condition is false (the CPU is not running).
@@ -113,7 +111,7 @@ namespace ca
 						cpuCondition = CPUStopped;
 					}
 					debug(1, "cpuStepping %d, reason %d, cpuCondition %d\n", cpuStepping, reason, cpuCondition);
-					throttleTimerReset = runConditionWait.waitOnCondition();
+					throttleTimerReset = waitOnCondition();
 				}
 				cpuTime += cycleCpu();
 #ifdef THROTTLEING
@@ -163,7 +161,7 @@ namespace ca
             // End of the Fetch state
             if (cpuStepping == SingleStep) {
 				cpuCondition = CPUStopped;
-                throttleTimerReset = runConditionWait.waitOnCondition();
+                throttleTimerReset = waitOnCondition();
             }
 
             cpuState = Execute;
@@ -186,7 +184,7 @@ namespace ca
                     // End of the Defer state
                     if (cpuStepping == SingleStep) {
 						cpuCondition = CPUStopped;
-                        throttleTimerReset = runConditionWait.waitOnCondition();
+                        throttleTimerReset = waitOnCondition();
                     }
                 }
 
@@ -288,7 +286,7 @@ namespace ca
                         PC = MA;
 
 						if (reason == STOP_IDLE) {
-							throttleTimerReset = runConditionWait.waitOnCondition();
+							throttleTimerReset = waitOnCondition();
 							reason = STOP_NO_REASON;
 						}
 
@@ -908,7 +906,7 @@ namespace ca
             // TODO: This is also where idle detection will pause the CPU
             if (cpuStepping == SingleStep || cpuStepping == SingleInstruction) {
 				cpuCondition = CPUStopped;
-                throttleTimerReset = runConditionWait.waitOnCondition();
+                throttleTimerReset = waitOnCondition();
             }
 
             cpuState = NoState;
@@ -917,29 +915,17 @@ namespace ca
             return cycleTime;
 		}
 
-		void CPU::setReasonIdle() {
-            try {
-                Lock    lock(idleMutex);
-                //reason = STOP_IDLE;
-				cpuCondition = CPUIdle;
-                debug(10, "%d\n", reason);
-            } catch (LockException &le) {
-                Console::instance()->printf(le.what());
-            }
-		}
+		/*
+		 * CPU waits until releaseOnCondition is called
+		 */
+		bool CPU::waitOnCondition() {
+		    if (pthread_mutex_lock( &mutexCondition ) == 0) {
+		        pthread_cond_wait( &condition, &mutexCondition );
+		        pthread_mutex_unlock( &mutexCondition );
+		    }
 
-        bool CPU::testReasonIdle() {
-            bool r = false;
-            try {
-                Lock    lock(idleMutex);
-                //r = reason == STOP_IDLE;
-				r = cpuCondition == CPUIdle || cpuCondition == CPURunning;
-                debug(10, "%d\n", r);
-            } catch (LockException &le) {
-                Console::instance()->printf(le.what());
-            }
-            return r;
-        }
+		    return true;
+		}
 
 		void CPU::cpuContinueFromIdle() {
 		    if (cpuStepping == NotStepping && (cpuCondition == CPUIdle || cpuCondition == CPURunning)) {
@@ -948,22 +934,10 @@ namespace ca
 		}
 
 		void CPU::cpuContinue() {
-			debug(10, "%d\n", waitCondition());
-			/*
-			try {
-				Lock	lock(runConditionWait);
-				cpuCondition = CPURunning;
-				debug(1, "%d\n", waitCondition());
-			} catch (LockException &le) {
-				Console::instance()->printf(le.what());
-			}
-			*/
-			runConditionWait.releaseOnCondition();
-			cpuCondition = CPURunning;
-		}
-
-		bool CPU::waitCondition() {
-			return cpuCondition == CPURunning;
+            if (pthread_mutex_lock( &mutexCondition ) == 0) {
+                pthread_cond_signal( &condition );
+                pthread_mutex_unlock( &mutexCondition );
+            }
 		}
 
 		void CPU::timerTick() {

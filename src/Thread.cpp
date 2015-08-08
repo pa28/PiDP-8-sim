@@ -116,12 +116,14 @@ namespace ca
 
 		bool ConditionWait::waitOnCondition() {
 			int rc = 0;
-			bool r = test = false;
+			bool r = false;
+
+            debug(1, "test %d\n", test);
 
 			try {
 				Lock	waitLock(mutex);
+				if (!test)
 				while (!test && rc == 0) {
-					debug(1, "waiting %d\n", r);
 					rc = pthread_cond_wait( &condition, &mutex );
 				}
 				r = test = true;

@@ -203,7 +203,6 @@ namespace ca
 
 			virtual int run();
 			virtual void stop() { threadRunning = false; }
-			virtual bool waitCondition();
 
 		protected:
 			static CPU *    _instance;
@@ -220,13 +219,15 @@ namespace ca
 			Mutex			timerTickMutex;
 			Mutex           idleMutex;
 
-			ConditionWait	runConditionWait;
-
 			bool throttleTimerReset;
 
+            pthread_mutex_t     mutexCondition;
+            pthread_cond_t      condition;
+
 			long cycleCpu();
-			void setReasonIdle();
-			bool testReasonIdle();
+
+			bool waitOnCondition();
+			void releaseOnCondition();
 
             void reset_all(int i) { /* TODO: call chassis reset all */ }
 

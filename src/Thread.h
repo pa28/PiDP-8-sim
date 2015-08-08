@@ -55,18 +55,18 @@ namespace ca
 
 		class ConditionWait;
 		class Lock;
-		
+
 		class Mutex
 		{
 			friend class Lock;
 		public:
 			Mutex() { pthread_mutex_init( &mutex, NULL ); }
 			virtual ~Mutex() { pthread_mutex_destroy( &mutex ); }
-		
+
 		protected:
 			pthread_mutex_t		mutex;
 		};
-		
+
 		class Lock
 		{
 		public:
@@ -112,7 +112,7 @@ namespace ca
             bool waitOnCondition();
 
 		private:
-			bool				test;
+			bool				test;           // true when
 			pthread_mutex_t		mutex;
 			pthread_cond_t		condition;
 
