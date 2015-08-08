@@ -70,6 +70,8 @@ namespace ca
         protected:
 			static		Chassis * _instance;
             Device*    	deviceList[DEV_MAX_COUNT];
+            int         timeoutCounter;
+            bool        timerFreq;
         };
 
     } /* namespace pdp8 */

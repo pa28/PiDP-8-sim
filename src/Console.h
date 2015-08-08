@@ -50,6 +50,7 @@ namespace ca
 
 			bool    getStopMode() const { return stopMode; }
 			int     getStopCount() const { return stopCount; }
+			void    oneSecond();
 
 		protected:
 			static	Console * _instance;

@@ -12,6 +12,7 @@
 #define DEBUG_LEVEL 5
 #include "PDP8.h"
 #include "Chassis.h"
+#include "Console.h"
 
 using namespace ca::pdp8;
 
@@ -39,7 +40,9 @@ namespace ca
 
 		Chassis * Chassis::_instance = NULL;
 
-        Chassis::Chassis()
+        Chassis::Chassis() :
+                timeoutCounter(0),
+                timerFreq(false)
         {
             int sxfd[2];
 
@@ -114,6 +117,7 @@ namespace ca
 			timer.it_interval.tv_sec = 0;
 			timer.it_interval.tv_usec = (f120 ? 8333 : 10000);
 
+			timerFreq = f120;
 			setitimer( ITIMER_REAL, &timer, NULL );
 		}
 
@@ -121,6 +125,12 @@ namespace ca
 			debug( 10, "%d\n", 0);
 			CPU::instance()->timerTick();
 			DK8EA::instance()->tick();
+
+			++timeoutCounter;
+			if (timeoutCounter > (timerFreq? 120 : 100)) {
+			    timeoutCounter = 0;
+			    Console::instance()->oneSecond();
+			}
 		}
 
     } /* namespace pdp8 */

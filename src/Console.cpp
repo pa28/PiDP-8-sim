@@ -95,25 +95,9 @@ namespace ca
 
 					int s;
 #ifdef HAS_PSELECT
-					if (stopMode) {
-                        struct timespec timeout;
-
-                        timeout.tv_sec = 1;
-                        timeout.tv_nsec = 0;
-                        s = pselect( n, &rd_set, NULL, NULL, &timeout, NULL);
-					} else {
-                        s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
-					}
+                    s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
 #else
-                    if (stopMode) {
-                        struct timeval timeout;
-
-                        timeout.tv_sec = 1;
-                        timeout.tv_usec = 0;
-                        s = select( n, &rd_set, NULL, NULL, &timeout);
-                    } else {
-                        s = select( n, &rd_set, NULL, NULL, NULL);
-                    }
+                    s = select( n, &rd_set, NULL, NULL, NULL);
 #endif
 
 					if (s < 0) {
@@ -230,15 +214,6 @@ namespace ca
 								}
 							}
 						}
-					} else {
-						// timeout
-						debug(1, "Timeout mode %d, count %d\n", stopMode, stopCount );
-					    if (stopMode) {
-					        --stopCount;
-					        if (stopCount < 0) {
-					            Chassis::instance()->stop();
-					        }
-					    }
 					}
 //#endif
 
@@ -248,6 +223,17 @@ namespace ca
 			printf("Console exiting.\n");
 			delete consoleTerm;
 			return 0;
+		}
+
+		void Console::oneSecond() {
+            // timeout
+            debug(1, "Timeout mode %d, count %d\n", stopMode, stopCount );
+            if (stopMode) {
+                --stopCount;
+                if (stopCount < 0) {
+                    Chassis::instance()->stop();
+                }
+            }
 		}
     } /* namespace pdp8 */
 } /* namespace ca */
