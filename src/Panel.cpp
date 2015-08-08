@@ -466,7 +466,7 @@ namespace ca
              */
 
             ledstatus[7] = (cpu.getDF() >> 3) | (cpu.getIF() >> 6);
-			ledstatus[7] |= (cpu.getL(true)) >> 7;
+			ledstatus[7] |= (cpu.getL()) >> 7;
         }
 
     } /* namespace pdp8 */
