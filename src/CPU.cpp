@@ -116,6 +116,7 @@ namespace ca
 					debug(1, "cpuStepping %d, reason %d\n", cpuStepping, reason);
 				}
 				cpuTime += cycleCpu();
+#ifdef THROTTLEING
 				if (cpuStepping == NotStepping) {
 					if (throttleTimerReset) {
 						cpuTime = 0;
@@ -139,6 +140,7 @@ namespace ca
 						}
 					}
 				}
+#endif
 				timerTickFlag = false;
 			}
 
