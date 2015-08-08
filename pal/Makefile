@@ -1,4 +1,4 @@
-BINS=DeepThought.bin  
+BINS=DeepThought.bin Test.bin
 
 all: $(BINS)
 
