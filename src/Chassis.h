@@ -44,6 +44,7 @@
 #include "Memory.h"
 #include "Console.h"
 #include "Panel.h"
+#include "DK8EA.h"
 
 namespace ca
 {

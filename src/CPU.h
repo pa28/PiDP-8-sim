@@ -96,6 +96,8 @@ namespace ca
 #define INT_PENDING     (INT_ION+INT_NO_CIF_PENDING+INT_NO_ION_PENDING)
 #define INT_UPDATE      ((int_req & ~INT_DEV_ENABLE) | (dev_done & int_enable))
 
+        extern int32_t int_enable, int_req, dev_done, stop_inst;
+
         enum CPUState {
 			NoState,
 			Fetch,
@@ -133,7 +135,7 @@ namespace ca
 		    STOP_HLT,
 		};
 
-		#define REGISTERS \
+		#define CPU_REGISTERS \
 			X(PC, PC, 8, 12, 0, 12 ) \
 			X(MQ, MQ, 8, 12, 0, 12 ) \
 			X(IR, IR, 8, 12, 0, 12 ) \
@@ -150,7 +152,7 @@ namespace ca
         #define IDLE_DETECT_MASK    0x1
         #define THROTTLE_MASK       0X2
 
-		#define MODIFIERS \
+		#define CPU_MODIFIERS \
 			X(IDLE, ModifierValue, cpuLoadControl, IDLE_DETECT_MASK, IDLE_DETECT_MASK ) \
 			X(NOIDLE, ModifierValue, cpuLoadControl, 0, IDLE_DETECT_MASK ) \
 			X(THROTTLE, ModifierValue, cpuLoadControl, THROTTLE_MASK, THROTTLE_MASK ) \
@@ -169,18 +171,18 @@ namespace ca
 
 			#define X(nm,loc,r,w,o,d)	Index ## nm,
 			enum RegisterIndex {
-				REGISTERS
+				CPU_REGISTERS
 				RegisterCount,
 			};
 			#undef X
 			//
 			//
 			#define X(nm,loc,r,w,o,d)	int32_t get ## nm (bool normal = false) const { return cpuRegisters[Index ## nm].get(normal); }
-			REGISTERS
+			CPU_REGISTERS
 			#undef X
 
 			#define X(nm,loc,r,w,o,d)	void set ## nm (int32_t v, bool normal = false) { cpuRegisters[Index ## nm].set(v, normal); }
-			REGISTERS
+			CPU_REGISTERS
 			#undef X
 
 			CPUState		getState() const { return cpuState; }

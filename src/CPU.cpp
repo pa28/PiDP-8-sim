@@ -47,16 +47,17 @@ namespace ca
 		int32_t dev_done = 0;                               /* dev done flags */
 		int32_t int_enable = INT_INIT_ENABLE;               /* intr enables */
 		int32_t cpuLoadControl = 0;
+		int32_t stop_inst = 0;                              /* trap on ill inst */
 
 		Register	CPU::cpuRegisters[] = {
 #define X(nm,loc,r,w,o,d) { #nm, &(loc), (r), (w), (o), (d) },
-			REGISTERS
+			CPU_REGISTERS
 #undef X
 		};
 
 		Modifier	cpuModifiers[] = {
-#define X(nm,loc,v,m) { #nm, &(loc), (v), (m) },
-			MODIFIERS
+#define X(nm,t,loc,v,m) { #nm, (t), &(loc), (v), (m) },
+		        CPU_MODIFIERS
 #undef X
 		};
 

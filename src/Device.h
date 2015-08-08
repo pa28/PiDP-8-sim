@@ -47,9 +47,9 @@ namespace ca
 		inline istream & operator >> (istream & s, Register &r) { return r.scanFrom(s); }
 
 		enum ModifierType {
-			ModifierValue
-			ModifierFunction
-		}
+			ModifierValue,
+			ModifierFunction,
+		};
 
 		class Modifier
 		{

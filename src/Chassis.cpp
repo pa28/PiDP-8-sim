@@ -64,6 +64,8 @@ namespace ca
             deviceList[DEV_PANEL] = Panel::instance();
 			deviceList[DEV_CONSOLE] = Console::instance();
 
+			deviceList[DEV_CLK] = DK8EA::instance();
+
 		    Panel::instance()->setSwitchFd(sxfd[1]);
 		    Console::instance()->setSwitchFd(sxfd[0]);
 
@@ -72,6 +74,7 @@ namespace ca
             for (int i = 0; i < DEV_MAX_COUNT; ++i) {
                 if (deviceList[i] != NULL) {
                     deviceList[i]->initialize();
+                    deviceList[i]->reset();
                 }
             }
 
@@ -117,6 +120,7 @@ namespace ca
 		void Chassis::timerHandler() {
 			debug( 10, "%d\n", 0);
 			CPU::instance()->timerTick();
+			DK8EA::instance()->tick();
 		}
 
     } /* namespace pdp8 */

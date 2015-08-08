@@ -4,7 +4,7 @@
  *  Created on: Aug 7, 2015
  *      Author: H Richard Buckley
  */
- 
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
@@ -12,54 +12,88 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "DK8EA.h"
+#include "CPU.h"
 
 namespace ca
 {
     namespace pdp8
     {
 		DK8EA * DK8EA::_instance = NULL;
-		
-#define X(nm,loc,r,w,o,d)	int32_t	#nm = 0;
-		REGISTERS
-#undef X
-		int32_t	clk_mode = DK8EA_Mode_P;
 
+        int32_t clk_mode = DK8EA_Mode_P;
+        int32_t clk_rand = DK8EA_HWRNG;
+
+        int hwrng = -1;                                           /* file descriptor of the hardware random number generator */
+        const char *hwrngPath = "/dev/hwrng";                     /* the path name of the hardware random number generator */
+        uint32_t seed = 0;                                        /* random seed */
+
+#define X(nm,loc,r,w,o,d)	int32_t	loc = 0;
+		DK8EA_REGISTERS
+#undef X
 		Register DK8EA::clkRegisters[] = {
 #define X(nm,loc,r,w,o,d) { #nm, &(loc), (r), (w), (o), (d) },
-			REGISTERS
+			DK8EA_REGISTERS
 #undef X
 		};
-		
+
 		DK8EA::DK8EA() :
 			Device("clk", "DK8EA", clkRegisters, sizeof(clkRegisters), NULL, 0)
 		{
-			
+
 		}
 
 		DK8EA::~DK8EA()
 		{
-			
+
 		}
-		
+
 		DK8EA * DK8EA::instance() {
 			if (_instance == NULL) {
 				_instance = new DK8EA();
 			}
-			
+
 			return _instance;
 		}
 
         void DK8EA::initialize() {
-#define X(nm,loc,r,w,o,d)	#nm = 0;
-		REGISTERS
+#define X(nm,loc,r,w,o,d)	loc = 0;
+		DK8EA_REGISTERS
 #undef X
 		}
-		
+
 		void DK8EA::reset() {
 			clk_flags = clk_cnt0 = clk_cnt1 = 0;
+			int32_t t;
+
+			dev_done = dev_done & ~INT_CLK;                         /* clear done, int */
+			int_req = int_req & ~INT_CLK;
+			int_enable = int_enable & ~INT_CLK;                     /* clear enable */
+
+			if (hwrng < 0) {
+			    if (access(hwrngPath, R_OK) == 0) {
+			        hwrng = open(hwrngPath, O_RDONLY);
+			        clk_rand = 0;
+			    } else {
+			        hwrng = -1;
+			        clk_rand = 1;
+			        fprintf(stderr, "Can not access %s\n", hwrngPath);
+			    }
+			}
+
+			if (seed == 0)
+			    seed = (uint32_t)time(NULL);                         /* random seed */
+
+			switch(clk_mode) {
+			    case 0:
+			        clk_flags = CLK_INT_FUNDAMENTAL;
+			        break;
+			    case 1:
+			        clk_flags = CLK_INT_MULT;
+			        break;
+			}
 		}
 
-		int32_t DK8EA::dispatch(int32_t IR, int32_t dat) {
+		int32_t DK8EA::dispatch(int32_t IR, int32_t AC) {
 		switch (clk_mode) {
 			case DK8EA_Mode_A:                                      /* DK8EA */
 			/* IOT routine
@@ -116,7 +150,7 @@ namespace ca
 			*/
 
 			switch (IR & 07) {                                      /* decode IR<9:11> */
-				int32   tmp;
+				int32_t   tmp;
 
 				case 0:                                             /* CLSF */
 					clk_flags = AC & 077;                         /* Set programmable flags */
@@ -175,9 +209,9 @@ namespace ca
 					}                                               /* end switch */
 				break;
 			}
-			
+
 		}
-			
+
 		void DK8EA::tick() {
 			// TODO: change dev_done and int_req updates.
 			switch(clk_mode) {
