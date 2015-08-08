@@ -1,0 +1,130 @@
+/ DeepThought
+
+/===============================================================================
+/ "Deep Thought" | The Ultimate PDP-8 Front Panel "Blinkenlights" Program
+/                | PiDP8 version assuming simh with enhanced ED8K realtime clock
+/                | with integral random number generator.
+/-------------------------------------------------------------------------------
+/
+/ This reads the front panel switch register to determine the speed and speed
+/ variation of the flashing lights. It implements a simple but sufficient linear
+/ congruential pseudo random number generator (LCPRNG) to generate visually
+/ unpredictable values for the AC and Memory Address to contain while we wait
+/ for the next serial port (KL8) interrupt. (See detailed explanation below.)
+/
+/-------------------------------------------------------------------------------
+/                 Contemporary PDP-8 FREEWARE written and placed
+/                  into the PUBLIC DOMAIN by Steve Gibson, 2009
+/               Adapted for the PiDP8 and placed with modifications
+/             placed into the PUBLIC DOMAIN by Richard Buckley, 2015
+/===============================================================================
+
+/ Implementation notes - This program uses an SBC6120/FP6120-specific feature
+/ that will not work on a regular PDP-8: The program manually takes over control
+/ of the data lights.  This is done because the 30hz sampling of the accumulator
+/ sometimes catches the AC at a bad time causing the display to flicker annoyingly.
+/ This would NOT be a problem on a real PDP-8, since its AC display is not being
+/ sampled and held.
+
+/CALLBIOS=6206           / Call SBC6120 BIOS function, function code follows call
+/LIGHTS=12               / BIOS function to take over the data display lights
+SCL=7403		/ Step Counter Load
+                        
+/ Since we don't have programmatic control over the memory lights, if we want to
+/ control them it's necessary for us to actually GO somewhere and remain there.
+/ This program functions by filling fields 1-7 (not field 0) with nothing but
+/ "JMP ." (jump to yourself) instructions. Thus, when we jump somewhere we loop
+/ at that single location until a serial port interrupt brings us back to location
+/ zero.  At that point we determine whether we've waited long enough, and either
+/ immediately return to waiting at the same location, or generate new randomness.
+
+	cla
+	dca	FillIndex		/ setup the start of our filling
+
+	tad	CFirstDataField	/ init to data field zero 
+	dca	NewDataField
+NewDataField,
+	cdf	10		/ set our new storage target data field
+	cla
+
+	/ fill memory with current page "JMP ." instructions
+
+FillMem,	tad	FillIndex		/ fill memory with current page "JMP ." instructions
+	and	(0177)		/ keep only the target loc's page bits
+	tad	CJmpCurrentPg	/ convert into a "JMP ." instruction
+	dca i	FillIndex		/ save the "JMP ." inst @ TargetLoc
+	isz	FillIndex		/ bump to next target location
+	jmp	FillMem
+
+	/ we've wrapped into the next 4K word field
+
+	tad	NewDataField	/ get the current data field
+	tad	(0010)		/ bump to the next data field
+	dca	NewDataField	/ save the next data field
+	tad	NewDataField	/ get back the new data field
+	and	CInstField		/ did we wrap out of the last one?
+	sza			/ if zero, we're all done
+	jmp	NewDataField	/ let's keep filling in the next field
+	cdf	00		/ and leave us back at data field 0
+
+	cla
+	clsm		/ Set the clock multiplier to 0
+	tad	Rate
+	clsi		/ Set the base clock rate
+	clei		/ Enable interrupt
+
+	jmp	ChangeLights	/ ... and off we go ...
+
+/------------------------ Initialized Symbolic Constant Values ----------------
+
+CInstField,		0070	/ GTF/RTF instruction field bitmask
+CJmpCurrentPg,	5200	/ inst for jmp to current page loc 0
+CFirstDataField,	cdf 10	/ "change to data field 1"
+Rate,		0006
+
+/-------------------------- Uninitialized Variables ---------------------------
+
+FillIndex,		0	/ Index to memory location being filled.
+
+
+*0			/ load at loc 0
+IntReturn,	0		/ interrupt return loc
+
+ChangeLights,
+	clsk		/ clear clock flag and skip if set
+	nop
+
+	rand		/ get a new random value
+	dca	IntReturn	/ save new waiting location. we will
+			/ return indirectly to this location
+			/ once everything else is set up
+
+	rand
+	mql		/ set the MQ register to a random value
+
+	rand
+	dca	SclValue
+	scl		/ Assumes Mode A
+SclValue,	0
+
+	rand		/ establish the next data field
+	and	(0007)	/ retain only bits 9-11 (DF)
+	dca	NextDF
+
+	rand		/ establish the next instruction field
+	and	(0070)	/ retain only bits 6-8 (IF)
+	sna		/ if we're not in page 0
+	tad	(0010)	/ collision possible, so set to field 1
+	tad	NextDF	/ combine the next DF
+	rtf
+
+	rand
+	ral
+	rand
+
+	ion
+	jmp i	IntReturn
+
+NextDf,	0
+$
+/* vim: set ts=12 sw=12  noet autoindent : */

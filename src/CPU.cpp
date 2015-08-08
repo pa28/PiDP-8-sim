@@ -268,7 +268,7 @@ namespace ca
 
                         if ( !(IR & 0400) ) {   // direct jump test for idle
                             if ( IF == IB ) {
-                                if (MA == ((PC - 2) & 07777)) {         // JMP .-1
+                                if ((MA & 07777) == ((PC - 2) & 07777)) {         // JMP .-1
                                     //if ((M[IB|((PC - 2) & 07777)] == OP_KSF)) { // next instruction is KSF
                                     int32_t no = M[IB|MA];
                                     if ( (no == OP_KSF) ||              // next instruction is KSF
