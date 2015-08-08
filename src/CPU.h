@@ -25,6 +25,7 @@ namespace ca
 #define IOT_REASON      (1 << IOT_V_REASON)
 
 #define OP_KSF          06031                           /* for idle */
+#define OP_CLSC         06133                           /* for idle */
 
 #define INT_V_START     0                               /* enable start */
 #define INT_V_LPT       (INT_V_START+0)                 /* line printer */
@@ -193,6 +194,7 @@ namespace ca
 			void	setStepping(CPUStepping s) { cpuStepping = s; }
 
 			void	cpuContinue();
+			void    cpuContinueFromIdle();
 			void	cpuStop() { cpuCondition = CPUStopped; }
 			void	cpuMemoryBreak() { cpuCondition = CPUMemoryBreak; }
 			void	timerTick();
@@ -215,12 +217,15 @@ namespace ca
 			CpuStopReason   reason;
 			bool			timerTickFlag;
 			Mutex			timerTickMutex;
+			Mutex           idleMutex;
 
 			ConditionWait	runConditionWait;
 
 			bool throttleTimerReset;
 
 			long cycleCpu();
+			void setReasonIdle();
+			bool testReasonIdle();
 
             void reset_all(int i) { /* TODO: call chassis reset all */ }
 

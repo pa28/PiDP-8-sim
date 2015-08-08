@@ -70,6 +70,8 @@ namespace ca
 				threadRunning(false),
 				reason(STOP_NO_REASON),
 				timerTickFlag(false),
+				timerTickMutex(),
+				idleMutex(),
 				runConditionWait(),
 				throttleTimerReset(false)
         {
@@ -260,16 +262,26 @@ namespace ca
                             if ( IF == IB ) {
                                 if (MA == ((PC - 2) & 07777)) {         // JMP .-1
                                     //if ((M[IB|((PC - 2) & 07777)] == OP_KSF)) { // next instruction is KSF
-                                    if (M[IB|MA] == OP_KSF) { // next instruction is KSF
-                                        reason = STOP_IDLE;
+                                    int32_t no = M[IB|MA];
+                                    if ( (no == OP_KSF) ||              // next instruction is KSF
+                                            (no == OP_CLSC)             // next instruction is CLSC
+                                            )  {
+                                        //reason = STOP_IDLE;
+                                        setReasonIdle();
                                     }
                                 } else if (MA == ((PC - 1) & 07777)) {  // JMP .
                                     if (!(int_req & INT_ION)) {             /*    iof? */
                                         reason = STOP_ENDLESS_LOOP;         /* then infinite loop */
                                     } else if (!(int_req & INT_ALL)) {      /*    ion, not intr? */
-                                        reason = STOP_IDLE;
+                                        //reason = STOP_IDLE;
+                                        setReasonIdle();
                                     }                                       /* end JMP */
                                 }
+                            }
+
+                            if (testReasonIdle()) {
+                                throttleTimerReset = runConditionWait.waitOnCondition();
+                                reason = STOP_NO_REASON;
                             }
                         }
 
@@ -901,6 +913,34 @@ namespace ca
 
             // TODO: return the number of nanoseconds the cycle should have taken on the real machine.
             return cycleTime;
+		}
+
+		void CPU::setReasonIdle() {
+            try {
+                Lock    lock(idleMutex);
+                reason = STOP_IDLE;
+                debug(10, "%d\n", reason);
+            } catch (LockException &le) {
+                Console::instance()->printf(le.what());
+            }
+		}
+
+        bool CPU::testReasonIdle() {
+            bool r = false;
+            try {
+                Lock    lock(idleMutex);
+                r = reason == STOP_IDLE;
+                debug(10, "%d\n", r);
+            } catch (LockException &le) {
+                Console::instance()->printf(le.what());
+            }
+            return r;
+        }
+
+		void CPU::cpuContinueFromIdle() {
+		    if (testReasonIdle()) {
+		        cpuContinue();
+		    }
 		}
 
 		void CPU::cpuContinue() {

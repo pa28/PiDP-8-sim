@@ -153,7 +153,7 @@ namespace ca
 				int32_t   tmp;
 
 				case 0:                                             /* CLSF */
-					clk_flags = AC & 077;                         /* Set programmable flags */
+					clk_flags = AC & 077;                           /* Set programmable flags */
 					return AC;
 
 				case 1:                                             /* CLEI */
@@ -219,12 +219,14 @@ namespace ca
 					clk_flags |= (CLK_FLAG_FUNDAMENTAL);
 					dev_done = dev_done | INT_CLK;                          /* set done */
 					int_req = INT_UPDATE;                                   /* update interrupts */
+					CPU::instance()->cpuContinueFromIdle();                 /* if idle, continue */
 					break;
 				case 1:                                                 /* DK8EAPi */
 					if (clk_flags & CLK_INT_FUNDAMENTAL) {
 						clk_flags |= (CLK_FLAG_FUNDAMENTAL);
 						dev_done = dev_done | INT_CLK;                      /* set done */
 						int_req = INT_UPDATE;                               /* update interrupts */
+	                    CPU::instance()->cpuContinueFromIdle();                 /* if idle, continue */
 					}
 					if (clk_flags & CLK_OPR_SEQ) {
 						if (clk_cnt0 == 0) {
@@ -237,6 +239,7 @@ namespace ca
 									clk_flags |= (CLK_FLAG_MULT);
 									dev_done = dev_done | INT_CLK;                      /* set done */
 									int_req = INT_UPDATE;                               /* update interrupts */
+				                    CPU::instance()->cpuContinueFromIdle();                 /* if idle, continue */
 								}
 							}
 						} else {
@@ -245,6 +248,7 @@ namespace ca
 								clk_flags |= (CLK_FLAG_BASE);
 								dev_done = dev_done | INT_CLK;                      /* set done */
 								int_req = INT_UPDATE;                               /* update interrupts */
+			                    CPU::instance()->cpuContinueFromIdle();                 /* if idle, continue */
 							}
 						}
 					} else {
@@ -253,12 +257,14 @@ namespace ca
 								clk_flags |= (CLK_FLAG_BASE);
 								dev_done = dev_done | INT_CLK;                      /* set done */
 								int_req = INT_UPDATE;                               /* update interrupts */
+			                    CPU::instance()->cpuContinueFromIdle();                 /* if idle, continue */
 							}
 							if (clk_cnt1 == 0) {
 								if (clk_flags & CLK_INT_MULT) {
 									clk_flags |= (CLK_FLAG_MULT);
 									dev_done = dev_done | INT_CLK;                      /* set done */
 									int_req = INT_UPDATE;                               /* update interrupts */
+				                    CPU::instance()->cpuContinueFromIdle();                 /* if idle, continue */
 								}
 								clk_cnt0 = clk_buf0;                         /* reload base counter */
 								clk_cnt1 = clk_buf1;                         /* reload multiplier */
