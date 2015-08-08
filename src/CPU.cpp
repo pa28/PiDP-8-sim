@@ -150,6 +150,14 @@ namespace ca
             reason = STOP_NO_REASON;
             int32_t device, pulse, temp, iot_data;
 
+            if (int_req > INT_PENDING) {                        /* interrupt? */
+                int_req = int_req & ~INT_ION;                   /* interrupts off */
+                SF = (UF << 6) | (IF >> 9) | (DF >> 12);        /* form save field */
+                IF = IB = DF = UF = UB = 0;                     /* clear mem ext */
+                M[0] = PC;                                      /* save PC in 0 */
+                PC = 1;                                         /* fetch next from 1 */
+                }
+
             cpuState = Fetch;
 
             MA = IF | PC;               // compute memory address
