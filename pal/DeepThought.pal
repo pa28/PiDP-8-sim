@@ -116,8 +116,9 @@ ChangeLights,
 
 	rand		/ get a new random value
 	dca	IntReturn	/ save new waiting location. we will
-			/ return indirectly to this location
-			/ once everything else is set up
+	rand		/ return indirectly to this location
+	and	IntReturn	/ once everything else is set up
+	dca	IntReturn
 
 	rand
 	dca	SpRandSv
