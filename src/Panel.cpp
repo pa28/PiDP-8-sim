@@ -411,10 +411,8 @@ namespace ca
 					ledstatus[6] |= ((ledBlink & 020) << 5);
 					break;
 				case CPURunning:		// Turn on the Run LED
-					ledstatus[6] |= (1<<7);
-					break;
 				case CPUIdle:			// Blink the Run LED
-					ledstatus[6] |= ((ledBlink & 010) << 3);
+					ledstatus[6] |= (1<<7);
 					break;
 				default:				// Leave all LEDs off
 					;
@@ -469,7 +467,7 @@ namespace ca
              */
 
             ledstatus[7] = (cpu.getDF() >> 3) | (cpu.getIF() >> 6);
-			ledstatus[7] |= (cpu.getL(true)) >> 7;
+			ledstatus[7] |= (cpu.getL()) >> 7;
         }
 
     } /* namespace pdp8 */

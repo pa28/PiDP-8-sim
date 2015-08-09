@@ -95,25 +95,9 @@ namespace ca
 
 					int s;
 #ifdef HAS_PSELECT
-					if (stopMode) {
-                        struct timespec timeout;
-
-                        timeout.tv_sec = 1;
-                        timeout.tv_nsec = 0;
-                        s = pselect( n, &rd_set, NULL, NULL, &timeout, NULL);
-					} else {
-                        s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
-					}
+                    s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
 #else
-                    if (stopMode) {
-                        struct timeval timeout;
-
-                        timeout.tv_sec = 1;
-                        timeout.tv_usec = 0;
-                        s = select( n, &rd_set, NULL, NULL, &timeout);
-                    } else {
-                        s = select( n, &rd_set, NULL, NULL, NULL);
-                    }
+                    s = select( n, &rd_set, NULL, NULL, NULL);
 #endif
 
 					if (s < 0) {
@@ -157,6 +141,7 @@ namespace ca
                                         switchstatus[0] = switchReport[1];
 							            debug(1, "SR: %04o\n", switchstatus[0]);
 							            consoleTerm->updatePanel( switchstatus );
+										CPU::instance()->setOSR(switchstatus[0]);
 							            break;
 							        case 1: // DF and IF
                                         switchstatus[1] = switchReport[1];
@@ -198,6 +183,10 @@ namespace ca
 								} else {
 									switch ((switchstatus[2] >> 6) & 077) {
 										case PanelStart:
+											debug(1, "%s\n", "PanelStart");
+											Chassis::instance()->reset();
+											cpu.setCondition(CPURunning);
+											cpu.cpuContinue();
 											break;
 										case PanelLoadAdr:
 											CPU::instance()->setPC(switchstatus[0]);
@@ -218,26 +207,19 @@ namespace ca
 	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelContinue:
-											debug(1, "PanelContinue\n", 0);
+											debug(1, "%s\n", "PanelContinue");
+											cpu.setCondition(CPURunning);
 										    cpu.cpuContinue();
 	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelStop:
-											debug(1, "PanelStop\n", 0);
+											debug(1, "%s\n", "PanelStop");
 											cpu.cpuStop();
 											break;
 									}
 								}
 							}
 						}
-					} else {
-						// timeout
-					    if (stopMode) {
-					        --stopCount;
-					        if (stopCount < 0) {
-					            Chassis::instance()->stop();
-					        }
-					    }
 					}
 //#endif
 
@@ -247,6 +229,17 @@ namespace ca
 			printf("Console exiting.\n");
 			delete consoleTerm;
 			return 0;
+		}
+
+		void Console::oneSecond() {
+            // timeout
+            debug(10, "Timeout mode %d, count %d\n", stopMode, stopCount );
+            if (stopMode) {
+                --stopCount;
+                if (stopCount < 0) {
+                    Chassis::instance()->stop();
+                }
+            }
 		}
     } /* namespace pdp8 */
 } /* namespace ca */

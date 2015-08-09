@@ -12,6 +12,7 @@
 #define DEBUG_LEVEL 5
 #include "PDP8.h"
 #include "Chassis.h"
+#include "Console.h"
 
 using namespace ca::pdp8;
 
@@ -39,7 +40,9 @@ namespace ca
 
 		Chassis * Chassis::_instance = NULL;
 
-        Chassis::Chassis()
+        Chassis::Chassis() :
+                timeoutCounter(0),
+                timerFreq(false)
         {
             int sxfd[2];
 
@@ -64,6 +67,8 @@ namespace ca
             deviceList[DEV_PANEL] = Panel::instance();
 			deviceList[DEV_CONSOLE] = Console::instance();
 
+			deviceList[DEV_CLK] = DK8EA::instance();
+
 		    Panel::instance()->setSwitchFd(sxfd[1]);
 		    Console::instance()->setSwitchFd(sxfd[0]);
 
@@ -72,10 +77,12 @@ namespace ca
             for (int i = 0; i < DEV_MAX_COUNT; ++i) {
                 if (deviceList[i] != NULL) {
                     deviceList[i]->initialize();
+                    deviceList[i]->reset();
                 }
             }
 
-			Memory::instance()->loadFile("/nas/pi/PiDP-8-sim/Test.bin");
+			Memory::instance()->loadFile("/nas/pi/PiDP-8-sim/pal/DeepThought.bin");
+			//Memory::instance()->loadFile("/nas/pi/PiDP-8-sim/pal/Test.bin");
 
             Console::instance()->printf("PiDP-8-sim started.\n");
 
@@ -86,6 +93,14 @@ namespace ca
         {
             // TODO Auto-generated destructor stub
         }
+
+		void Chassis::reset() {
+			for (int i = 0; i < DEV_MAX_COUNT; ++i) {
+				if (deviceList[i] != NULL) {
+					deviceList[i]->reset();
+				}
+			}
+		}
 
 		Chassis * Chassis::instance() {
 			if (_instance == NULL) {
@@ -111,12 +126,20 @@ namespace ca
 			timer.it_interval.tv_sec = 0;
 			timer.it_interval.tv_usec = (f120 ? 8333 : 10000);
 
+			timerFreq = f120;
 			setitimer( ITIMER_REAL, &timer, NULL );
 		}
 
 		void Chassis::timerHandler() {
 			debug( 10, "%d\n", 0);
 			CPU::instance()->timerTick();
+			DK8EA::instance()->tick();
+
+			++timeoutCounter;
+			if (timeoutCounter > (timerFreq? 120 : 100)) {
+			    timeoutCounter = 0;
+			    Console::instance()->oneSecond();
+			}
 		}
 
     } /* namespace pdp8 */

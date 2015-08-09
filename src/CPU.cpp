@@ -47,16 +47,17 @@ namespace ca
 		int32_t dev_done = 0;                               /* dev done flags */
 		int32_t int_enable = INT_INIT_ENABLE;               /* intr enables */
 		int32_t cpuLoadControl = 0;
+		int32_t stop_inst = 0;                              /* trap on ill inst */
 
 		Register	CPU::cpuRegisters[] = {
 #define X(nm,loc,r,w,o,d) { #nm, &(loc), (r), (w), (o), (d) },
-			REGISTERS
+			CPU_REGISTERS
 #undef X
 		};
 
 		Modifier	cpuModifiers[] = {
-#define X(nm,loc,v,m) { #nm, &(loc), (v), (m) },
-			MODIFIERS
+#define X(nm,t,loc,v,m) { #nm, (t), &(loc), (v), (m) },
+		        CPU_MODIFIERS
 #undef X
 		};
 
@@ -69,16 +70,18 @@ namespace ca
 				threadRunning(false),
 				reason(STOP_NO_REASON),
 				timerTickFlag(false),
-				runConditionWait(),
+				timerTickMutex(),
+				idleMutex(),
 				throttleTimerReset(false)
         {
-            // TODO Auto-generated constructor stub
-
+            pthread_mutex_init( &mutexCondition, NULL );
+            pthread_cond_init( &condition, NULL );
         }
 
         CPU::~CPU()
         {
-            // TODO Auto-generated destructor stub
+            pthread_mutex_destroy( &mutexCondition );
+            pthread_cond_destroy( &condition );
         }
 
 		CPU * CPU::instance() {
@@ -99,8 +102,6 @@ namespace ca
 			long	cpuTime = 0;
 			threadRunning = true;
 
-			runConditionWait.waitOnCondition();
-
 			while (threadRunning) {
 				// If we are going to wait, reset throttling when we get going again.
 				// Wait the thread if the condition is false (the CPU is not running).
@@ -109,10 +110,11 @@ namespace ca
 					if (cpuStepping == PanelCommand || reason > STOP_IDLE) {
 						cpuCondition = CPUStopped;
 					}
-					throttleTimerReset = runConditionWait.waitOnCondition();
-					debug(1, "cpuStepping %d, reason %d\n", cpuStepping, reason);
+					debug(1, "cpuStepping %d, reason %d, cpuCondition %d\n", cpuStepping, reason, cpuCondition);
+					throttleTimerReset = waitOnCondition();
 				}
 				cpuTime += cycleCpu();
+#ifdef THROTTLEING
 				if (cpuStepping == NotStepping) {
 					if (throttleTimerReset) {
 						cpuTime = 0;
@@ -136,6 +138,7 @@ namespace ca
 						}
 					}
 				}
+#endif
 				timerTickFlag = false;
 			}
 
@@ -147,18 +150,28 @@ namespace ca
             reason = STOP_NO_REASON;
             int32_t device, pulse, temp, iot_data;
 
+			debug(10, "int_req %o, INT_PENDING %o\n", int_req, INT_PENDING);
+            if (int_req > INT_PENDING) {                        /* interrupt? */
+                int_req = int_req & ~INT_ION;                   /* interrupts off */
+                SF = (UF << 6) | (IF >> 9) | (DF >> 12);        /* form save field */
+                IF = IB = DF = UF = UB = 0;                     /* clear mem ext */
+                M[0] = PC;                                      /* save PC in 0 */
+                PC = 1;                                         /* fetch next from 1 */
+                }
+
             cpuState = Fetch;
 
             MA = IF | PC;               // compute memory address
             IR = M[MA];                 // fetch instruction
             PC = (PC + 1) & 07777;      // increment PC
 
-            // TODO: clear ION delay
+			int_req = int_req | INT_NO_ION_PENDING;             /* clear ION delay */
+
 
             // End of the Fetch state
             if (cpuStepping == SingleStep) {
 				cpuCondition = CPUStopped;
-                throttleTimerReset = runConditionWait.waitOnCondition();
+                throttleTimerReset = waitOnCondition();
             }
 
             cpuState = Execute;
@@ -181,7 +194,7 @@ namespace ca
                     // End of the Defer state
                     if (cpuStepping == SingleStep) {
 						cpuCondition = CPUStopped;
-                        throttleTimerReset = runConditionWait.waitOnCondition();
+                        throttleTimerReset = waitOnCondition();
                     }
                 }
 
@@ -257,16 +270,21 @@ namespace ca
 
                         if ( !(IR & 0400) ) {   // direct jump test for idle
                             if ( IF == IB ) {
-                                if (MA == ((PC - 2) & 07777)) {         // JMP .-1
+                                if ((MA & 07777) == ((PC - 2) & 07777)) {         // JMP .-1
                                     //if ((M[IB|((PC - 2) & 07777)] == OP_KSF)) { // next instruction is KSF
-                                    if (M[IB|MA] == OP_KSF) { // next instruction is KSF
+                                    int32_t no = M[IB|MA];
+                                    if ( (no == OP_KSF) ||              // next instruction is KSF
+                                            (no == OP_CLSC)             // next instruction is CLSC
+                                            )  {
                                         reason = STOP_IDLE;
+                                        //setReasonIdle();
                                     }
-                                } else if (MA == ((PC - 1) & 07777)) {  // JMP .
+                                } else if ((MA & 07777) == ((PC - 1) & 07777)) {  // JMP .
                                     if (!(int_req & INT_ION)) {             /*    iof? */
                                         reason = STOP_ENDLESS_LOOP;         /* then infinite loop */
                                     } else if (!(int_req & INT_ALL)) {      /*    ion, not intr? */
                                         reason = STOP_IDLE;
+                                        //setReasonIdle();
                                     }                                       /* end JMP */
                                 }
                             }
@@ -276,6 +294,11 @@ namespace ca
                         UF = UB;                                        /* change UF */
                         int_req = int_req | INT_NO_CIF_PENDING;         /* clr intr inhibit */
                         PC = MA;
+
+						if (reason == STOP_IDLE) {
+							throttleTimerReset = waitOnCondition();
+							reason = STOP_NO_REASON;
+						}
 
                         break;
                 }
@@ -893,7 +916,7 @@ namespace ca
             // TODO: This is also where idle detection will pause the CPU
             if (cpuStepping == SingleStep || cpuStepping == SingleInstruction) {
 				cpuCondition = CPUStopped;
-                throttleTimerReset = runConditionWait.waitOnCondition();
+                throttleTimerReset = waitOnCondition();
             }
 
             cpuState = NoState;
@@ -902,21 +925,29 @@ namespace ca
             return cycleTime;
 		}
 
-		void CPU::cpuContinue() {
-			cpuCondition = CPURunning;
-			debug(1, "%d\n", waitCondition());
-			try {
-				Lock	lock(runConditionWait);
-				cpuCondition = CPURunning;
-				debug(1, "%d\n", waitCondition());
-			} catch (LockException &le) {
-				Console::instance()->printf(le.what());
-			}
-			runConditionWait.releaseOnCondition();
+		/*
+		 * CPU waits until releaseOnCondition is called
+		 */
+		bool CPU::waitOnCondition() {
+		    if (pthread_mutex_lock( &mutexCondition ) == 0) {
+		        pthread_cond_wait( &condition, &mutexCondition );
+		        pthread_mutex_unlock( &mutexCondition );
+		    }
+
+		    return true;
 		}
 
-		bool CPU::waitCondition() {
-			return cpuCondition == CPURunning;
+		void CPU::cpuContinueFromIdle() {
+		    if (cpuStepping == NotStepping && (cpuCondition == CPUIdle || cpuCondition == CPURunning)) {
+		        cpuContinue();
+		    }
+		}
+
+		void CPU::cpuContinue() {
+            if (pthread_mutex_lock( &mutexCondition ) == 0) {
+                pthread_cond_signal( &condition );
+                pthread_mutex_unlock( &mutexCondition );
+            }
 		}
 
 		void CPU::timerTick() {

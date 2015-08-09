@@ -9,7 +9,7 @@
 #include "Thread.h"
 #include "Console.h"
 
-//#define DEBUG_LEVEL 5
+#define DEBUG_LEVEL 5
 #include "PDP8.h"
 
 namespace ca
@@ -27,7 +27,7 @@ namespace ca
 			int s = pthread_mutex_lock( mutex );
 			switch (s) {
 				case 0:
-					debug(1, "Mutex %0X locked\n", mutex);
+					debug(10, "Mutex %0X locked\n", mutex);
 					break;
 				default:
 					throw LockException(true, s);
@@ -39,7 +39,7 @@ namespace ca
 			int s = pthread_mutex_lock( mutex );
 			switch (s) {
 				case 0:
-					debug(1, "Mutex %0X locked\n", mutex);
+					debug(10, "Mutex %0X locked\n", mutex);
 					break;
 				default:
 					throw LockException(true, s);
@@ -51,7 +51,7 @@ namespace ca
 			int s = pthread_mutex_lock( mutex );
 			switch (s) {
 				case 0:
-					debug(1, "ConditionWait mutex %0X locked\n", mutex);
+					debug(10, "ConditionWait mutex %0X locked\n", mutex);
 					break;
 				default:
 					throw LockException(true, s);
@@ -63,7 +63,7 @@ namespace ca
 			int s = pthread_mutex_lock( mutex );
 			switch (s) {
 				case 0:
-					debug(1, "ConditionWait mutex %0X locked\n", mutex);
+					debug(10, "ConditionWait mutex %0X locked\n", mutex);
 					break;
 				default:
 					throw LockException(true, s);
@@ -74,7 +74,7 @@ namespace ca
 			int s = pthread_mutex_unlock( mutex );
 			switch (s) {
 				case 0:
-					debug(1, "Mutex %0X unlocked\n", mutex);
+					debug(10, "Mutex %0X unlocked\n", mutex);
 					break;
 				default:
 					throw LockException(false, s);
@@ -103,7 +103,7 @@ namespace ca
 		}
 
 		ConditionWait::ConditionWait() :
-			test(false)
+			test(true)
 		{
 			pthread_mutex_init( &mutex, NULL );
 			pthread_cond_init( &condition, NULL );
@@ -116,15 +116,17 @@ namespace ca
 
 		bool ConditionWait::waitOnCondition() {
 			int rc = 0;
-			bool r = test = false;
+			bool r = false;
+
+            debug(1, "test %d\n", test);
 
 			try {
 				Lock	waitLock(mutex);
+				if (!test)
 				while (!test && rc == 0) {
-					debug(1, "waiting %d\n", r);
-					r = true;
 					rc = pthread_cond_wait( &condition, &mutex );
 				}
+				r = test = true;
 			} catch (LockException &le) {
 				Console::instance()->printf(le.what());
 			}
@@ -136,12 +138,14 @@ namespace ca
 		void ConditionWait::releaseOnCondition(bool all) {
 			try {
 				Lock	waitLock(mutex);
-				debug(1, "release %d\n", all);
-				test = true;
-				if (all) {
-					pthread_cond_broadcast( &condition );
-				} else {
-					pthread_cond_signal( &condition );
+				if (!test) {
+					debug(1, "release %d\n", all);
+					if (all) {
+						pthread_cond_broadcast( &condition );
+					} else {
+						pthread_cond_signal( &condition );
+					}
+					test = true;
 				}
 			} catch (LockException &le) {
 				Console::instance()->printf(le.what());

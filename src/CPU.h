@@ -25,6 +25,7 @@ namespace ca
 #define IOT_REASON      (1 << IOT_V_REASON)
 
 #define OP_KSF          06031                           /* for idle */
+#define OP_CLSC         06133                           /* for idle */
 
 #define INT_V_START     0                               /* enable start */
 #define INT_V_LPT       (INT_V_START+0)                 /* line printer */
@@ -96,6 +97,8 @@ namespace ca
 #define INT_PENDING     (INT_ION+INT_NO_CIF_PENDING+INT_NO_ION_PENDING)
 #define INT_UPDATE      ((int_req & ~INT_DEV_ENABLE) | (dev_done & int_enable))
 
+        extern int32_t int_enable, int_req, dev_done, stop_inst;
+
         enum CPUState {
 			NoState,
 			Fetch,
@@ -133,7 +136,7 @@ namespace ca
 		    STOP_HLT,
 		};
 
-		#define REGISTERS \
+		#define CPU_REGISTERS \
 			X(PC, PC, 8, 12, 0, 12 ) \
 			X(MQ, MQ, 8, 12, 0, 12 ) \
 			X(IR, IR, 8, 12, 0, 12 ) \
@@ -150,11 +153,11 @@ namespace ca
         #define IDLE_DETECT_MASK    0x1
         #define THROTTLE_MASK       0X2
 
-		#define MODIFIERS \
-			X(IDLE, cpuLoadControl, IDLE_DETECT_MASK, IDLE_DETECT_MASK ) \
-			X(NOIDLE, cpuLoadControl, 0, IDLE_DETECT_MASK ) \
-			X(THROTTLE, cpuLoadControl, THROTTLE_MASK, THROTTLE_MASK ) \
-			X(NOTHROTTLE, cpuLoadControl, 0, THROTTLE_MASK )
+		#define CPU_MODIFIERS \
+			X(IDLE, ModifierValue, cpuLoadControl, IDLE_DETECT_MASK, IDLE_DETECT_MASK ) \
+			X(NOIDLE, ModifierValue, cpuLoadControl, 0, IDLE_DETECT_MASK ) \
+			X(THROTTLE, ModifierValue, cpuLoadControl, THROTTLE_MASK, THROTTLE_MASK ) \
+			X(NOTHROTTLE, ModifierValue, cpuLoadControl, 0, THROTTLE_MASK )
 
         class CPU: public Device, Thread
         {
@@ -169,18 +172,18 @@ namespace ca
 
 			#define X(nm,loc,r,w,o,d)	Index ## nm,
 			enum RegisterIndex {
-				REGISTERS
+				CPU_REGISTERS
 				RegisterCount,
 			};
 			#undef X
 			//
 			//
 			#define X(nm,loc,r,w,o,d)	int32_t get ## nm (bool normal = false) const { return cpuRegisters[Index ## nm].get(normal); }
-			REGISTERS
+			CPU_REGISTERS
 			#undef X
 
 			#define X(nm,loc,r,w,o,d)	void set ## nm (int32_t v, bool normal = false) { cpuRegisters[Index ## nm].set(v, normal); }
-			REGISTERS
+			CPU_REGISTERS
 			#undef X
 
 			CPUState		getState() const { return cpuState; }
@@ -189,8 +192,10 @@ namespace ca
 
 			void	setState(CPUState s) { cpuState = s; }
 			void	setStepping(CPUStepping s) { cpuStepping = s; }
+			void	setCondition(CPUCondition c) { cpuCondition = c; }
 
 			void	cpuContinue();
+			void    cpuContinueFromIdle();
 			void	cpuStop() { cpuCondition = CPUStopped; }
 			void	cpuMemoryBreak() { cpuCondition = CPUMemoryBreak; }
 			void	timerTick();
@@ -198,7 +203,6 @@ namespace ca
 
 			virtual int run();
 			virtual void stop() { threadRunning = false; }
-			virtual bool waitCondition();
 
 		protected:
 			static CPU *    _instance;
@@ -213,12 +217,17 @@ namespace ca
 			CpuStopReason   reason;
 			bool			timerTickFlag;
 			Mutex			timerTickMutex;
-
-			ConditionWait	runConditionWait;
+			Mutex           idleMutex;
 
 			bool throttleTimerReset;
 
+            pthread_mutex_t     mutexCondition;
+            pthread_cond_t      condition;
+
 			long cycleCpu();
+
+			bool waitOnCondition();
+			void releaseOnCondition();
 
             void reset_all(int i) { /* TODO: call chassis reset all */ }
 

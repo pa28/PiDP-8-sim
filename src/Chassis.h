@@ -44,6 +44,7 @@
 #include "Memory.h"
 #include "Console.h"
 #include "Panel.h"
+#include "DK8EA.h"
 
 namespace ca
 {
@@ -61,6 +62,7 @@ namespace ca
 
 			void    	stop();
 			void		timerHandler();
+			void		reset();
 
 			Device  * 	device(int32_t devNo) { return deviceList[devNo]; }
 
@@ -69,9 +71,12 @@ namespace ca
         protected:
 			static		Chassis * _instance;
             Device*    	deviceList[DEV_MAX_COUNT];
+            int         timeoutCounter;
+            bool        timerFreq;
         };
 
     } /* namespace pdp8 */
 } /* namespace ca */
 
 #endif /* CHASSIS_H_ */
+/* vim: set ts=4 sw=4  noet autoindent : */
