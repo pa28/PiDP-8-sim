@@ -183,6 +183,10 @@ namespace ca
 								} else {
 									switch ((switchstatus[2] >> 6) & 077) {
 										case PanelStart:
+											debug(1, "%s\n", "PanelStart");
+											Chassis::instance()->reset();
+											cpu.setCondition(CPURunning);
+											cpu.cpuContinue();
 											break;
 										case PanelLoadAdr:
 											CPU::instance()->setPC(switchstatus[0]);

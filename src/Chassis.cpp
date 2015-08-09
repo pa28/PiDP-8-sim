@@ -94,6 +94,14 @@ namespace ca
             // TODO Auto-generated destructor stub
         }
 
+		void Chassis::reset() {
+			for (int i = 0; i < DEV_MAX_COUNT; ++i) {
+				if (deviceList[i] != NULL) {
+					deviceList[i]->reset();
+				}
+			}
+		}
+
 		Chassis * Chassis::instance() {
 			if (_instance == NULL) {
 				_instance = new Chassis();

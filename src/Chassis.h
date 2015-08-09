@@ -62,6 +62,7 @@ namespace ca
 
 			void    	stop();
 			void		timerHandler();
+			void		reset();
 
 			Device  * 	device(int32_t devNo) { return deviceList[devNo]; }
 
@@ -78,3 +79,4 @@ namespace ca
 } /* namespace ca */
 
 #endif /* CHASSIS_H_ */
+/* vim: set ts=4 sw=4  noet autoindent : */
