@@ -94,6 +94,26 @@ ChangeLights,
 	clsk		/ clear clock flag and skip if set
 	nop
 
+	cla		/ get the switches into the AC
+	osr
+	dca	Switches
+	tad	Switches
+	and	(0077)
+	clsi		/ the lower nibble of SR sets the
+	cla		/ base clock rate
+
+	tad	Switches	/ the upper nibble of SR masked
+	bsw
+	and	(0077)
+	dca	Switches
+	rand		/ by random data
+	dca	IntReturn	/	with each nibble
+	tad	IntReturn	/	anded with the other
+	bsw
+	and	IntReturn
+	and	Switches
+	clsm		/ sets the multiplier of the clock
+
 	rand		/ get a new random value
 	dca	IntReturn	/ save new waiting location. we will
 			/ return indirectly to this location
@@ -126,5 +146,6 @@ SclValue,	0
 	jmp i	IntReturn
 
 NextDf,	0
+Switches,	0
 $
 /* vim: set ts=12 sw=12  noet autoindent : */
