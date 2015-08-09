@@ -207,13 +207,13 @@ namespace ca
 	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelContinue:
-											debug(1, "PanelContinue\n", 0);
+											debug(1, "%s\n", "PanelContinue");
 											cpu.setCondition(CPURunning);
 										    cpu.cpuContinue();
 	                                        consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelStop:
-											debug(1, "PanelStop\n", 0);
+											debug(1, "%s\n", "PanelStop");
 											cpu.cpuStop();
 											break;
 									}
