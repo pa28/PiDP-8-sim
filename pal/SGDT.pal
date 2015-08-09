@@ -21,8 +21,8 @@
 / This would NOT be a problem on a real PDP-8, since its AC display is not being
 / sampled and held.
 
-/CALLBIOS=6206           / Call SBC6120 BIOS function, function code follows call
-/LIGHTS=12               / BIOS function to take over the data display lights
+CALLBIOS=6206           / Call SBC6120 BIOS function, function code follows call
+LIGHTS=12               / BIOS function to take over the data display lights
                         
 / Since we don't have programmatic control over the memory lights, if we want to
 / control them it's necessary for us to actually GO somewhere and remain there.
@@ -32,17 +32,18 @@
 / zero.  At that point we determine whether we've waited long enough, and either
 / immediately return to waiting at the same location, or generate new randomness.
 
-/RTF=6005                / This "Restore Flags" opcode, which we are defining here,
+RTF=6005                / This "Restore Flags" opcode, which we are defining here,
                         / is unknown to the PAL-8 assembler because it is only
                         / valid when the PDP-8 is equipped with extended memory.
                         / It is used for cross-field interrupt returns by loading
                         / fields of the AC into the extended memory field regs.
                         / whose effects are deferred until the next jump. inst.
 
-CLCL=6136		/ clear clock opcode
-CLLE=6135		/ enable clock interrupt
-
 /-------------------------------------------------------------------------------
+*0200
+		JMP I  StartAddr
+StartAddr,	RunFromHere
+
 *0                                      / load at loc 0
 IntReturn,      0                       / interrupt return loc
                                         
@@ -72,22 +73,12 @@ ChangeLights,   JMS     GetRand         / get a new random value
                 DCA     IntReturn       / save new waiting location. we will
                                         / return indirectly to this location
                                         / once everything else is set up
-                JMS     GetRand
-                /CALLBIOS                / call the SBC6120 BIOS
-                /LIGHTS                  / to set the data register lights
-                /1                       / under our program's control
-
+                
                 JMS     GetRand         / establish the next instruction field
                 AND     CInstField      / retain only bits 6-8 (IF)
                 SNA                     / if we're not in page 0
                 TAD     C0010           / collision possible, so set to field 1
                 TAD     C0200           / turn on the Interrupt Enable bit
-/-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-/                SKP                     / skip over 0026, our startup entry. Our
-/                                        / funky SBC6120 OS/8 boot requires this
-/                JMP     RunFromHere     / fixed 0026 entrypoint, but it's easily
-/                                        / accommodated with a SKP instruction
-/-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 DCA     LoopField       / set next loop field to 4
 
                 OSR                     / read the switches
@@ -112,7 +103,9 @@ SpeedControl,   0                       / the multiply subroutine's multiplicand
 
 Leave,          TAD     CBaudDelay      / reset our inner-loop counter
                 DCA     AccumLow
-Continue,       CLCL                    / clear interrupt and clock flags
+Continue,       CLSC                    / clear clock interrupt
+                NOP                     / skipped if interrupt set
+                CLEI                    / enable clock interrupt
                 TAD     LoopField       / put the RTF's memory field into AC
                 RTF                     / set the restored pending field & ION
                 JMP I   IntReturn       / return to the place we'll be waiting
@@ -187,8 +180,7 @@ Shift24,        TAD     AccumLow        / get the lower 12-bit half
 / until we're yanked back by the completion of the serial port character that we
 / always start sending just before we jump out to never-never land.
 
-RunFromHere,    CLLE			/ enable clock interrupt
-		CLA
+RunFromHere,    CLA
                 DCA     LastRand        / setup the start of our filling
 
                 TAD     CFirstDatField  / init to data field zero 
@@ -230,7 +222,7 @@ CRandAdd,       541                     / 353 base 10
 CJmpCurrentPg,  5200                    / inst for jmp to current page loc 0
 CFirstDatField, CDF     10              / "change to data field 1"
 
-CBaudDelay,     7777                    / baud rate compensation value
+CBaudDelay,     7770                    / baud rate compensation value
                                         / 7740 - 38400
                                         / 7760 - 19200
                                         / 7770 -  9600 baud
