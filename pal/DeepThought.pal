@@ -120,6 +120,9 @@ ChangeLights,
 			/ once everything else is set up
 
 	rand
+	dca	SpRandSv
+	rand
+	and	SpRandSv
 	mql		/ set the MQ register to a random value
 
 	rand
@@ -140,12 +143,24 @@ SclValue,	0
 
 	rand
 	ral
+
 	rand
+	dca	SpRandSv
+	rand
+	and	SpRandSv
 
 	ion
 	jmp i	IntReturn
 
+SpRand,	0
+	rand
+	dca	SpRandSv
+	rand
+	and	SpRandSv
+	jmp i	SpRand
+
 NextDf,	0
 Switches,	0
+SpRandSv,	0
 $
 /* vim: set ts=12 sw=12  noet autoindent : */
