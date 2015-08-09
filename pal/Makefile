@@ -1,4 +1,4 @@
-BINS=DeepThought.bin Test.bin
+BINS=DeepThought.bin Test.bin SGDT.bin
 
 all: $(BINS)
 
