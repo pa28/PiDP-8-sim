@@ -5,6 +5,7 @@
  *      Author: H Richard Buckley
  */
 
+#include "PDP8.h"
 #include "Panel.h"
 #include "Chassis.h"
 #include "Console.h"
@@ -179,17 +180,17 @@ namespace ca
 
             // Find gpio address (different for Pi 2) ----------
             gpio.addr_p = bcm_host_get_peripheral_address() +  + 0x200000;
-            if (gpio.addr_p== 0x20200000) Console::instance()->printf("RPi Plus detected\n");
-            else Console::instance()->printf("RPi 2 detected\n");
+            if (gpio.addr_p== 0x20200000) LOG("RPi Plus detected\n");
+            else LOG("RPi 2 detected\n");
 
             // set thread to real time priority -----------------
             struct sched_param sp;
             sp.sched_priority = 98; // maybe 99, 32, 31?
             if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sp))
-            { Console::instance()->printf( "warning: failed to set RT priority\n"); }
+            { ERROR( "warning: failed to set RT priority\n"); }
             // --------------------------------------------------
             if(map_peripheral(&gpio) == -1)
-            {   Console::instance()->printf("Failed to map the physical GPIO registers into the virtual memory space.\n");
+            {   ERROR("Failed to map the physical GPIO registers into the virtual memory space.\n");
                 return -1;
             }
 
@@ -320,8 +321,8 @@ namespace ca
                         switchReport[1] = switchscan;
                         int n = write( switchFd, switchReport, sizeof(switchReport));
                         if (n < 0) {
-                            perror("write to switchFd");
-                            Console::instance()->printf("fd: %d, size: %d\n", switchFd, sizeof(switchstatus));
+                            ERROR("write to switchFd");
+                            ERROR("fd: %d, size: %d\n", switchFd, sizeof(switchstatus));
                         }
                     }
 
