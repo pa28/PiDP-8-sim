@@ -12,16 +12,17 @@
 
 // Requires fmt be a string literal
 #ifdef SYSLOG
-#define debug(l,fmt,...) do{if(l<DEBUG_LEVEL) syslog(LOG_DEBUG, "%s: " fmt, __PRETTY_FUNCTION__, __VA_ARGS__);} while(0)
+#include <syslog.h>
+#define debug(l,...) do{if(l<DEBUG_LEVEL) syslog(LOG_DEBUG,  __VA_ARGS__);} while(0)
 
-#define ERROR(fmt,...) syslog(LOG_ERR, "%s: " fmt, __PRETTY_FUNCTION__, __VA_ARGS__)
+#define ERROR(...) syslog(LOG_ERR,  __VA_ARGS__)
 
-#define LOG(fmt,...) syslog(LOG_INFO, fmt, __VA_ARGS__)
+#define LOG(...) syslog(LOG_INFO,  __VA_ARGS__)
 
 #else
-#define debug(l,fmt,...) do{if(l<DEBUG_LEVEL) Console::instance()->printf( "%s: " fmt, __PRETTY_FUNCTION__, __VA_ARGS__);} while(0)
-#define ERROR(fmt,...)
-#define LOG(fmt,...)
+#define debug(l,...) do{if(l<DEBUG_LEVEL) Console::instance()->printf( "%s: " fmt, __PRETTY_FUNCTION__, __VA_ARGS__);} while(0)
+#define ERROR(...)
+#define LOG(...)
 #endif
 
 #endif	// _PDP8_H_
