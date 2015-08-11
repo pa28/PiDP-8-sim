@@ -61,6 +61,8 @@ int main( int argc, char ** argv ) {
             exit(1);
         }
 
+		LOG("Entering daemon mode.");
+
         /* Close out the standard file descriptors */
         close(STDIN_FILENO);
         close(STDOUT_FILENO);
@@ -68,6 +70,7 @@ int main( int argc, char ** argv ) {
     }
 
 	signal( SIGINT, sigintHandler );
+	signal( SIGTERM, sigintHandler );
 
 	Chassis *chassis = Chassis::instance();
 	Console::instance()->run();
@@ -151,6 +154,7 @@ namespace ca
 		}
 
 		void Chassis::stop() {
+			LOG( "PIDP-8/I simulator exiting");
 		    for (int i = 0; i < DEV_MAX_COUNT; ++i) {
 		        if (deviceList[i] != NULL) {
 		            deviceList[i]->stop();
