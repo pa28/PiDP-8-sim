@@ -128,6 +128,7 @@ namespace ca
 
 			Memory::instance()->loadFile("/nas/pi/PiDP-8-sim/pal/DeepThought.bin");
 			//Memory::instance()->loadFile("/nas/pi/PiDP-8-sim/pal/Test.bin");
+			Memory::instance()->saveFile("/nas/pi/PiDP-8-sim/pal/DeepThought.txt", 0, 0400);
 
 			setTimerFreq(true);
         }

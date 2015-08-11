@@ -229,6 +229,21 @@ namespace ca
             }
         }
 
+        int Memory::saveFile(const char *fileName, int32_t start, int32_t end) {
+            FILE    *fp = fopen( fileName, "r" );
+            if (fp) {
+                for (int i = start; i < end; ++i) {
+                    fprintf( fp, "%06o,\n", this->m[i].operator int());
+                }
+                fclose(fp);
+                return 1;
+            } else {
+                ERROR( "Can not open memory save file %s: %s", fileName, strerror(errno));
+            }
+
+            return 0;
+        }
+
     } /* namespace pdp8 */
 } /* namespace ca */
 /* vim: set ts=4 sw=4  noet autoindent : */

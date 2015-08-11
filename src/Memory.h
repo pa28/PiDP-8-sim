@@ -105,6 +105,7 @@ namespace ca
             static uint16_t     MA() { return ma; }
 
             int     loadFile(const char *fileName);
+            int     saveFile(const char *fileName, int32_t start, int32_t end);
 
         protected:
 
