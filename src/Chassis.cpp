@@ -137,7 +137,6 @@ namespace ca
 		}
 
 		void Chassis::timerHandler() {
-			debug( 10, "%d\n", 0);
 			CPU::instance()->timerTick();
 			DK8EA::instance()->tick();
 
