@@ -5,6 +5,11 @@
  *      Author: richard
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -35,6 +40,33 @@ int main( int argc, char ** argv ) {
     openlog( "pidp8", LOG_PID, LOG_DAEMON);
     syslog(LOG_INFO, "pidp8 - PDP-8/I simulator starting.");
 #endif
+
+    if (daemonMode) {
+        pid_t pid, sid;
+
+        pid = fork();
+        if (pid < 0) {
+            ERROR( "Error starting daemon mode %s", strerror(errno) );
+            exit(1);
+        }
+
+        if (pid > 0) {
+            exit(0);
+        }
+
+        umask(0);
+        sid = setsid();
+        if (sid < 0) {
+            ERROR( "Error setting process group %s", strerror(errno) );
+            exit(1);
+        }
+
+        /* Close out the standard file descriptors */
+        close(STDIN_FILENO);
+        close(STDOUT_FILENO);
+        close(STDERR_FILENO);
+    }
+
 	signal( SIGINT, sigintHandler );
 
 	Chassis *chassis = Chassis::instance();
