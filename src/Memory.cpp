@@ -31,6 +31,9 @@
    in this Software without prior written authorization from Robert M Supnik.
  */
 
+#include <string.h>
+#include <errno.h>
+#include "PDP8.h"
 #include "Memory.h"
 #include "Console.h"
 
@@ -213,7 +216,9 @@ namespace ca
 				ma = lastOrigin;
 				CPU::instance()->setState(ExamineState);
                 return r;
-            }
+            } else {
+				ERROR( "Can not open memory file %s: %s", fileName, strerror(errno));
+			}
 
             return 0;
         }
