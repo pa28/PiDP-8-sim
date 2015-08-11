@@ -29,7 +29,7 @@ namespace ca
     {
 		Console * Console::_instance = NULL;
 
-        Console::Console() :
+        Console::Console(bool headless) :
                 Device("CONS", "Console"),
 				runConsole(false),
 				stopMode(false),
@@ -37,8 +37,11 @@ namespace ca
 				stopCount(0),
 				M(*(Memory::instance())),
 				cpu(*(CPU::instance())),
-				consoleTerm(new VirtualPanel())
+				consoleTerm(NULL)
         {
+            if (!headless) {
+                consoleTerm = new VirtualPanel();
+            }
             pthread_mutex_init( &mutex, NULL );
         }
 
@@ -47,15 +50,19 @@ namespace ca
             pthread_mutex_destroy( &mutex );
         }
 
-		Console * Console::instance() {
+		Console * Console::instance(bool headless) {
 			if (_instance == NULL) {
-				_instance = new Console();
+				_instance = new Console(headless);
 			}
 
 			return _instance;
 		}
 
 		int Console::printf( const char * format, ... ) {
+		    if (consoleTerm == NULL) {
+		        return 0;
+		    }
+
 		    int n = -1;
 		    try {
                 va_list args;
@@ -86,14 +93,17 @@ namespace ca
 
 					int	n = 0;
 
-					FD_SET(consoleTerm->fdOfInput(), &rd_set); n = consoleTerm->fdOfInput() + 1;
-
-					if (switchPipe >= 0) {
-						FD_SET(switchPipe, &rd_set);
-						n = max(n,switchPipe + 1);
+					if (consoleTerm != NULL) {
+                        FD_SET(consoleTerm->fdOfInput(), &rd_set); n = consoleTerm->fdOfInput() + 1;
 					}
 
-					int s;
+                    if (switchPipe >= 0) {
+                        FD_SET(switchPipe, &rd_set);
+                        n = max(n,switchPipe + 1);
+                    }
+
+                    int s;
+
 #ifdef HAS_PSELECT
                     s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
 #else
@@ -113,20 +123,10 @@ namespace ca
 						}
 					} else if (s > 0) {
 						// one or more fd ready
-						if (FD_ISSET(consoleTerm->fdOfInput(), &rd_set)) {
-							consoleTerm->processStdin();
-							/*
-						if (FD_ISSET(0, &rd_set)) {
-							int ch = getch();
-							switch (ch) {
-								case KEY_F(1):
-									//wprintw(console, "F1\n");
-									//wrefresh(console);
-									break;
-								default:
-									Chassis::instance()->stop();
-							}
-							*/
+					    if (consoleTerm != NULL) {
+                            if (FD_ISSET(consoleTerm->fdOfInput(), &rd_set)) {
+                                consoleTerm->processStdin();
+                            }
 						} else if (FD_ISSET(switchPipe, &rd_set)) {
 							// Panel
 						    int    switchReport[2];
@@ -140,17 +140,16 @@ namespace ca
 							        case 0: // Switch register
                                         switchstatus[0] = switchReport[1];
 							            debug(1, "SR: %04o\n", switchstatus[0]);
-							            consoleTerm->updatePanel( switchstatus );
+							            if (consoleTerm) consoleTerm->updatePanel( switchstatus );
 										CPU::instance()->setOSR(switchstatus[0]);
 							            break;
 							        case 1: // DF and IF
                                         switchstatus[1] = switchReport[1];
                                         debug(1, "DF: %1o  IF: %1o\n", ((switchstatus[1] >> 9) & 07), ((switchstatus[1] >> 6) & 07) );
-                                        consoleTerm->updatePanel( switchstatus );
+                                        if (consoleTerm) consoleTerm->updatePanel( switchstatus );
                                         break;
 							        case 2: // Command switches
                                         switchstatus[2] = switchReport[1];
-                                        //consoleTerm->updatePanel( switchstatus );
                                         debug(1, "Cmd: %02o  SS: %1o\n", (switchstatus[2] >> 6) & 077, (switchstatus[2] >> 4) & 03 );
                                         break;
 							    }
@@ -192,25 +191,25 @@ namespace ca
 											CPU::instance()->setPC(switchstatus[0]);
 											CPU::instance()->setDF((switchstatus[1] >> 9) & 07);
 											CPU::instance()->setIF((switchstatus[1] >> 6) & 07);
-	                                        consoleTerm->updatePanel( switchstatus );
+											if (consoleTerm) consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelDeposit:
 											M[cpu.getIF() | cpu.getPC()] = switchstatus[0];
 											cpu.setPC( (cpu.getPC() + 1) & 07777 );
 											cpu.setState(DepositState);
-	                                        consoleTerm->updatePanel( switchstatus );
+											if (consoleTerm) consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelExamine:
 											switchReport[1] = M[cpu.getIF() | cpu.getPC()];
 											cpu.setPC( (cpu.getPC() + 1) & 07777 );
 											cpu.setState(ExamineState);
-	                                        consoleTerm->updatePanel( switchstatus );
+											if (consoleTerm) consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelContinue:
 											debug(1, "%s\n", "PanelContinue");
 											cpu.setCondition(CPURunning);
 										    cpu.cpuContinue();
-	                                        consoleTerm->updatePanel( switchstatus );
+										    if (consoleTerm) consoleTerm->updatePanel( switchstatus );
 											break;
 										case PanelStop:
 											debug(1, "%s\n", "PanelStop");
@@ -227,7 +226,7 @@ namespace ca
 				//runConsole = false;
 			}
 			printf("Console exiting.\n");
-			delete consoleTerm;
+			if (consoleTerm) delete consoleTerm;
 			return 0;
 		}
 

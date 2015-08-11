@@ -27,6 +27,8 @@ void timerHandler(int s) {
 	Chassis::instance()->timerHandler();
 }
 
+bool    daemonMode = true;
+
 int main( int argc, char ** argv ) {
 
 #ifdef SYSLOG
@@ -73,7 +75,7 @@ namespace ca
             deviceList[DEV_MEM] = Memory::instance();
             deviceList[DEV_CPU] = CPU::instance();
             deviceList[DEV_PANEL] = Panel::instance();
-			deviceList[DEV_CONSOLE] = Console::instance();
+			deviceList[DEV_CONSOLE] = Console::instance(daemonMode);
 
 			deviceList[DEV_CLK] = DK8EA::instance();
 

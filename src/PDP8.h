@@ -20,7 +20,7 @@
 #define LOG(...) syslog(LOG_INFO,  __VA_ARGS__)
 
 #else
-#define debug(l,...) do{if(l<DEBUG_LEVEL) Console::instance()->printf( "%s: " fmt, __PRETTY_FUNCTION__, __VA_ARGS__);} while(0)
+#define debug(l,...) do{if(l<DEBUG_LEVEL) Console::instance()->printf(__VA_ARGS__);} while(0)
 #define ERROR(...)
 #define LOG(...)
 #endif

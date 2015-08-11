@@ -32,12 +32,12 @@ namespace ca
 
         class Console: public Device
         {
-            Console();
+            Console(bool headless);
 
         public:
             virtual ~Console();
 
-			static Console * instance();
+			static Console * instance(bool headless = false);
 
 			int printf( const char *format, ... );
 
