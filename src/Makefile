@@ -2,7 +2,7 @@ CXX        := g++
 LD         := $(CXX)
 BINS       := pidp8
 BINSDIR    := .
-CCFLAGS    := -g -Wall -DHAS_PSELECT -std=gnu++0x
+CCFLAGS    := -g -Wall -DHAS_PSELECT -DSYSLOG -std=gnu++0x
 LDFLAGS    := -g -Wall
 pidp8_SRCS := Chassis.cpp Console.cpp CPU.cpp Device.cpp Memory.cpp Panel.cpp Thread.cpp Terminal.cpp VirtualPanel.cpp DK8EA.cpp
 pidp8_OBJS := $(patsubst %.cpp,%.o,$(pidp8_SRCS))

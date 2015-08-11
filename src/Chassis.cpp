@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#ifdef SYSLOG
+#include <syslog.h>
+#endif
 
 #define DEBUG_LEVEL 5
 #include "PDP8.h"
@@ -25,6 +28,11 @@ void timerHandler(int s) {
 }
 
 int main( int argc, char ** argv ) {
+
+#ifdef SYSLOG
+    openlog( "pidp8", LOG_PID, LOG_DAEMON);
+    syslog(LOG_INFO, "pidp8 - PDP-8/I simulator starting.");
+#endif
 	signal( SIGINT, sigintHandler );
 
 	Chassis *chassis = Chassis::instance();
@@ -83,8 +91,6 @@ namespace ca
 
 			Memory::instance()->loadFile("/nas/pi/PiDP-8-sim/pal/DeepThought.bin");
 			//Memory::instance()->loadFile("/nas/pi/PiDP-8-sim/pal/Test.bin");
-
-            Console::instance()->printf("PiDP-8-sim started.\n");
 
 			setTimerFreq(true);
         }
