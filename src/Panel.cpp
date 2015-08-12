@@ -421,6 +421,7 @@ namespace ca
 			ledstatus[6] |= (cpu.getION(true) << 9);
 
 			if (cpu.getStepping() == PanelCommand) {
+			    ledstatus[6] &= 06577;
 				if (ledBlink & 040) {
 					ledstatus[6] |= (1<<7);
 				} else {

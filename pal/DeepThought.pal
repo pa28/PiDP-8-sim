@@ -155,7 +155,7 @@ SclValue,	0
 
 SpRand,	0
 	rand
-/	jmp i	SpRand
+	jmp i	SpRand
 	dca	SpRandSv
 	rand
 	and	SpRandSv
