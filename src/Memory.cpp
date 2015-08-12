@@ -226,11 +226,11 @@ namespace ca
         void Memory::clearMemory() {
             for (int i = 0; i < MAXMEMSIZE; ++i) {
                 m[i].clear();
-            }
+			}
         }
 
         int Memory::saveFile(const char *fileName, int32_t start, int32_t end) {
-            FILE    *fp = fopen( fileName, "r" );
+            FILE    *fp = fopen( fileName, "w" );
             if (fp) {
                 for (int i = start; i < end; ++i) {
                     fprintf( fp, "%06o,\n", this->m[i].operator int());
