@@ -244,6 +244,18 @@ namespace ca
             return 0;
         }
 
+		void Memory::initMemory(const int32_t *mem, int32_t start, int32_t end, int32_t run) {
+			for (int i = start; i < end; ++i) {
+				this->m[i] = mem[i];
+			}
+			CPU::instance()->setPC(run);
+			CPU::instance()->setDF(0);
+			CPU::instance()->setIF(0);
+			int32_t t = m[CPU::instance()->getIF() | CPU::instance()->getPC()];
+			ma = lastOrigin;
+			CPU::instance()->setState(ExamineState);
+		}
+
     } /* namespace pdp8 */
 } /* namespace ca */
 /* vim: set ts=4 sw=4  noet autoindent : */

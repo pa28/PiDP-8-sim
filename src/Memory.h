@@ -106,6 +106,7 @@ namespace ca
 
             int     loadFile(const char *fileName);
             int     saveFile(const char *fileName, int32_t start, int32_t end);
+			void	initMemory(const int32_t *mem, int32_t start, int32_t end, int32_t run);
 
         protected:
 
