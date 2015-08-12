@@ -208,7 +208,7 @@ namespace ca
                 clearMemory();
                 int r = sim_load_bin( fp );
                 fclose( fp );
-                Console::instance()->printf ("Last secion %1o%04o\n", lastField, lastOrigin);
+                LOG ("Last secion %1o%04o\n", lastField, lastOrigin);
 				CPU::instance()->setPC(lastOrigin);
 				CPU::instance()->setDF(0);
 				CPU::instance()->setIF(0);
