@@ -23,8 +23,11 @@
    Except as contained in this notice, the name of Robert M Supnik shall not be
    used in advertising or otherwise to promote the sale, use or other dealings
    in this Software without prior written authorization from Robert M Supnik.
+
+   =============================================================================
    
-   The license for the remainder of the work is the same and follows:
+   The license for the remainder of the work, except palbart, is the same and
+   follows:
    
    Copyright (c) 2015, H Richard Buckley
 
@@ -49,3 +52,30 @@
    used in advertising or otherwise to promote the sale, use or other dealings
    in this Software without prior written authorization from H Richard Buckley.
    
+   =============================================================================
+
+   Palbart:
+   Author:   Gary A. Messenbrink                                                
+             gam@rahul.net                                                      
+                                                                                
+   DISCLAIMER:                                                                
+      See the symbol table for the set of pseudo-ops supported.               
+      See the code for pseudo-ops that are not standard for PDP/8 assembly.   
+      Refer to DEC's "Programming Languages (for the PDP/8)" for complete     
+      documentation of pseudo-ops.                                            
+      Refer to DEC's "Introduction to Programming (for the PDP/8)" or a       
+      lower level introduction to the assembly language.                      
+                                                                              
+   WARRANTY:                                                                  
+      If you don't like it the way it works or if it doesn't work, that's     
+      tough.  You're welcome to fix it yourself.  That's what you get for     
+      using free software.                                                    
+                                                                              
+   COPYRIGHT NOTICE:                                                          
+      This is free software.  There is no fee for using it.  You may make     
+      any changes that you wish and also give it away.  If you can make       
+      a commercial product out of it, fine, but do not put any limits on      
+      the purchaser's right to do the same.  If you improve it or fix any     
+      bugs, it would be nice if you told me and offered me a copy of the      
+      new version.                                                            
+                                                                              
