@@ -1,3 +1,5 @@
+include *.mk
+
 CXX        := g++
 LD         := $(CXX)
 BINS       := pidp8
@@ -13,6 +15,9 @@ OBJS := $(pidp8_OBJS)
 DEPS := $(pidp8_DEPS)
 
 all: $(BINS)
+
+install: $(BINS)
+	$(INSTALL) $(INSTALL_OPTS) $(INSTALL_XOPTS) $(BINS) $(BIN_DIR)
 
 clean:
 	$(RM) $(BINS) $(OBJS) $(DEPS)
