@@ -30,8 +30,8 @@ umask 022
 
 # Assuming pidp and scanswitch are in /opt/pidp8
 #
-pidp="/opt/pidp8/bin/pidp8"
-scanswitch="/opt/pidp8/bin/scanswitch"
+pidp="__ROOT__/bin/pidp8"
+scanswitch="__ROOT__/bin/scanswitch"
 
 pidp_dir=`dirname $pidp`
 pidp_bin=`basename $pidp`
