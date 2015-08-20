@@ -27,5 +27,7 @@ clean: $(SUBDIRS)
 	make -C src clean
 	make -C pal clean
 	make -C asm clean
+	make -C etc clean
+	make -C dist clean
 	
 .PHONY: all $(SUBDIRS)
