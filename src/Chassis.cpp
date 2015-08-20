@@ -5,6 +5,7 @@
  *      Author: richard
  */
 
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -194,6 +195,8 @@ namespace ca
 		            deviceList[i]->stop();
 		        }
 		    }
+
+			system( "/sbin/shutdown -h now" );
 		}
 
 		void Chassis::setTimerFreq( bool f120 ) {
