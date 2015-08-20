@@ -36,6 +36,7 @@
 #include "PDP8.h"
 #include "Memory.h"
 #include "Console.h"
+#include "Chassis.h"
 
 namespace ca
 {
@@ -244,16 +245,21 @@ namespace ca
             return 0;
         }
 
-		void Memory::initMemory(const int32_t *mem, int32_t start, int32_t end, int32_t run) {
+		void Memory::initMemory(const int32_t *mem, int32_t start, int32_t end, int32_t startAddr, bool run) {
 			for (int i = start; i < end; ++i) {
 				this->m[i] = mem[i];
 			}
-			CPU::instance()->setPC(run);
+			CPU::instance()->setPC(startAddr);
 			CPU::instance()->setDF(0);
 			CPU::instance()->setIF(0);
 			int32_t t = m[CPU::instance()->getIF() | CPU::instance()->getPC()];
 			ma = lastOrigin;
 			CPU::instance()->setState(ExamineState);
+			if (run) {
+				Chassis::instance()->reset();
+				CPU::instance()->setCondition(CPURunning);
+				CPU::instance()->cpuContinue();
+			}
 		}
 
     } /* namespace pdp8 */
