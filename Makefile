@@ -7,6 +7,15 @@ all: $(SUBDIRS)
 	make -C pal all
 	make -C asm all
 
+dist: all $(SUBDIRS)
+	mkdir -p dist/$(DIST)/bin
+	mkdir -p dist/$(DIST)/etc
+	make -C src dist
+	make -C pal dist
+	make -C asm dist
+	make -C etc dist
+	make -C dist dist
+
 install: $(SUBDIRS)
 	$(INSTALL) $(INSTALL_OPTS) $(INSTALL_DOPTS) -d $(BIN_DIR) $(ETC_DIR)
 	make -C src install

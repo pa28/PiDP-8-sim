@@ -9,6 +9,10 @@ install: palbart
 	$(INSTALL) --owner=root --group=root --mode=0644 /tmp/palbart.1.gz /usr/share/man/man1
 	$(RM) /tmp/palbart.1.gz
 
+dist: all
+	cp palbart ../dist/$(DIST)
+	gzip -c palbart.1 > ../dist/$(DIST)/palbart.1.gz
+
 clean:
 	$(RM) palbart
 

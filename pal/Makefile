@@ -7,6 +7,9 @@ all: $(BINS)
 install: $(BINS)
 	$(INSTALL) $(INSTALL_OPTS) $(INSTALL_FOPTS) $(BINS) $(ETC_DIR)
 
+dist: $(BINS)
+	cp $(BINS) ../dist/$(DIST)/etc
+
 clean:
 	$(RM) *.bin *.lst
 

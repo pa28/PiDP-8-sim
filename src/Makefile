@@ -19,6 +19,9 @@ all: $(BINS)
 install: $(BINS)
 	$(INSTALL) $(INSTALL_OPTS) $(INSTALL_XOPTS) $(BINS) $(BIN_DIR)
 
+dist: $(BINS)
+	cp $(BINS) ../dist/$(DIST)/bin
+
 clean:
 	$(RM) $(BINS) $(OBJS) $(DEPS)
 
