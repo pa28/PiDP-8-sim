@@ -23,6 +23,15 @@
 #include "Chassis.h"
 #include "Console.h"
 
+//#define PANEL_WAIT
+#ifdef PANEL_WAIT
+#define HZ120 641
+#define HZ100 769
+#else /* PANEL_WAIT */
+#define HZ120 8333
+#define HZ100 10000
+#endif /* PANEL_WAIT */
+
 using namespace ca::pdp8;
 
 void sigintHandler(int s) {
@@ -105,7 +114,7 @@ int main( int argc, char ** argv ) {
 	signal( SIGINT, sigintHandler );
 	signal( SIGTERM, sigintHandler );
 
-	Chassis *chassis = Chassis::instance();
+	Chassis::instance();
 	Console::instance()->run();
 
     return 0;
@@ -120,6 +129,7 @@ namespace ca
 
         Chassis::Chassis() :
                 timeoutCounter(0),
+				timerHandlerCnt(0),
                 timerFreq(false)
         {
             int sxfd[2];
@@ -204,16 +214,23 @@ namespace ca
 		void Chassis::setTimerFreq( bool f120 ) {
 			struct itimerval timer;
 			timer.it_value.tv_sec = 0;
-			timer.it_value.tv_usec = (f120 ? 8333 : 10000);	// 120Hz 10000 for 100Hz
+			timer.it_value.tv_usec = (f120 ? HZ120 : HZ100);	// 120Hz 10000 for 100Hz
 
 			timer.it_interval.tv_sec = 0;
-			timer.it_interval.tv_usec = (f120 ? 8333 : 10000);
-
+			timer.it_interval.tv_usec = (f120 ? HZ120 : HZ100); 
 			timerFreq = f120;
 			setitimer( ITIMER_REAL, &timer, NULL );
 		}
 
 		void Chassis::timerHandler() {
+#ifdef PANEL_WAIT
+			if (++timerHandlerCnt > 13) {
+				timerHandlerCnt = 0;
+			} else {
+				return;
+			}
+#endif /* PANEL_WAIT */
+
 			CPU::instance()->timerTick();
 			DK8EA::instance()->tick();
 
