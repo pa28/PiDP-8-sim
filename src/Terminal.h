@@ -2,7 +2,7 @@
  * Terminal.h
  *
  *  Created on: Jul 31, 2015
- *      Author: richard
+ *      Author: H Richard Buckley
  */
 
 #ifndef TERMINAL_H_

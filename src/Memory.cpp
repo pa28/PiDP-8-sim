@@ -4,6 +4,7 @@
  *  Created on: Jul 28, 2015
  *      Author: H Richard Buckley
  *
+
    Portions of this program are based substantially on work by Robert M Supnik
    The license for Mr Supnik's work follows:
 

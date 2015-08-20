@@ -2,7 +2,7 @@
  * VirtualPanel.h
  *
  *  Created on: Aug 2, 2015
- *      Author: richard
+ *      Author: H Richard Buckley
  */
 
 #ifndef VIRTUALPANEL_H_
