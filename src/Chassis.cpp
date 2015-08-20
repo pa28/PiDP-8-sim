@@ -26,7 +26,7 @@
 using namespace ca::pdp8;
 
 void sigintHandler(int s) {
-    Chassis::instance()->stop();
+    Chassis::instance()->stop(false);
 }
 
 void timerHandler(int s) {
@@ -188,7 +188,7 @@ namespace ca
 			return _instance;
 		}
 
-		void Chassis::stop() {
+		void Chassis::stop(bool halt) {
 			LOG( "PIDP-8/I simulator exiting");
 		    for (int i = 0; i < DEV_MAX_COUNT; ++i) {
 		        if (deviceList[i] != NULL) {
@@ -196,7 +196,9 @@ namespace ca
 		        }
 		    }
 
-			system( "/sbin/shutdown -h now" );
+			if (halt) {
+				system( "/sbin/shutdown -h now" );
+			}
 		}
 
 		void Chassis::setTimerFreq( bool f120 ) {

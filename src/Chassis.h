@@ -60,7 +60,7 @@ namespace ca
 
 			static 		Chassis * instance();
 
-			void    	stop();
+			void    	stop(bool halt=true);
 			void		timerHandler();
 			void		reset();
 
