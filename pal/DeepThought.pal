@@ -114,17 +114,17 @@ ChangeLights,
 	and	Switches
 	clsm		/ sets the multiplier of the clock
 
-	rand		/ get a new random value
+	jms	SpRand	/ get a new random value
 	dca	IntReturn	/ save new waiting location. we will
-	rand		/ return indirectly to this location
-	and	IntReturn	/ once everything else is set up
-	dca	IntReturn
+			/ return indirectly to this location
+			/ once everything else is set up
 
 	jms	SpRand
 	mql		/ set the MQ register to a random value
 
-	jms	SpRand
-	dca	SclValue
+	jms	SpRand	/ Get random value for SC
+	cma		/ complement because the SCL command 
+	dca	SclValue	/ will complement it again
 	scl		/ Assumes Mode A
 SclValue,	0
 
