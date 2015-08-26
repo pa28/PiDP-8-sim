@@ -145,17 +145,18 @@ SclValue,	0
 	tad	NextDF	/ combine the next DF
 	rtf
 
-	rand
-	ral
-	cla
-	tad	RandAc
+	rand		/ Random value for
+	ral		/ link
+	cla		/ Get random AC
+	tad	RandAc	/ value
 
 	ion
 	jmp i	IntReturn
 
 SpRand,	0
 	rand
-	jmp i	SpRand
+	/jmp i	SpRand
+	nop
 	dca	SpRandSv
 	rand
 	and	SpRandSv
