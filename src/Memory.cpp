@@ -234,9 +234,15 @@ namespace ca
         int Memory::saveFile(const char *fileName, int32_t start, int32_t end) {
             FILE    *fp = fopen( fileName, "w" );
             if (fp) {
-                for (int i = start; i < end; ++i) {
-                    fprintf( fp, "%06o,\n", this->m[i].operator int());
-                }
+				int	j = 0;
+				for (int i = start; i < end; ++i) {
+					fprintf( fp, "%06o, ", this->m[i].operator int());
+					++j;
+					if (j >= 8) {
+						fprintf( fp, "\n");
+						j = 0;
+					}
+				}
                 fclose(fp);
                 return 1;
             } else {
