@@ -19,7 +19,9 @@ int main() {
     for (auto m = memory->begin(); m != memory->end(); ++m) {
         if (m->flags() & MemoryFlag::MemFlagInitialized) {
             std::cout << std::oct << setw(5) << setfill('0') << m - memory->begin() << ' '
-                      << m->flags() << ' ' << *m << std::endl;
+                      << m->flags() << ' ' << *m << ' '
+                      << pdp8::disassemble(*m, m - memory->begin())
+                      << std::endl;
         }
     }
 }
