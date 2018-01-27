@@ -6,6 +6,7 @@
 #define PIDP_PDP8_H
 
 #include <cstdio>
+#include <cstdint>
 #include "Console.h"
 
 #ifndef DEBUG_LEVEL
@@ -27,5 +28,11 @@
 #define LOG(...)
 #endif
 
+namespace pdp8 {
+
+    using register_base_t = uint16_t;
+    using memory_base_t = uint16_t;
+
+}
 
 #endif //PIDP_PDP8_H
