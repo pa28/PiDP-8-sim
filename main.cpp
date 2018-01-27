@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "Memory.h"
+#include "FileUtilities.h"
 
 using namespace hw_sim;
 
@@ -13,20 +14,12 @@ int main() {
 
     auto memory = std::make_shared<Memory<MAXMEMSIZE, uint16_t, 12>>();
 
-    f(memory);
+    pdp8::readFileToMemory("../TestData/Test.bin", memory);
 
-    if (memory != nullptr) {
-        auto m = memory;
-        f(memory);
+    for (auto m = memory->begin(); m != memory->end(); ++m) {
+        if (m->flags() & MemoryFlag::MemFlagInitialized) {
+            std::cout << std::oct << setw(5) << setfill('0') << m - memory->begin() << ' '
+                      << m->flags() << ' ' << *m << std::endl;
+        }
     }
-
-    f(memory);
-
-    memory->at(0) = 0077;
-    std::cout << memory->at(0).flags() << ' ' << std::oct << memory->at(0) << std::endl;
-
-    memory->clear();
-    std::cout << memory->at(0).flags() << ' ' << std::oct << memory->at(0) << std::endl;
-
-    return 0;
 }
