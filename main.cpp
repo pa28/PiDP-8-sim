@@ -1,36 +1,32 @@
 #include <iostream>
 
-#include "Registers.h"
+#include "Memory.h"
 
 using namespace hw_sim;
 
-enum RegisterId
-{
-    AC, PC, IR, Count
-};
-
-
-using WordRegister_t = RegisterType<8, 12, 0>;
-
-using RegisterSet_t = std::array<int32_t, RegisterId::Count>;
-
-using rAC_t = RegisterAccessor<RegisterSet_t, AC, WordRegister_t>;
-using rPC_t = RegisterAccessor<RegisterSet_t, PC, WordRegister_t>;
-
-
-RegisterSet_t registerSet;
-
-rAC_t rAC{registerSet};
-rPC_t rPC{registerSet};
-
+void f(std::shared_ptr<Memory<MAXMEMSIZE, uint16_t, 12>> &memory) {
+    std::cout << "Ref to mem: " << memory.use_count() << std::endl;
+}
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-    rAC = 077;
-    rPC = rAC;
+    auto memory = std::make_shared<Memory<MAXMEMSIZE, uint16_t, 12>>();
 
-    std::cout << rAC << ' ' << rPC << std::endl;
+    f(memory);
+
+    if (memory != nullptr) {
+        auto m = memory;
+        f(memory);
+    }
+
+    f(memory);
+
+    memory->at(0) = 0077;
+    std::cout << memory->at(0).flags() << ' ' << std::oct << memory->at(0) << std::endl;
+
+    memory->clear();
+    std::cout << memory->at(0).flags() << ' ' << std::oct << memory->at(0) << std::endl;
 
     return 0;
 }
