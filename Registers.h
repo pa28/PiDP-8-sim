@@ -116,7 +116,8 @@ namespace hw_sim
     template <class Ct, class Tt, class Array, size_t Id, class RegType>
     std::basic_ostream<Ct,Tt> &operator << (std::basic_ostream<Ct,Tt> & os, RegisterAccessor<Array, Id, RegType> & r)
     {
-        constexpr auto w = static_cast<int>(RegType::width / (int)log2(RegType::radix));
+        constexpr auto w = static_cast<int>(RegType::width / (int) log2(RegType::radix)) +
+                           (static_cast<int>(RegType::width % (int) log2(RegType::radix)) ? 1 : 0);
         return os << std::setbase(static_cast<int>(RegType::radix))
                   << std::setw(w)
                   << std::setfill('0')
