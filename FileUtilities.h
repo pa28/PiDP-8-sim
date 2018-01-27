@@ -74,6 +74,7 @@ namespace pdp8 {
                             hi |= c & 077;
                             *pc = hi;
                             pc->setFlag(hw_sim::MemFlagInitialized);
+                            ++pc;
                         } else
                             throw FileFormatError("File format error", readPoint);
                     default:
