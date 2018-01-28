@@ -8,10 +8,6 @@
 #ifndef PIDP_THREAD_H
 #define PIDP_THREAD_H
 
-
-#ifndef THREAD_H_
-#define THREAD_H_
-
 #include <ctime>
 #include <pthread.h>
 #include <cstdint>

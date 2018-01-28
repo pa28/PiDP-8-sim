@@ -18,6 +18,7 @@ using namespace std;
 namespace pdp8
 {
 
+#if 0
     class Register
     {
     public:
@@ -66,26 +67,7 @@ namespace pdp8
         int32_t				value;
         int32_t				mask;
     };
-
-    class Device
-    {
-    public:
-        Device(std::string name, std::string longName, Register *reg = NULL, int numReg = 0, Modifier *mod = NULL, int numMod = 0);
-        virtual ~Device();
-
-        virtual void initialize() = 0;
-        virtual void reset() = 0;
-        virtual void stop() = 0;
-
-        virtual int32_t dispatch(int32_t IR, int32_t dat) { return 0; }
-
-    protected:
-        string		name, longName;
-        int			nReg, nMod;
-        Register	*registers;
-        Modifier	*modifiers;
-
-    };
+#endif
 
 } /* namespace pdp8 */
 

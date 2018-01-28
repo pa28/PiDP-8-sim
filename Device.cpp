@@ -30,7 +30,7 @@
 
 namespace pdp8
 {
-
+#if 0
     int32_t	Register::nmask[] = {
             0x0,
             0x1, 0x3, 0x7,	0xF,
@@ -77,17 +77,6 @@ namespace pdp8
         set(i,true);
         return s;
     }
-
-    Device::Device(std::string nm, std::string longNm, Register *reg, int numReg, Modifier *mod, int numMod) :
-            name(nm), longName(longNm), nReg(numReg), nMod(numMod), registers(reg), modifiers(mod)
-    {
-        // TODO Auto-generated constructor stub
-
-    }
-
-    Device::~Device()
-    {
-        // TODO Auto-generated destructor stub
-    }
+#endif
 
 } /* namespace pdp8 */

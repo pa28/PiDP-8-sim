@@ -74,7 +74,12 @@ namespace hw_sim {
             return *this;
         }
 
-        explicit operator Base() const {
+        template <typename B2, class RT2>
+        MemoryCell<Base,Width> & operator = (ScalarRegister<B2, RT2> &r) {
+            return operator=(r());
+        };
+
+        operator Base() const {
             static_assert(sizeof(Base) * 8 >= Width + MemoryFlagWidth);
             return static_cast<Base>(m & hw_sim::RegisterMask<Width>::value);
         }
@@ -105,6 +110,8 @@ namespace hw_sim {
     protected:
         Base m;
     };
+
+
 
     /**
      * An stream inserter for a memory cell
@@ -145,10 +152,17 @@ namespace hw_sim {
     };
 
     template<size_t Size, typename Base, size_t Width>
-    class Memory //: public Device
+    class Memory : public Device
     {
     public:
-        Memory() : /*Device("MEM", "Core Memory"),*/ ma(), mb(), m() {}
+        Memory() : Device("MEM", "Core Memory"), ma(), mb(), m() {}
+
+        virtual ~Memory() = default;
+
+        virtual void initialize() {}
+        virtual void reset() {}
+        virtual void stop() {}
+        virtual void tick(int ticksPerSecond) {}
 
         constexpr static size_t size() { return Size; }
 
@@ -167,6 +181,16 @@ namespace hw_sim {
                 return *ma;
             }
             throw MemoryOutOfRange{};
+        }
+
+        template <typename B2, class RT2>
+        MemoryCell<Base, Width> &operator[](ScalarRegister<B2,RT2> &ma) {
+            return at(ma());
+        };
+
+        template <typename B2, class RT2>
+        MemoryCell<Base, Width> &at(ScalarRegister<B2,RT2> &ma) {
+            return at(ma());
         }
 
         MemoryCell<Base, Width> &MB() { return mb; }

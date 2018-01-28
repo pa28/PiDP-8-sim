@@ -44,8 +44,8 @@ namespace pdp8
         WINDOW      *vPanel, *console, *command;
         ConsoleMode consoleMode;
 
-        Memory  &M;
-        CPU     &cpu;
+//        Memory  &M;
+//        CPU     &cpu;
 
         uint32_t	switches[3];
 

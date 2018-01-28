@@ -59,8 +59,8 @@ namespace pdp8
         int	    switchPipe;
         int     stopCount;
 
-        Memory  &M;
-        CPU     &cpu;
+//        Memory  &M;
+//        CPU     &cpu;
 
         VirtualPanel    *consoleTerm;
         pthread_mutex_t     mutex;

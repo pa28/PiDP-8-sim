@@ -53,8 +53,8 @@ namespace pdp8
             stopMode(false),
             switchPipe(-1),
             stopCount(0),
-            M(*(Memory::instance())),
-            cpu(*(CPU::instance())),
+//            M(*(Memory::instance())),
+//            cpu(*(CPU::instance())),
             consoleTerm(NULL)
     {
         if (!headless) {

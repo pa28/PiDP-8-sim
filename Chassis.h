@@ -9,53 +9,43 @@
 #define PIDP_CHASSIS_H
 
 
-/* Non-IOT device numbers */
-
-#define DEV_MEM         0100                            /* core memmory */
-#define DEV_CPU         0101                            /* cpu */
-#define DEV_PANEL       0102                            /* front pannel */
-#define DEV_CONSOLE     0103                            /* simulator console */
-#define DEV_MAX_COUNT   0104                            /* maximum number of devices */
-
-/* Standard device numbers */
-
-#define DEV_PTR         001                             /* paper tape reader */
-#define DEV_PTP         002                             /* paper tape punch */
-#define DEV_TTI         003                             /* console input */
-#define DEV_TTO         004                             /* console output */
-#define DEV_CLK         013                             /* clock */
-#define DEV_TSC         036
-#define DEV_KJ8         040                             /* extra terminals */
-#define DEV_FPP         055                             /* floating point */
-#define DEV_DF          060                             /* DF32 */
-#define DEV_RF          060                             /* RF08 */
-#define DEV_RL          060                             /* RL8A */
-#define DEV_LPT         066                             /* line printer */
-#define DEV_MT          070                             /* TM8E */
-#define DEV_CT          070                             /* TA8E */
-#define DEV_RK          074                             /* RK8E */
-#define DEV_RX          075                             /* RX8E/RX28 */
-#define DEV_DTA         076                             /* TC08 */
-#define DEV_TD8E        077                             /* TD8E */
-
 #include <csignal>
+#include <map>
+#include <memory>
 #include <sys/time.h>
 
-#include "CPU.h"
-#include "Memory.h"
-#include "Console.h"
-#include "Panel.h"
-#include "DK8EA.h"
+//#include "CPU.h"
+//#include "Memory.h"
+//#include "Console.h"
+//#include "Panel.h"
+//#include "DK8EA.h"
 
-namespace pdp8
+namespace hw_sim
 {
+    class Device
+    {
+    public:
+        Device(std::string & name, std::string & longName) : name(name), longName(longName) {}
+        Device(const char * name, const char * longName) : name(name), longName(longName) {}
 
-    class Chassis
+        virtual ~Device() = default;
+        virtual void initialize() = 0;
+        virtual void reset() = 0;
+        virtual void stop() = 0;
+        virtual void tick(int ticksPerSecond) = 0;
+
+        virtual int32_t dispatch(int32_t IR, int32_t dat) { return 0; }
+
+    protected:
+        std::string		name, longName;
+    };
+
+
+    class Chassis : public std::map<uint32_t, std::shared_ptr<Device>>
     {
         Chassis();
 
     public:
-        virtual 	~Chassis();
 
         static 		Chassis * instance();
 
@@ -63,13 +53,10 @@ namespace pdp8
         void		timerHandler();
         void		reset();
 
-        Device  * 	device(int32_t devNo) { return deviceList[devNo]; }
-
         void		setTimerFreq( bool f120 = true );
 
     protected:
         static		Chassis * _instance;
-        Device*    	deviceList[DEV_MAX_COUNT];
         int         timeoutCounter;
         bool        timerFreq;
     };

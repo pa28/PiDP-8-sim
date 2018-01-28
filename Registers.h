@@ -44,6 +44,45 @@ namespace hw_sim
     };
 
 
+    template <typename Base, class RegType>
+    struct ScalarRegister
+    {
+        using base_type = Base;
+
+        explicit ScalarRegister(Base &base) : value(base) {}
+
+        ScalarRegister<Base,RegType> &operator = (Base v) {
+            value = (value & ~(RegisterMask<RegType::width>::value << RegType::offset)) |
+                    (v & RegisterMask<RegType::width>::value) << RegType::offset;
+            return *this;
+        };
+
+        template <typename B2, class RT2>
+        ScalarRegister<Base,RegType> &operator = (ScalarRegister<B2,RT2> &r2) {
+            value = (value & ~(RegisterMask<RegType::width>::value << RegType::offset)) |
+                    (r2() & RegisterMask<RegType::width>::value) << RegType::offset;
+            return *this;
+        };
+
+        Base operator() () const {
+            return (value >> RegType::offset) & RegisterMask<RegType::width>::value;
+        }
+
+        ScalarRegister<Base,RegType> &operator++() {
+            return operator=(operator()()+1);
+        };
+
+        Base operator & (int o) const {
+            return operator()() & o;
+        }
+
+        operator Base() const {
+            return operator()();
+        }
+
+        Base &value;
+    };
+
     /**
      * @brief An accessor object to get and set register values
      * @tparam Array The type of the register array

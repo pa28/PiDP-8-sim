@@ -5,14 +5,19 @@
 #ifndef PIDP_8_SIM_CPU_H
 #define PIDP_8_SIM_CPU_H
 
-#include <stdint.h>
+#include <cstdint>
+#include "PDP8.h"
 #include "Device.h"
 #include "Thread.h"
+#include "Registers.h"
+
+using namespace hw_sim;
 
 namespace pdp8
 {
+    extern int32_t int_enable, int_req, dev_done, stop_inst;
 
-/* IOT subroutine return codes */
+    /* IOT subroutine return codes */
 
     constexpr int32_t IOT_V_SKP =       12;                              /* skip */
     constexpr int32_t IOT_V_REASON =   13;                              /* reason */
@@ -90,9 +95,7 @@ namespace pdp8
                         (INT_TTI1+INT_TTI2+INT_TTI3+INT_TTI4) | \
                         (INT_TTO1+INT_TTO2+INT_TTO3+INT_TTO4);
     constexpr int32_t INT_PENDING =    (INT_ION+INT_NO_CIF_PENDING+INT_NO_ION_PENDING);
-    constexpr int32_t INT_UPDATE =     ((int_req & ~INT_DEV_ENABLE) | (dev_done & int_enable));
-
-    extern int32_t int_enable, int_req, dev_done, stop_inst;
+#define               INT_UPDATE =     ((int_req & ~INT_DEV_ENABLE) | (dev_done & int_enable));
 
     enum CPUState {
         NoState,
@@ -131,6 +134,14 @@ namespace pdp8
         STOP_HLT,
     };
 
+    using AddressRegister_t = RegisterType<8, 15, 0>;
+    using WordRegister_t = RegisterType<8, 12, 0>;
+    using LinkAccRegister_t = RegisterType<8, 13, 0>;
+    using LinkRegister_t = RegisterType<8, 1, 12>;
+    using FieldRegister_t = RegisterType<8, 3, 12>;
+    using SCRegister_t = RegisterType<8, 5, 0>;
+    using IntReqRegister_t = RegisterType<8, 1, INT_V_ION>;
+
 #define CPU_REGISTERS \
         X(PC, PC, 8, 12, 0, 12 ) \
         X(MQ, MQ, 8, 12, 0, 12 ) \
@@ -157,29 +168,11 @@ namespace pdp8
     class CPU: public Device, Thread
     {
         CPU();
+        ~CPU();
 
     public:
-        virtual ~CPU();
-
-        static CPU * instance();
         virtual void initialize() { start(); }
         virtual void reset() {}
-
-#define X(nm,loc,r,w,o,d)	Index ## nm,
-        enum RegisterIndex {
-            CPU_REGISTERS
-            RegisterCount,
-        };
-#undef X
-        //
-        //
-#define X(nm,loc,r,w,o,d)	int32_t get ## nm (bool normal = false) const { return cpuRegisters[Index ## nm].get(normal); }
-        CPU_REGISTERS
-#undef X
-
-#define X(nm,loc,r,w,o,d)	void set ## nm (int32_t v, bool normal = false) { cpuRegisters[Index ## nm].set(v, normal); }
-        CPU_REGISTERS
-#undef X
 
         CPUState		getState() const { return cpuState; }
         CPUCondition	getCondition() const { return cpuCondition; }
@@ -199,12 +192,24 @@ namespace pdp8
         virtual int run();
         virtual void stop() { threadRunning = false; }
 
+        ScalarRegister<register_base_t, WordRegister_t> PC;
+        ScalarRegister<register_base_t, WordRegister_t> MQ;
+        ScalarRegister<register_base_t, WordRegister_t> IR;
+        ScalarRegister<register_base_t, WordRegister_t> IB;
+        ScalarRegister<register_base_t, WordRegister_t> OSR;
+        ScalarRegister<register_base_t, WordRegister_t> AC;
+        ScalarRegister<register_base_t, LinkAccRegister_t> LAC;
+        ScalarRegister<register_base_t, LinkRegister_t> L;
+        ScalarRegister<register_base_t, FieldRegister_t> DF;
+        ScalarRegister<register_base_t, FieldRegister_t> IF;
+        ScalarRegister<register_base_t, SCRegister_t> SC;
+        ScalarRegister<int32_t, IntReqRegister_t> ION;
+        ScalarRegister<register_base_t, AddressRegister_t> MA;
+        ScalarRegister<register_base_t, FieldRegister_t> MA_F;
+        ScalarRegister<register_base_t, WordRegister_t > MA_W;
+
     protected:
-        static CPU *    _instance;
-        static Register cpuRegisters[];
-
-        //Memory &        M;
-
+        register_base_t rPC, rMQ, rIR, rIB, rOSR, rLAC, rDF, rIF, rSC, rMA;
         CPUState	    cpuState;
         CPUCondition	cpuCondition;
         CPUStepping		cpuStepping;

@@ -25,17 +25,16 @@
    in this Software without prior written authorization from Robert M Supnik.
  */
 
+#include "CPU.h"
 #include "Memory.h"
 #include "Chassis.h"
 
-#define DEBUG_LEVEL 5
 #include "PDP8.h"
+
+using namespace hw_sim;
 
 namespace pdp8
 {
-
-    Memory & M = *Memory::instance();
-    CPU * CPU::_instance = NULL;
 
 #ifndef NOT_DEF
     int32_t PC = 0;										// Program Counter
@@ -64,21 +63,31 @@ namespace pdp8
     int32_t cpuLoadControl = 0;
     int32_t stop_inst = 0;                              /* trap on ill inst */
 
-    Register	CPU::cpuRegisters[] = {
-#define X(nm,loc,r,w,o,d) { #nm, &(loc), (r), (w), (o), (d) },
-            CPU_REGISTERS
-#undef X
-    };
 
-    Modifier	cpuModifiers[] = {
-#define X(nm,t,loc,v,m) { #nm, (t), &(loc), (v), (m) },
-            CPU_MODIFIERS
-#undef X
-    };
+    auto memory = std::make_shared<Memory<MAXMEMSIZE, uint16_t, 12>>();
+
+    struct _M
+    {
+        MemoryCell<uint16_t, 12> &operator [] (size_t ma) {
+            return memory->at(ma);
+        }
+
+        template <typename B2, class RT2>
+        MemoryCell<uint16_t, 12> &operator [] (ScalarRegister<B2,RT2> & ma) {
+            return memory->at(ma());
+        }
+    }   M;
+
+//    template <typename B1, size_t S1, typename B2, class RT2>
+//    MemoryCell<B1,S1> & operator = (MemoryCell<B1,S1> & m, ScalarRegister<B2, RT2> &r) {
+//        m = r();
+//    };
 
     CPU::CPU() :
-            Device("CPU", "Central Processing Unit", cpuRegisters, sizeof(cpuRegisters), cpuModifiers, sizeof(cpuModifiers)),
-            //M(*Memory::instance()),
+            Device("CPU", "Central Processing Unit"),
+            rPC(0), rMQ(0), rIR(0), rIB(0), rOSR(0), rLAC(0), rDF(0), rIF(0), rSC(0), rMA(0),
+            PC(rPC), MQ(rMQ), IR(rIR), IB(rIB), OSR(rOSR), LAC(rLAC), DF(rDF), IF(rIF), SC(rSC), AC(rLAC), L(rLAC),
+            ION(int_req), MA(rMA), MA_F(rMA), MA_W(rMA),
             cpuState(NoState),
             cpuCondition(CPUStopped),
             cpuStepping(NotStepping),
@@ -89,22 +98,14 @@ namespace pdp8
             idleMutex(),
             throttleTimerReset(false)
     {
-        pthread_mutex_init( &mutexCondition, NULL );
-        pthread_cond_init( &condition, NULL );
+        pthread_mutex_init( &mutexCondition, nullptr );
+        pthread_cond_init( &condition, nullptr );
     }
 
     CPU::~CPU()
     {
         pthread_mutex_destroy( &mutexCondition );
         pthread_cond_destroy( &condition );
-    }
-
-    CPU * CPU::instance() {
-        if (_instance == nullptr) {
-            _instance = new CPU();
-        }
-
-        return _instance;
     }
 
     /*
@@ -125,7 +126,7 @@ namespace pdp8
                 if (cpuStepping == PanelCommand || reason > STOP_IDLE) {
                     cpuCondition = CPUStopped;
                 }
-                debug(1, "cpuStepping %d, reason %d, cpuCondition %d\n", cpuStepping, reason, cpuCondition);
+//                debug(1, "cpuStepping %d, reason %d, cpuCondition %d\n", cpuStepping, reason, cpuCondition);
                 throttleTimerReset = waitOnCondition();
             }
             cpuTime += cycleCpu();
@@ -165,10 +166,10 @@ namespace pdp8
         reason = STOP_NO_REASON;
         int32_t device, pulse, temp, iot_data;
 
-        debug(10, "int_req %o, INT_PENDING %o\n", int_req, INT_PENDING);
+//        debug(10, "int_req %o, INT_PENDING %o\n", int_req, INT_PENDING);
         if (int_req > INT_PENDING) {                        /* interrupt? */
             int_req = int_req & ~INT_ION;                   /* interrupts off */
-            SF = (UF << 6) | (IF >> 9) | (DF >> 12);        /* form save field */
+            SF = (UF << 6) | (IF() << 3) | (DF());          /* form save field */
             IF = IB = DF = UF = UB = 0;                     /* clear mem ext */
             M[0] = PC;                                      /* save PC in 0 */
             PC = 1;                                         /* fetch next from 1 */
@@ -176,9 +177,10 @@ namespace pdp8
 
         cpuState = Fetch;
 
-        MA = IF | PC;               // compute memory address
-        IR = M[MA];                 // fetch instruction
-        PC = (PC + 1) & 07777;      // increment PC
+        MA_W = PC;
+        MA_F = IF;                // create memory address
+        IR = M[MA]();               // fetch instruction
+        ++PC;
 
         int_req = int_req | INT_NO_ION_PENDING;             /* clear ION delay */
 
@@ -193,17 +195,23 @@ namespace pdp8
 
         if ( (IR & 07000) <= 05000 ) {                                 // memory access function
             if ( IR & 0200 ) {      // current page
-                MA = (MA & 077600) | (IR & 0177);
+                MA = (MA & 077600) | (IR() & 0177);
             } else {                // page zero
-                MA = IF | (IR & 0177);
+                MA_W = IR & 0177;
+                MA_F = IF;
             }
 
-            if ( IR & 0400 ) {      // indirect
+            if ( IR() & 0400 ) {      // indirect
                 cpuState = Defer;
-                if ((MA & 07770) != 00010) { // not autoincrement
-                    MA = DF | M[MA];
+                if ((MA_W & 07770) != 00010) { // not autoincrement
+                    MA_W = M[MA];
+                    MA_F = DF;
                 } else {
-                    MA = DF | (M[MA] = (M[MA] + 1) & 07777);
+                    // ToDo: check this.
+                    int t = M[MA];
+                    M[MA] = t + 1;
+                    MA_W = t;
+                    MA_F = DF;
                 }
 
                 // End of the Defer state
@@ -218,22 +226,22 @@ namespace pdp8
             switch ( IR & 07000 ) {
                 case 00000: // AND
                     cycleTime = 3000;
-                    LAC = LAC & (M[MA] | 010000);
+                    AC = AC & M[MA];
                     break;
                 case 01000: // TAD
                     cycleTime = 3000;
-                    LAC = (LAC + M[MA]) & 017777;
+                    LAC = (LAC + M[MA]);
                     break;
                 case 02000: // ISZ
                     cycleTime = 3000;
-                    M[MA] = (M[MA] + 1) & 07777;               /* field must exist */
-                    if (M.MB() == 0)
-                        PC = (PC + 1) & 07777;
+                    M[MA] = (M[MA] + 1);               /* field must exist */
+                    if (memory->MB() == 0)
+                        ++PC;
                     break;
                 case 03000: // DCA
                     cycleTime = 3000;
-                    M[MA] = LAC & 07777;
-                    LAC = LAC & 010000;
+                    M[MA] = AC;
+                    AC = 0;
                     break;
                 case 04000: // JMS
                     /* Opcode 4, JMS.  From Bernhard Baehr's description of the TSC8-75:
@@ -250,16 +258,17 @@ namespace pdp8
                         tsc_cdf = 0;                                /* clear flag */
                     }
                     if (UF && tsc_enb) {                            /* user mode, TSC enab? */
-                        tsc_pc = (PC - 1) & 07777;                  /* save PC */
+                        tsc_pc = (PC - 1) & 07777;                /* save PC */
                         int_req = int_req | INT_TSC;                /* request intr */
                     }
                     else {                                          /* normal */
                         IF = IB;                                    /* change IF */
                         UF = UB;                                    /* change UF */
                         int_req = int_req | INT_NO_CIF_PENDING;     /* clr intr inhibit */
-                        MA = IF | MA;
+                        MA_F = IF;
                         M[MA] = PC;
-                        PC = (MA + 1) & 07777;
+                        PC = MA_W;
+                        ++PC;
                     }
                     break;
                 case 05000: // JMP
@@ -273,31 +282,28 @@ namespace pdp8
                        word of the subroutine) happens. When the TSC8-75 is disabled, the JMS is performed
                        as usual. */
                     if (UF) {                                       /* user mode? */
-                        tsc_ir = IR;                                /* save instruction */
+                        tsc_ir = IR();                              /* save instruction */
                         tsc_cdf = 0;                                /* clear flag */
                         if (tsc_enb) {                              /* TSC8 enabled? */
-                            tsc_pc = (PC - 1) & 07777;              /* save PC */
+                            tsc_pc = (PC - 1) & 07777;            /* save PC */
                             int_req = int_req | INT_TSC;            /* request intr */
                         }
                     }
 
                     if ( !(IR & 0400) ) {   // direct jump test for idle
                         if ( IF == IB ) {
-                            if ((MA & 07777) == ((PC - 2) & 07777)) {         // JMP .-1
-                                //if ((M[IB|((PC - 2) & 07777)] == OP_KSF)) { // next instruction is KSF
-                                int32_t no = M[IB|MA];
+                            if (MA_W() == ((PC - 2) & 07777)) {         // JMP .-1
+                                int32_t no = M[MA];
                                 if ( (no == OP_KSF) ||              // next instruction is KSF
-                                     (no == OP_CLSC)             // next instruction is CLSC
+                                     (no == OP_CLSC)                // next instruction is CLSC
                                         )  {
                                     reason = STOP_IDLE;
-                                    //setReasonIdle();
                                 }
-                            } else if ((MA & 07777) == ((PC - 1) & 07777)) {  // JMP .
+                            } else if (MA_W == ((PC - 1) & 07777)) {  // JMP .
                                 if (!(int_req & INT_ION)) {             /*    iof? */
                                     reason = STOP_ENDLESS_LOOP;         /* then infinite loop */
                                 } else if (!(int_req & INT_ALL)) {      /*    ion, not intr? */
                                     reason = STOP_IDLE;
-                                    //setReasonIdle();
                                 }                                       /* end JMP */
                             }
                         }
@@ -325,14 +331,14 @@ namespace pdp8
 
             if (UF) {                                       /* privileged? */
                 int_req = int_req | INT_UF;                 /* request intr */
-                tsc_ir = IR;                                /* save instruction */
+                tsc_ir = IR;                              /* save instruction */
                 if ((IR & 07707) == 06201)                  /* set/clear flag */
                     tsc_cdf = 1;
                 else tsc_cdf = 0;
             } else {
-                device = (IR >> 3) & 077;                       /* device = IR<3:8> */
+                device = (IR >> 3) & 077;                     /* device = IR<3:8> */
                 pulse = IR & 07;                                /* pulse = IR<9:11> */
-                iot_data = LAC & 07777;                         /* AC unchanged */
+                iot_data = AC;                                /* AC unchanged */
                 switch (device) {                               /* decode IR<3:8> */
 
                     case 000:                                       /* CPU control */
@@ -340,7 +346,7 @@ namespace pdp8
 
                             case 0:                                     /* SKON */
                                 if (int_req & INT_ION)
-                                    PC = (PC + 1) & 07777;
+                                    ++PC;
                                 int_req = int_req & ~INT_ION;
                                 break;
 
@@ -354,7 +360,7 @@ namespace pdp8
 
                             case 3:                                     /* SRQ */
                                 if (int_req & INT_ALL)
-                                    PC = (PC + 1) & 07777;
+                                    ++PC;
                                 break;
 
                             case 4:                                     /* GTF */
@@ -375,7 +381,7 @@ namespace pdp8
 
                             case 6:                                     /* SGT */
                                 if (gtf)
-                                    PC = (PC + 1) & 07777;
+                                    ++PC;
                                 break;
 
                             case 7:                                     /* CAF */
@@ -416,15 +422,15 @@ namespace pdp8
                                         break;
 
                                     case 1:                                 /* RDF */
-                                        LAC = LAC | (DF >> 9);
+                                        LAC = LAC() | (DF() >> 9);
                                         break;
 
                                     case 2:                                 /* RIF */
-                                        LAC = LAC | (IF >> 9);
+                                        LAC = LAC() | (IF() >> 9);
                                         break;
 
                                     case 3:                                 /* RIB */
-                                        LAC = LAC | SF;
+                                        LAC = LAC() | SF;
                                         break;
 
                                     case 4:                                 /* RMF */
@@ -436,7 +442,7 @@ namespace pdp8
 
                                     case 5:                                 /* SINT */
                                         if (int_req & INT_UF)
-                                            PC = (PC + 1) & 07777;
+                                            ++PC;
                                         break;
 
                                     case 6:                                 /* CUF */
@@ -465,7 +471,7 @@ namespace pdp8
 
                             case 2:                                     /* SPL */
                                 if (int_req & INT_PWR)
-                                    PC = (PC + 1) & 07777;
+                                    ++PC;
                                 break;
 
                             case 3:                                     /* CAL */
@@ -479,11 +485,12 @@ namespace pdp8
                         break;                                      /* end case 10 */
 
                     default:                                        /* I/O device */
-                        if (Chassis::instance()->device(device)) {                      /* dev present? */
-                            iot_data = Chassis::instance()->device(device)->dispatch(IR, iot_data);
-                            LAC = (LAC & 010000) | (iot_data & 07777);
+                        auto dev = Chassis::instance()->find(device);
+                        if (dev != Chassis::instance()->end()) {                      /* dev present? */
+                            iot_data = dev->second->dispatch(IR(), iot_data);
+                            AC = iot_data;
                             if (iot_data & IOT_SKP)
-                                PC = (PC + 1) & 07777;
+                                ++PC;
                             if (iot_data >= IOT_REASON)
                                 reason = STOP_IOT_REASON; //reason = iot_data >> IOT_V_REASON;
                         }
@@ -504,46 +511,52 @@ namespace pdp8
                         case 0:                                         /* nop */
                             break;
                         case 1:                                         /* CML */
-                            LAC = LAC ^ 010000;
+                            L = L ^ 1;
                             break;
                         case 2:                                         /* CMA */
-                            LAC = LAC ^ 07777;
+                            AC = AC ^ 07777;
                             break;
                         case 3:                                         /* CMA CML */
                             LAC = LAC ^ 017777;
                             break;
                         case 4:                                         /* CLL */
-                            LAC = LAC & 07777;
+                            L = 0;
                             break;
                         case 5:                                         /* CLL CML = STL */
-                            LAC = LAC | 010000;
+                            L = 1;
                             break;
                         case 6:                                         /* CLL CMA */
-                            LAC = (LAC ^ 07777) & 07777;
+                            L = 0;
+                            AC = AC ^ 07777;
                             break;
                         case 7:                                         /* CLL CMA CML */
-                            LAC = (LAC ^ 07777) | 010000;
+                            L = 1;
+                            AC = AC ^ 07777;
                             break;
                         case 010:                                       /* CLA */
-                            LAC = LAC & 010000;
+                            AC = 0;
                             break;
                         case 011:                                       /* CLA CML */
-                            LAC = (LAC & 010000) ^ 010000;
+                            L = L ^ 1;
+                            AC = 0;
                             break;
                         case 012:                                       /* CLA CMA = STA */
-                            LAC = LAC | 07777;
+                            AC = 07777;
                             break;
                         case 013:                                       /* CLA CMA CML */
-                            LAC = (LAC | 07777) ^ 010000;
+                            L = L ^ 1;
+                            AC = 07777;
                             break;
                         case 014:                                       /* CLA CLL */
                             LAC = 0;
                             break;
                         case 015:                                       /* CLA CLL CML */
-                            LAC = 010000;
+                            L = 1;
+                            AC = 0;
                             break;
                         case 016:                                       /* CLA CLL CMA */
-                            LAC = 07777;
+                            L = 0;
+                            AC = 07777;
                             break;
                         case 017:                                       /* CLA CLL CMA CML */
                             LAC = 017777;
@@ -551,30 +564,32 @@ namespace pdp8
                     }                                           /* end switch opers */
 
                     if (IR & 01)                                    /* IAC */
-                        LAC = (LAC + 1) & 017777;
+                        ++AC;
                     switch ((IR >> 1) & 07) {                       /* decode IR<8:10> */
                         case 0:                                         /* nop */
                             break;
                         case 1:                                         /* BSW */
-                            LAC = (LAC & 010000) | ((LAC >> 6) & 077) | ((LAC & 077) << 6);
+                            AC = ((AC >> 6) & 077) | ((AC & 077) << 6);
                             break;
                         case 2:                                         /* RAL */
-                            LAC = ((LAC << 1) | (LAC >> 12)) & 017777;
+                            LAC = (LAC << 1) | L;
                             break;
                         case 3:                                         /* RTL */
-                            LAC = ((LAC << 2) | (LAC >> 11)) & 017777;
+                            LAC = (LAC << 1) | L;
+                            LAC = (LAC << 1) | L;
                             break;
                         case 4:                                         /* RAR */
-                            LAC = ((LAC >> 1) | (LAC << 12)) & 017777;
+                            LAC = (LAC >> 1) | (LAC << 12);
                             break;
                         case 5:                                         /* RTR */
-                            LAC = ((LAC >> 2) | (LAC << 11)) & 017777;
+                            LAC = (LAC >> 1) | (LAC << 12);
+                            LAC = (LAC >> 1) | (LAC << 12);
                             break;
                         case 6:                                         /* RAL RAR - undef */
-                            LAC = LAC & (IR | 010000);                  /* uses AND path */
+                            AC = AC & IR;                             /* uses AND path */
                             break;
                         case 7:                                         /* RTL RTR - undef */
-                            LAC = (LAC & 010000) | (MA & 07600) | (IR & 0177);
+                            AC = (MA & 07600) | (IR & 0177);
                             break;                                      /* uses address path */
                     }                                           /* end switch shifts */
                     break;                                          /* end group 1 */
@@ -590,75 +605,75 @@ namespace pdp8
                             case 0:                                     /* nop */
                                 break;
                             case 1:                                     /* SKP */
-                                PC = (PC + 1) & 07777;
+                                ++PC;
                                 break;
                             case 2:                                     /* SNL */
-                                if (LAC >= 010000)
-                                    PC = (PC + 1) & 07777;
+                                if (L)
+                                    ++PC;
                                 break;
                             case 3:                                     /* SZL */
-                                if (LAC < 010000)
-                                    PC = (PC + 1) & 07777;
+                                if (L == 0)
+                                    ++PC;
                                 break;
                             case 4:                                     /* SZA */
-                                if ((LAC & 07777) == 0)
-                                    PC = (PC + 1) & 07777;
+                                if (AC == 0)
+                                    ++PC;
                                 break;
                             case 5:                                     /* SNA */
-                                if ((LAC & 07777)
-                                    != 0) PC = (PC + 1) & 07777;
+                                if (AC)
+                                    ++PC;
                                 break;
                             case 6:                                     /* SZA | SNL */
-                                if ((LAC == 0) || (LAC >= 010000))
-                                    PC = (PC + 1) & 07777;
+                                if ((AC == 0) || (L == 1))
+                                    ++PC;
                                 break;
                             case 7:                                     /* SNA & SZL */
-                                if ((LAC != 0) && (LAC < 010000))
-                                    PC = (PC + 1) & 07777;
+                                if ((AC != 0) && (L == 0))
+                                    ++PC;
                                 break;
                             case 010:                                   /* SMA */
-                                if ((LAC & 04000) != 0)
-                                    PC = (PC + 1) & 07777;
+                                if ((AC & 04000) != 0)
+                                    ++PC;
                                 break;
                             case 011:                                   /* SPA */
-                                if ((LAC & 04000) == 0)
-                                    PC = (PC + 1) & 07777;
+                                if ((AC & 04000) == 0)
+                                    ++PC;
                                 break;
                             case 012:                                   /* SMA | SNL */
-                                if (LAC >= 04000)
-                                    PC = (PC + 1) & 07777;
+                                if (L == 1 || (AC & 04000))
+                                    ++PC;
                                 break;
                             case 013:                                   /* SPA & SZL */
-                                if (LAC < 04000)
-                                    PC = (PC + 1) & 07777;
+                                if (L == 0 || (AC & 04000) == 0)
+                                    ++PC;
                                 break;
                             case 014:                                   /* SMA | SZA */
                                 if (((LAC & 04000) != 0) || ((LAC & 07777) == 0))
-                                    PC = (PC + 1) & 07777;
+                                    ++PC;
                                 break;
                             case 015:                                   /* SPA & SNA */
                                 if (((LAC & 04000) == 0) && ((LAC & 07777) != 0))
-                                    PC = (PC + 1) & 07777;
+                                    ++PC;
                                 break;
                             case 016:                                   /* SMA | SZA | SNL */
                                 if ((LAC >= 04000) || (LAC == 0))
-                                    PC = (PC + 1) & 07777;
+                                    ++PC;
                                 break;
                             case 017:                                   /* SPA & SNA & SZL */
                                 if ((LAC < 04000) && (LAC != 0))
-                                    PC = (PC + 1) & 07777;
+                                    ++PC;
                                 break;
                         }                                       /* end switch skips */
                         if (IR & 0200)                              /* CLA */
                             LAC = LAC & 010000;
                         if ((IR & 06) && UF) {                      /* user mode? */
                             int_req = int_req | INT_UF;             /* request intr */
-                            tsc_ir = IR;                            /* save instruction */
+                            tsc_ir = IR;                          /* save instruction */
                             tsc_cdf = 0;                            /* clear flag */
                         }
                         else {
                             if (IR & 04)                            /* OSR */
-                                LAC = LAC | OSR;
+                                AC = AC | OSR;
                             if (IR & 02)                            /* HLT */
                                 reason = STOP_HLT;
                         }
@@ -672,7 +687,7 @@ namespace pdp8
                             LAC = LAC & 010000 | temp;
                     */
 
-                    temp = MQ;                                      /* group 3 */
+                    temp = MQ();                                      /* group 3 */
                     if (IR & 0200)                                  /* CLA */
                         LAC = LAC & 010000;
                     if (IR & 0020) {                                /* MQL */
@@ -746,15 +761,21 @@ namespace pdp8
 
                         case 021:                                       /* mode B: DAD */
                             if (emode) {
-                                MA = IF | PC;
-                                if ((MA & 07770) != 00010)              /* indirect; autoinc? */
-                                    MA = DF | M[MA];
-                                else MA = DF | (M[MA] = (M[MA] + 1) & 07777); /* incr before use */
+                                MA_W = PC;
+                                MA_F = IF;
+                                if ((MA & 07770) != 00010) {             /* indirect; autoinc? */
+                                    MA_W = M[MA];
+                                    MA_F = DF;
+                                } else {
+                                    MA_W = M[MA] = M[MA] + 1;
+                                    MA_F = DF;
+                                } /* incr before use */
                                 MQ = MQ + M[MA];
-                                MA = DF | ((MA + 1) & 07777);
-                                LAC = (LAC & 07777) + M[MA] + (MQ >> 12);
+                                ++MA_W;
+                                MA_F = DF;
+                                LAC = AC + M[MA] + (MQ >> 12);
                                 MQ = MQ & 07777;
-                                PC = (PC + 1) & 07777;
+                                ++PC;
                                 break;
                             }
                             LAC = LAC | SC;                             /* mode A: SCA then */
@@ -765,36 +786,49 @@ namespace pdp8
                                 LAC = LAC & 010000;
                             }
                             else {                                      /* mode A: SCL */
-                                SC = (~M[IF | PC]) & 037;
-                                PC = (PC + 1) & 07777;
+                                MA_W = PC;
+                                MA_F = IF;
+                                SC = (~M[MA]()) & 037;
+                                ++PC;
                             }
                             break;
 
                         case 022:                                       /* mode B: DST */
                             if (emode) {
-                                MA = IF | PC;
-                                if ((MA & 07770) != 00010)              /* indirect; autoinc? */
-                                    MA = DF | M[MA];
-                                else MA = DF | (M[MA] = (M[MA] + 1) & 07777); /* incr before use */
-                                M[MA] = MQ & 07777;
-                                MA = DF | ((MA + 1) & 07777);
-                                M[MA] = LAC & 07777;
-                                PC = (PC + 1) & 07777;
+                                MA_W = PC;
+                                MA_F = IF;
+                                if ((MA & 07770) != 00010) {            /* indirect; autoinc? */
+                                    MA_W = M[MA];
+                                    MA_F = DF;
+                                } else {
+                                    MA_W = M[MA] = M[MA] + 1;
+                                    MA_F = DF;
+                                } /* incr before use */
+                                M[MA] = MQ;
+                                ++MA_W;
+                                MA_F = DF;
+                                M[MA] = AC;
+                                ++PC;
                                 break;
                             }
                             LAC = LAC | SC;                             /* mode A: SCA then */
                             // no break
                         case 002:                                       /* MUY */
-                            MA = IF | PC;
+                            MA_W = PC;
+                            MA_F = IF;
                             if (emode) {                                /* mode B: defer */
-                                if ((MA & 07770) != 00010)              /* indirect; autoinc? */
-                                    MA = DF | M[MA];
-                                else MA = DF | (M[MA] = (M[MA] + 1) & 07777); /* incr before use */
+                                if ((MA & 07770) != 00010) {            /* indirect; autoinc? */
+                                    MA_W = M[MA];
+                                    MA_F = DF;
+                                } else {
+                                    MA_W = M[MA] = M[MA] + 1;
+                                    MA_F = DF;
+                                } /* incr before use */
                             }
-                            temp = (MQ * M[MA]) + (LAC & 07777);
-                            LAC = (temp >> 12) & 07777;
+                            temp = (MQ * M[MA]) + AC;
+                            AC = (temp >> 12) & 07777;
                             MQ = temp & 07777;
-                            PC = (PC + 1) & 07777;
+                            ++PC;
                             SC = 014;                                   /* 12 shifts */
                             break;
 
@@ -804,30 +838,35 @@ namespace pdp8
                             LAC = LAC | SC;                             /* mode A: SCA then */
                             // no break
                         case 003:                                       /* DVI */
-                            MA = IF | PC;
+                            MA_W = PC;
+                            MA_F = IF;
                             if (emode) {                                /* mode B: defer */
-                                if ((MA & 07770) != 00010)              /* indirect; autoinc? */
-                                    MA = DF | M[MA];
-                                else MA = DF | (M[MA] = (M[MA] + 1) & 07777); /* incr before use */
+                                if ((MA & 07770) != 00010) {            /* indirect; autoinc? */
+                                    MA_W = M[MA];
+                                    MA_F = DF;
+                                } else {
+                                    MA_W = M[MA] = M[MA] + 1;
+                                    MA_F = DF;
+                                } /* incr before use */
                             }
-                            if ((LAC & 07777) >= M[MA]) {               /* overflow? */
-                                LAC = LAC | 010000;                     /* set link */
+                            if (AC >= M[MA]) {               /* overflow? */
+                                L = 1;                     /* set link */
                                 MQ = ((MQ << 1) + 1) & 07777;           /* rotate MQ */
                                 SC = 0;                                 /* no shifts */
                             }
                             else {
-                                temp = ((LAC & 07777) << 12) | MQ;
+                                temp = (AC << 12) | MQ;
                                 MQ = temp / M[MA];
                                 LAC = temp % M[MA];
                                 SC = 015;                               /* 13 shifts */
                             }
-                            PC = (PC + 1) & 07777;
+                            ++PC;
                             break;
 
                         case 024:                                       /* mode B: DPSZ */
                             if (emode) {
-                                if (((LAC | MQ) & 07777) == 0)
-                                    PC = (PC + 1) & 07777;
+                                if ((AC | MQ) == 0)
+                                    ++PC;
                                 break;
                             }
                             LAC = LAC | SC;                             /* mode A: SCA then */
@@ -835,12 +874,12 @@ namespace pdp8
                         case 004:                                       /* NMI */
                             temp = (LAC << 12) | MQ;                    /* preserve link */
                             for (SC = 0; ((temp & 017777777) != 0) &&
-                                         (temp & 040000000) == ((temp << 1) & 040000000); SC++)
+                                         (temp & 040000000) == ((temp << 1) & 040000000); ++SC)
                                 temp = temp << 1;
                             LAC = (temp >> 12) & 017777;
                             MQ = temp & 07777;
-                            if (emode && ((LAC & 07777) == 04000) && (MQ == 0))
-                                LAC = LAC & 010000;                     /* clr if 4000'0000 */
+                            if (emode && (AC == 04000) && (MQ == 0))
+                                AC = 0;                     /* clr if 4000'0000 */
                             break;
 
                         case 025:                                       /* mode B: DPIC */
@@ -853,13 +892,15 @@ namespace pdp8
                             LAC = LAC | SC;                             /* mode A: SCA then */
                             // no break
                         case 5:                                         /* SHL */
-                            SC = (M[IF | PC] & 037) + (emode ^ 1);      /* shift+1 if mode A */
+                            MA_W = PC;
+                            MA_F = IF;
+                            SC = (M[MA] & 037) + (emode ^ 1);      /* shift+1 if mode A */
                             if (SC > 25)                                /* >25? result = 0 */
                                 temp = 0;
                             else temp = ((LAC << 12) | MQ) << SC;       /* <=25? shift LAC:MQ */
                             LAC = (temp >> 12) & 017777;
                             MQ = temp & 07777;
-                            PC = (PC + 1) & 07777;
+                            ++PC;
                             SC = emode? 037: 0;                         /* SC = 0 if mode A */
                             break;
 
@@ -873,18 +914,20 @@ namespace pdp8
                             LAC = LAC | SC;                             /* mode A: SCA then */
                             // no break
                         case 6:                                         /* ASR */
-                            SC = (M[IF | PC] & 037) + (emode ^ 1);      /* shift+1 if mode A */
-                            temp = ((LAC & 07777) << 12) | MQ;          /* sext from AC0 */
+                            MA_W = PC;
+                            MA_F = IF;
+                            SC = (M[MA] & 037) + (emode ^ 1);      /* shift+1 if mode A */
+                            temp = (AC << 12) | MQ;          /* sext from AC0 */
                             if (LAC & 04000)
                                 temp = temp | ~037777777;
                             if (emode && (SC != 0))
                                 gtf = (temp >> (SC - 1)) & 1;
-                            if (SC > 25)
+                            if (SC() > 25)
                                 temp = (LAC & 04000)? -1: 0;
                             else temp = temp >> SC;
                             LAC = (temp >> 12) & 017777;
                             MQ = temp & 07777;
-                            PC = (PC + 1) & 07777;
+                            ++PC;
                             SC = emode? 037: 0;                         /* SC = 0 if mode A */
                             break;
 
@@ -898,8 +941,10 @@ namespace pdp8
                             LAC = LAC | SC;                             /* mode A: SCA then */
                             // no break
                         case 7:                                         /* LSR */
-                            SC = (M[IF | PC] & 037) + (emode ^ 1);      /* shift+1 if mode A */
-                            temp = ((LAC & 07777) << 12) | MQ;          /* clear link */
+                            MA_W = PC;
+                            MA_F = IF;
+                            SC = (M[MA] & 037) + (emode ^ 1);      /* shift+1 if mode A */
+                            temp = (AC << 12) | MQ;          /* clear link */
                             if (emode && (SC != 0))
                                 gtf = (temp >> (SC - 1)) & 1;
                             if (SC > 24)                                /* >24? result = 0 */
@@ -907,7 +952,7 @@ namespace pdp8
                             else temp = temp >> SC;                     /* <=24? shift AC:MQ */
                             LAC = (temp >> 12) & 07777;
                             MQ = temp & 07777;
-                            PC = (PC + 1) & 07777;
+                            ++PC;
                             SC = emode? 037: 0;                         /* SC = 0 if mode A */
                             break;
                     }                                           /* end switch */
@@ -957,7 +1002,7 @@ namespace pdp8
             Lock	lock(timerTickMutex);
             timerTickFlag = true;
         } catch ( LockException &le ) {
-            Console::instance()->printf(le.what());
+            //Console::instance()->printf(le.what());
         }
     }
 
