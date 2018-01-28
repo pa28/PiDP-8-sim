@@ -7,8 +7,9 @@
 
 #include <cstdint>
 #include "PDP8.h"
-#include "Device.h"
+#include "Chassis.h"
 #include "Thread.h"
+#include "Memory.h"
 #include "Registers.h"
 
 using namespace hw_sim;
@@ -159,12 +160,9 @@ namespace pdp8
 
         virtual void initialize()
         {
-            auto devItr = hw_sim::Chassis::instance()->find(DEV_MEM);
-            if (devItr != hw_sim::Chassis::instance()->end()) {
-                auto memory = std::dynamic_pointer_cast<Memory<MAXMEMSIZE, uint16_t, 12>>(devItr->second);
-
+            auto memory = Memory<MAXMEMSIZE,memory_base_t,12>::getMemory(DEV_MEM);
+            if (memory != nullptr)
                 M.set(memory);
-            }
             start();
         }
 
@@ -186,7 +184,7 @@ namespace pdp8
         void	timerTick();
         bool	testTick(bool clear = true);
 
-        virtual int run();
+        virtual void * run();
         virtual void stop() { threadRunning = false; }
 
         ScalarRegister<register_base_t, WordRegister_t> PC;
@@ -205,8 +203,16 @@ namespace pdp8
         ScalarRegister<register_base_t, FieldRegister_t> MA_F;
         ScalarRegister<register_base_t, WordRegister_t > MA_W;
 
-    protected:
+        void setMA(register_base_t field, register_base_t word) {
+            MA_W = word;
+            MA_F = field;
+        }
+
         MemoryHelper<MAXMEMSIZE, uint16_t, 12>M;
+
+        static std::shared_ptr<CPU> getCPU();
+
+    protected:
         register_base_t rPC, rMQ, rIR, rIB, rOSR, rLAC, rDF, rIF, rSC, rMA;
         CPUState	    cpuState;
         CPUCondition	cpuCondition;
@@ -222,11 +228,6 @@ namespace pdp8
         pthread_mutex_t     mutexCondition;
         pthread_cond_t      condition;
 
-        void setMA(register_base_t field, register_base_t word) {
-            MA_W = word;
-            MA_F = field;
-        }
-
         long cycleCpu();
 
         bool waitOnCondition();
@@ -235,6 +236,7 @@ namespace pdp8
         void reset_all(int i) { /* TODO: call chassis reset all */ }
 
     };
+
 
 } /* namespace pdp8 */
 

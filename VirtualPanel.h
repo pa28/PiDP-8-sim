@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <string>
+#include "CPU.h"
 #include "Terminal.h"
 
 namespace pdp8
@@ -44,8 +45,8 @@ namespace pdp8
         WINDOW      *vPanel, *console, *command;
         ConsoleMode consoleMode;
 
-//        Memory  &M;
-//        CPU     &cpu;
+        std::shared_ptr<Memory<MAXMEMSIZE, memory_base_t, 12>> M;
+        std::shared_ptr<CPU> cpu;
 
         uint32_t	switches[3];
 

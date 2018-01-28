@@ -34,7 +34,6 @@
 #include <syslog.h>
 #endif
 
-#define DEBUG_LEVEL 5
 #include "Chassis.h"
 
 void timerHandler(int) {

@@ -13,42 +13,14 @@
 #include <cstdint>
 #include <cerrno>
 #include <exception>
+#include <stdexcept>
 
 namespace pdp8
 {
-    class LockException : public std::exception {
+    class LockException : public std::runtime_error {
     public:
-        LockException(bool l, int c) : locking(l), code(c) {}
-        virtual ~LockException() throw() {}
-        virtual const char* what() const throw() {
-            if (locking)
-                switch (code) {
-                    case EINVAL:
-                        return "Lock on invalid mutex.";
-                    case EBUSY:
-                        return "Already locked.";
-                    case EAGAIN:
-                        return "Too many recursive locks.";
-                    case EDEADLK:
-                        return "Thread already owns lock.";
-                    default:
-                        return "Unknown locking error.";
-                }
-            else
-                switch (code) {
-                    case EINVAL:
-                        return "Unock on invalid mutex.";
-                    case EAGAIN:
-                        return "Too many recursive locks.";
-                    case EPERM:
-                        return "Thread does not own lock.";
-                    default:
-                        return "Unknown unlocking error.";
-                }
-        }
-    protected:
-        bool locking;
-        int	code;
+        explicit LockException(const char *what_arg) : std::runtime_error(what_arg) {}
+        explicit LockException(const std::string& what_arg) : std::runtime_error(what_arg) {}
     };
 
     class ConditionWait;
@@ -58,36 +30,42 @@ namespace pdp8
     {
         friend class Lock;
     public:
-        Mutex() { pthread_mutex_init( &mutex, NULL ); }
-        virtual ~Mutex() { pthread_mutex_destroy( &mutex ); }
+        Mutex() { pthread_mutex_init( &mutex, nullptr ); }
+        virtual ~Mutex() noexcept { pthread_mutex_destroy( &mutex ); }
 
     protected:
-        pthread_mutex_t		mutex;
+        pthread_mutex_t		mutex{};
     };
 
     class Lock
     {
     public:
-        Lock( pthread_mutex_t * mutex );
-        Lock( pthread_mutex_t & mutex );
-        Lock( ConditionWait & conditionWait );
-        Lock( Mutex & mutex );
-        virtual ~Lock();
+        explicit Lock( pthread_mutex_t * mutex );
+
+        explicit Lock( pthread_mutex_t & mutex );
+
+        explicit Lock( ConditionWait & conditionWait );
+
+        explicit Lock( Mutex & mutex );
+
+        virtual ~Lock() noexcept;
 
     private:
-        pthread_mutex_t * mutex;
+        Lock();
 
+        pthread_mutex_t * mutex;
+        void construct();
     };
 
     class Thread
     {
     public:
         Thread();
-        virtual ~Thread();
+        virtual ~Thread() noexcept = default;
 
         int start();
 
-        virtual int run() = 0;
+        virtual void * run() = 0;
         virtual void stop() = 0;
 
         virtual bool waitCondition() { return true; }

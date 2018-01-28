@@ -143,8 +143,6 @@ uint8_t cols[] = {13, 12, 11,    10, 9, 8,    7, 6, 5,    4, 15, 14};
 
 namespace pdp8
 {
-    Panel * Panel::_instance = NULL;
-
     Panel::Panel() :
             Device("PANEL", "Front Panel"),
             driveLeds(true),
@@ -157,14 +155,6 @@ namespace pdp8
     Panel::~Panel()
     {
         pthread_mutex_destroy( &accessMutex );
-    }
-
-    Panel * Panel::instance() {
-        if (_instance == NULL) {
-            _instance = new Panel();
-        }
-
-        return _instance;
     }
 
     void Panel::testLeds(bool turnOn) {
@@ -187,7 +177,11 @@ namespace pdp8
 
     }
 
-    int Panel::run() {
+    void Panel::tick(int) {
+
+    }
+
+    void * Panel::run() {
         int i,j,k,switchscan, tmp;
 
         // Find gpio address (different for Pi 2) ----------
@@ -345,7 +339,7 @@ namespace pdp8
         //printf("\nFP off\n");
         // at this stage, all cols, rows, ledrows are set to input, so elegant way of closing down.
 
-        return 0;
+        return nullptr;
     }
 
     void Panel::getLeds() {

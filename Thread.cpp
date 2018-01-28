@@ -25,77 +25,44 @@
    in this Software without prior written authorization from Robert M Supnik.
  */
 
-#include <stdio.h>
+#include <sstream>
+#include <cstring>
+#include <cerrno>
 #include "Thread.h"
-#include "Console.h"
 
-#define DEBUG_LEVEL 5
 #include "PDP8.h"
+#include "Console.h"
 
 namespace pdp8
 {
     void * _threadStart(void *t) {
-        Thread *thread = (Thread*)t;
+        auto *thread = (Thread*)t;
 
-        return (void *)(thread->run());
+        return thread->run();
     }
 
-    Lock::Lock( pthread_mutex_t * m ) : mutex(m)
-    {
-        int s = pthread_mutex_lock( mutex );
-        switch (s) {
-            case 0:
-                debug(10, "Mutex %0X locked\n", mutex);
-                break;
-            default:
-                throw LockException(true, s);
-        }
-    }
+    Lock::Lock( pthread_mutex_t * m ) : mutex(m) { construct(); }
 
-    Lock::Lock( pthread_mutex_t & m ) : mutex(&m)
-    {
-        int s = pthread_mutex_lock( mutex );
-        switch (s) {
-            case 0:
-                debug(10, "Mutex %0X locked\n", mutex);
-                break;
-            default:
-                throw LockException(true, s);
-        }
-    }
+    Lock::Lock( pthread_mutex_t & m ) : mutex(&m) { construct(); }
 
-    Lock::Lock( ConditionWait & cw ) : mutex(&cw.mutex)
-    {
-        int s = pthread_mutex_lock( mutex );
-        switch (s) {
-            case 0:
-                debug(10, "ConditionWait mutex %0X locked\n", mutex);
-                break;
-            default:
-                throw LockException(true, s);
-        }
-    }
+    Lock::Lock( ConditionWait & cw ) : mutex(&cw.mutex) { construct(); }
 
-    Lock::Lock( Mutex & m ) : mutex(&m.mutex)
-    {
+    Lock::Lock( Mutex & m ) : mutex(&m.mutex) { construct(); }
+
+    void Lock::construct() {
         int s = pthread_mutex_lock( mutex );
-        switch (s) {
-            case 0:
-                debug(10, "ConditionWait mutex %0X locked\n", mutex);
-                break;
-            default:
-                throw LockException(true, s);
+        if (s) {
+            std::stringstream ss;
+            ss << "Lock failed "
+               << strerror(errno);
+            throw LockException(ss.str());
         }
     }
 
     Lock::~Lock() {
         int s = pthread_mutex_unlock( mutex );
-        switch (s) {
-            case 0:
-                debug(10, "Mutex %0X unlocked\n", mutex);
-                break;
-            default:
-                throw LockException(false, s);
+        if (s) {
+            ERROR("Mutex unlock error %s", strerror(errno));
         }
     }
 
@@ -104,12 +71,8 @@ namespace pdp8
     {
     }
 
-    Thread::~Thread()
-    {
-    }
-
     int Thread::start() {
-        int s = pthread_create( &thread, NULL, _threadStart, this );
+        int s = pthread_create( &thread, nullptr, _threadStart, this );
         switch (s) {
             case 0:
                 break;
@@ -123,8 +86,8 @@ namespace pdp8
     ConditionWait::ConditionWait() :
             test(true)
     {
-        pthread_mutex_init( &mutex, NULL );
-        pthread_cond_init( &condition, NULL );
+        pthread_mutex_init( &mutex, nullptr);
+        pthread_cond_init( &condition, nullptr);
     }
 
     ConditionWait::~ConditionWait() {
@@ -136,8 +99,6 @@ namespace pdp8
         int rc = 0;
         bool r = false;
 
-        debug(1, "test %d\n", test);
-
         try {
             Lock	waitLock(mutex);
             if (!test)
@@ -146,10 +107,11 @@ namespace pdp8
                 }
             r = test = true;
         } catch (LockException &le) {
-            Console::instance()->printf(le.what());
+            auto console = Console::getConsole();
+            if (console != nullptr)
+                console->printf(le.what());
         }
 
-        debug(1, "returning %d\n", r);
         return r;
     }
 
@@ -157,7 +119,6 @@ namespace pdp8
         try {
             Lock	waitLock(mutex);
             if (!test) {
-                debug(1, "release %d\n", all);
                 if (all) {
                     pthread_cond_broadcast( &condition );
                 } else {
@@ -166,7 +127,9 @@ namespace pdp8
                 test = true;
             }
         } catch (LockException &le) {
-            Console::instance()->printf(le.what());
+            auto console = Console::getConsole();
+            if (console != nullptr)
+                console->printf(le.what());
         }
     }
 

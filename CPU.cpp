@@ -90,11 +90,22 @@ namespace pdp8
         pthread_cond_destroy( &condition );
     }
 
+    std::shared_ptr<CPU> CPU::getCPU() {
+        std::shared_ptr<CPU> cpu;
+        auto devItr = Chassis::instance()->find(DEV_CPU);
+        if (devItr != Chassis::instance()->end()) {
+            cpu = std::dynamic_pointer_cast<CPU>(devItr->second);
+        }
+
+        return cpu;
+    }
+
+
     /*
      * By waiting on the run condition between CPU execution states, and at the end of the cycle,
      * the run loop does not have to do anything with cpuStepping.
      */
-    int CPU::run() {
+    void * CPU::run() {
         throttleTimerReset = true;
         struct timespec throttleStart{}, throttleCheck{};
         long	cpuTime = 0;
@@ -140,7 +151,7 @@ namespace pdp8
             timerTickFlag = false;
         }
 
-        return 0;
+        return nullptr;
     }
 
     long CPU::cycleCpu() {

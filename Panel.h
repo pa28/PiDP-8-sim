@@ -53,17 +53,16 @@ namespace pdp8
 
     class Panel: public Device, Thread
     {
+    public:
         Panel();
 
-    public:
         virtual ~Panel();
-
-        static Panel * instance();
 
         void initialize();
         void reset();
 
-        virtual int run();
+        virtual void * run();
+        virtual void tick(int);
 
         void stop() { driveLeds = false; }
         void setSwitchFd(int fd) { if (switchFd >= 0) close(switchFd); switchFd = fd; }
@@ -71,7 +70,6 @@ namespace pdp8
         void testLeds(bool ledsOn);		// Turn all LEDs on (if true) or off (if false)
 
     protected:
-        static	Panel * _instance;
         bool    driveLeds;
         int		switchFd;				// Switch status is written here when it changes.
         int		ledBlink;				// A counter to blink LEDs for special status

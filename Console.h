@@ -9,8 +9,8 @@
 #define PIDP_CONSOLE_H
 
 
+#include "PDP8.h"
 #include "Device.h"
-#include "Panel.h"
 #include "CPU.h"
 #include "Memory.h"
 #include "Thread.h"
@@ -18,6 +18,7 @@
 
 namespace pdp8
 {
+    constexpr size_t SWITCHSTATUS_COUNT = 3;
 
     enum PanelCmdButton {
         PanelStart = 040,
@@ -31,25 +32,27 @@ namespace pdp8
 
     class Console: public Device
     {
-        Console(bool headless);
-
     public:
+        explicit Console(bool headless);
+
         virtual ~Console();
 
         static Console * instance(bool headless = false);
 
         int printf( const char *format, ... );
 
-        void initialize();
-        void reset();
-
+        virtual void initialize();
+        virtual void reset();
+        virtual void tick(int ticksPerSecond);
         virtual int run();
-        void stop() { runConsole = false; }
+        virtual void stop(){ runConsole = false; }
         void setSwitchFd(int fd) { switchPipe = fd; }
 
         bool    getStopMode() const { return stopMode; }
         int     getStopCount() const { return stopCount; }
         void    oneSecond();
+
+        static std::shared_ptr<Console> getConsole();
 
     protected:
         static	Console * _instance;
@@ -58,6 +61,7 @@ namespace pdp8
 
         int	    switchPipe;
         int     stopCount;
+        int     tickCount;
 
 //        Memory  &M;
 //        CPU     &cpu;

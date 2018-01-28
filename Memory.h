@@ -222,6 +222,16 @@ namespace hw_sim {
                 i->clear();
         }
 
+        static std::shared_ptr<Memory<Size,Base,Width>> getMemory(int32_t dev) {
+            std::shared_ptr<Memory<Size,Base,Width>> memory;
+            auto devItr = Chassis::instance()->find(dev);
+            if (devItr != Chassis::instance()->end()) {
+                memory = std::dynamic_pointer_cast<Memory<Size,Base,Width>>(devItr->second);
+            }
+
+            return memory;
+        }
+
     protected:
         typename std::array<MemoryCell<Base, Width>, Size>::iterator ma;
         MemoryCell<Base, Width> mb;

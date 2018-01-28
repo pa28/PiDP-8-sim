@@ -29,6 +29,8 @@
 #include <cctype>
 #include "PDP8.h"
 #include "Chassis.h"
+#include "VirtualPanel.h"
+#include "CPU.h"
 
 using namespace std;
 
@@ -36,12 +38,12 @@ namespace pdp8
 {
 
     VirtualPanel::VirtualPanel() :
-            vPanel(NULL),
-            console(NULL),
-            command(NULL),
+            vPanel(nullptr),
+            console(nullptr),
+            command(nullptr),
             consoleMode(PanelMode),
-            M(*(Memory::instance())),
-            cpu(*(CPU::instance())),
+            M(),
+            cpu(),
             cmdBuffer(),
             cmdCurLoc(string::npos)
 
@@ -49,6 +51,9 @@ namespace pdp8
         switches[0] = 0;
         switches[1] = 0;
         switches[2] = 0;
+
+        cpu = CPU::getCPU();
+        M = Memory<MAXMEMSIZE, memory_base_t, 12>::getMemory(DEV_MEM);
 
         vPanel=subwin(stdscr,4,80,0,0);
         scrollok(vPanel,true);
@@ -121,11 +126,11 @@ namespace pdp8
                  ((switches[1] >> 9) & 07),
                  ((switches[1] >> 6) & 07),
                  switches[0] & 07777,
-                 (cpu.getDF() >> 12) & 07,
-                 (cpu.getIF() >> 12) & 07,
-                 cpu.getPC(), M.MA() & 07777, M.MB(),
-                 cpu.getLAC() >> 12,
-                 cpu.getLAC() & 07777
+                 cpu->DF,
+                 cpu->IF,
+                 cpu->PC, cpu->MA_W, M->MB(),
+                 cpu->L,
+                 cpu->AC
         );
         wrefresh( vPanel );
         setCursorLocation();
@@ -210,23 +215,25 @@ namespace pdp8
                     updatePanel();
                     break;
                 case '*':	// Address Load
-                    cpu.setPC(switches[0]);
-                    cpu.setDF((switches[1] >> 9) & 07);
-                    cpu.setIF((switches[1] >> 6) & 07);
+                    cpu->PC = switches[0];
+                    cpu->DF = (switches[1] >> 9) & 07;
+                    cpu->IF = (switches[1] >> 6) & 07;
                     switches[0] = switches[1] = 0;
                     updatePanel();
                     break;
                 case 012:	// Enter deposit
-                    M[cpu.getIF() | cpu.getPC()] = switches[0];
-                    cpu.setPC( (cpu.getPC() + 1) & 07777 );
-                    cpu.setState(DepositState);
+                    cpu->setMA(cpu->IF, cpu->PC);
+                    cpu->M[cpu->MA] = switches[0];
+                    ++(cpu->PC);
+                    cpu->setState(DepositState);
                     switches[0] = switches[1] = 0;
                     updatePanel();
                     break;
                 case '+':	// Examine
-                    t = M[cpu.getIF() | cpu.getPC()];
-                    cpu.setPC( (cpu.getPC() + 1) & 07777 );
-                    cpu.setState(ExamineState);
+                    cpu->setMA(cpu->IF, cpu->PC);
+                    t = cpu->M[cpu->MA];
+                    ++(cpu->PC);
+                    cpu->setState(ExamineState);
                     switches[0] = switches[1] = 0;
                     updatePanel();
                     break;

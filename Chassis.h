@@ -14,6 +14,7 @@
 #include <memory>
 #include <sys/time.h>
 
+#include "Device.h"
 //#include "CPU.h"
 //#include "Memory.h"
 //#include "Console.h"
@@ -22,25 +23,6 @@
 
 namespace hw_sim
 {
-    class Device
-    {
-    public:
-        Device(std::string & name, std::string & longName) : name(name), longName(longName) {}
-        Device(const char * name, const char * longName) : name(name), longName(longName) {}
-
-        virtual ~Device() = default;
-        virtual void initialize() = 0;
-        virtual void reset() = 0;
-        virtual void stop() = 0;
-        virtual void tick(int ticksPerSecond) = 0;
-
-        virtual int32_t dispatch(int32_t IR, int32_t dat) { return 0; }
-
-    protected:
-        std::string		name, longName;
-    };
-
-
     class Chassis : public std::map<int32_t, std::shared_ptr<Device>>
     {
         Chassis();
@@ -61,7 +43,7 @@ namespace hw_sim
         bool        timerFreq;
     };
 
-} /* namespace pdp8 */
+} /* namespace hw_sim */
 
 
 #endif //PIDP_CHASSIS_H

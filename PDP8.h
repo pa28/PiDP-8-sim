@@ -7,8 +7,6 @@
 
 #include <cstdio>
 #include <cstdint>
-#include "Chassis.h"
-#include "Memory.h"
 
 #ifndef DEBUG_LEVEL
 #define DEBUG_LEVEL 0
@@ -17,14 +15,14 @@
 // Requires fmt be a string literal
 #ifdef SYSLOG
 #include <syslog.h>
-#define debug(l,...) do{if(l<DEBUG_LEVEL) syslog(LOG_DEBUG,  __VA_ARGS__);} while(0)
+#define debug(l,...) do{if(l<DEBUG_LEVEL) syslog(LOG_DEBUG,  __VA_ARGS__);} while(false)
 
 #define ERROR(...) syslog(LOG_ERR,  __VA_ARGS__)
 
 #define LOG(...) syslog(LOG_INFO,  __VA_ARGS__)
 
 #else
-#define debug(l,...) do{if(l<DEBUG_LEVEL) Console::instance()->printf(__VA_ARGS__);} while(0)
+#define debug(l,...) do{if(l<DEBUG_LEVEL) Console::instance()->printf(__VA_ARGS__);} while(false)
 #define ERROR(...)
 #define LOG(...)
 #endif
@@ -64,5 +62,6 @@ namespace pdp8 {
     using memory_base_t = uint16_t;
 
 }
+
 
 #endif //PIDP_PDP8_H

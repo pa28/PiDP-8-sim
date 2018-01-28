@@ -30,22 +30,19 @@
 #include <cstdarg>
 #include <unistd.h>
 #include <ncurses.h>
-#include <sys/select.h>
-#include <csignal>
-#include <ctime>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <cerrno>
 
-#define DEBUG_LEVEL 5
 #include "PDP8.h"
-
 #include "Console.h"
-#include "Chassis.h"
 
 using namespace std;
+using namespace hw_sim;
 
 namespace pdp8
 {
-    Console * Console::_instance = NULL;
+    Console * Console::_instance = nullptr;
 
     Console::Console(bool headless) :
             Device("CONS", "Console"),
@@ -53,14 +50,13 @@ namespace pdp8
             stopMode(false),
             switchPipe(-1),
             stopCount(0),
-//            M(*(Memory::instance())),
-//            cpu(*(CPU::instance())),
-            consoleTerm(NULL)
+            tickCount(0),
+            consoleTerm(nullptr)
     {
         if (!headless) {
             consoleTerm = new VirtualPanel();
         }
-        pthread_mutex_init( &mutex, NULL );
+        pthread_mutex_init( &mutex, nullptr );
     }
 
     Console::~Console()
@@ -68,16 +64,8 @@ namespace pdp8
         pthread_mutex_destroy( &mutex );
     }
 
-    Console * Console::instance(bool headless) {
-        if (_instance == NULL) {
-            _instance = new Console(headless);
-        }
-
-        return _instance;
-    }
-
     int Console::printf( const char * format, ... ) {
-        if (consoleTerm == NULL) {
+        if (consoleTerm == nullptr) {
             return 0;
         }
 
@@ -85,7 +73,7 @@ namespace pdp8
         try {
             va_list args;
             va_start (args, format);
-            int n = consoleTerm->vconf(format, args);
+            consoleTerm->vconf(format, args);
             va_end (args);
         } catch (LockException &le ) {
             consoleTerm->printw( le.what() );
@@ -101,8 +89,24 @@ namespace pdp8
 
     }
 
+    std::shared_ptr<Console> Console::getConsole() {
+        std::shared_ptr<Console> console;
+        auto devItr = Chassis::instance()->find(DEV_CONSOLE);
+        if (devItr != Chassis::instance()->end()) {
+            console = std::dynamic_pointer_cast<Console>(devItr->second);
+        }
+
+        return console;
+    }
+
+
     int Console::run() {
-        fd_set	rd_set, wr_set;
+        fd_set	rd_set{}, wr_set{};
+
+        auto cpu = CPU::getCPU();
+        if (cpu == nullptr) {
+            return ENODEV;
+        }
 
         uint32_t switchstatus[SWITCHSTATUS_COUNT] = { 0 };
         while (runConsole) {
@@ -111,7 +115,7 @@ namespace pdp8
 
             int	n = 0;
 
-            if (consoleTerm != NULL) {
+            if (consoleTerm != nullptr) {
                 FD_SET(consoleTerm->fdOfInput(), &rd_set); n = consoleTerm->fdOfInput() + 1;
             }
 
@@ -123,34 +127,36 @@ namespace pdp8
             int s;
 
 #ifdef HAS_PSELECT
-            s = pselect( n, &rd_set, NULL, NULL, NULL, NULL);
+            s = pselect( n, &rd_set, nullptr, nullptr, nullptr, nullptr);
 #else
-            s = select( n, &rd_set, NULL, NULL, NULL);
+            s = select( n, &rd_set, nullptr, nullptr, nullptr);
 #endif
 
             if (s < 0) {
                 switch(errno) {
-                    case EBADF:	// invalid FD
+                    case EBADF:	    // invalid FD
                         break;
-                    case EINTR: // Signal was caught
+                    case EINTR:     // Signal was caught
                         break;
                     case EINVAL:	// invalid n or timeout
                         break;
                     case ENOMEM:	// no memory
                         break;
+                    default:
+                        break;
                 }
             } else if (s > 0) {
                 // one or more fd ready
-                if (consoleTerm != NULL) {
+                if (consoleTerm != nullptr) {
                     if (FD_ISSET(consoleTerm->fdOfInput(), &rd_set)) {
                         consoleTerm->processStdin();
                     }
                 } else if (FD_ISSET(switchPipe, &rd_set)) {
                     // Panel
-                    int    switchReport[2];
+                    uint32_t switchReport[2];
 
-                    int n = read(switchPipe, switchReport, sizeof(switchReport));
-                    if (n == sizeof(switchReport)) {
+                    ssize_t sxn = read(switchPipe, switchReport, sizeof(switchReport));
+                    if (sxn == sizeof(switchReport)) {
                         // handle switches
                         switchReport[1] ^= 07777;
 
@@ -159,7 +165,7 @@ namespace pdp8
                                 switchstatus[0] = switchReport[1];
                                 debug(1, "SR: %04o\n", switchstatus[0]);
                                 if (consoleTerm) consoleTerm->updatePanel( switchstatus );
-                                CPU::instance()->setOSR(switchstatus[0]);
+                                cpu->OSR = switchstatus[0];
                                 break;
                             case 1: // DF and IF
                                 switchstatus[1] = switchReport[1];
@@ -170,13 +176,15 @@ namespace pdp8
                                 switchstatus[2] = switchReport[1];
                                 debug(1, "Cmd: %02o  SS: %1o\n", (switchstatus[2] >> 6) & 077, (switchstatus[2] >> 4) & 03 );
                                 break;
+                            default:
+                                break;
                         }
 
                         debug(1, "Sx: %04o %04o %04o\n", switchstatus[0],  switchstatus[2], switchstatus[2]);
 
-                        CPU::instance()->setStepping(static_cast<CPUStepping>((switchstatus[2] >> 4) & 03));
+                        cpu->setStepping(static_cast<CPUStepping>((switchstatus[2] >> 4) & 03));
 
-                        if (CPU::instance()->getStepping() == PanelCommand) {
+                        if (cpu->getStepping() == PanelCommand) {
                             switch ((switchstatus[2] >> 6) & 077) {
                                 case PanelNoCmd:
                                     stopMode = false;
@@ -196,42 +204,48 @@ namespace pdp8
                                     stopMode = true;
                                     stopCount = 8;
                                     break;
+                                default:
+                                    break;
                             }
                         } else {
                             switch ((switchstatus[2] >> 6) & 077) {
                                 case PanelStart:
                                     debug(1, "%s\n", "PanelStart");
                                     Chassis::instance()->reset();
-                                    cpu.setCondition(CPURunning);
-                                    cpu.cpuContinue();
+                                    cpu->setCondition(CPURunning);
+                                    cpu->cpuContinue();
                                     break;
                                 case PanelLoadAdr:
-                                    CPU::instance()->setPC(switchstatus[0]);
-                                    CPU::instance()->setDF((switchstatus[1] >> 9) & 07);
-                                    CPU::instance()->setIF((switchstatus[1] >> 6) & 07);
+                                    cpu->PC = switchstatus[0];
+                                    cpu->DF = ((switchstatus[1] >> 9) & 07);
+                                    cpu->IF = ((switchstatus[1] >> 6) & 07);
                                     if (consoleTerm) consoleTerm->updatePanel( switchstatus );
                                     break;
                                 case PanelDeposit:
-                                    M[cpu.getIF() | cpu.getPC()] = switchstatus[0];
-                                    cpu.setPC( (cpu.getPC() + 1) & 07777 );
-                                    cpu.setState(DepositState);
+                                    cpu->setMA(cpu->IF, cpu->PC);
+                                    cpu->M[cpu->MA] = switchstatus[0];
+                                    ++(cpu->PC);
+                                    cpu->setState(DepositState);
                                     if (consoleTerm) consoleTerm->updatePanel( switchstatus );
                                     break;
                                 case PanelExamine:
-                                    switchReport[1] = M[cpu.getIF() | cpu.getPC()];
-                                    cpu.setPC( (cpu.getPC() + 1) & 07777 );
-                                    cpu.setState(ExamineState);
+                                    cpu->setMA(cpu->IF, cpu->PC);
+                                    switchReport[1] = cpu->M[cpu->MA];
+                                    ++(cpu->PC);
+                                    cpu->setState(ExamineState);
                                     if (consoleTerm) consoleTerm->updatePanel( switchstatus );
                                     break;
                                 case PanelContinue:
                                     debug(1, "%s\n", "PanelContinue");
-                                    cpu.setCondition(CPURunning);
-                                    cpu.cpuContinue();
+                                    cpu->setCondition(CPURunning);
+                                    cpu->cpuContinue();
                                     if (consoleTerm) consoleTerm->updatePanel( switchstatus );
                                     break;
                                 case PanelStop:
                                     debug(1, "%s\n", "PanelStop");
-                                    cpu.cpuStop();
+                                    cpu->cpuStop();
+                                    break;
+                                default:
                                     break;
                             }
                         }
@@ -244,8 +258,17 @@ namespace pdp8
             //runConsole = false;
         }
         printf("Console exiting.\n");
-        if (consoleTerm) delete consoleTerm;
+        delete consoleTerm;
         return 0;
+    }
+
+    void Console::tick(int ticksPerSecond) {
+        if (tickCount == 0) {
+            tickCount = ticksPerSecond;
+            oneSecond();
+        } else {
+            --tickCount;
+        }
     }
 
     void Console::oneSecond() {
