@@ -41,7 +41,7 @@ namespace hw_sim
     };
 
 
-    class Chassis : public std::map<uint32_t, std::shared_ptr<Device>>
+    class Chassis : public std::map<int32_t, std::shared_ptr<Device>>
     {
         Chassis();
 

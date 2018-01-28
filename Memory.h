@@ -79,6 +79,10 @@ namespace hw_sim {
             return operator=(r());
         };
 
+        MemoryCell<Base,Width> & operator ++ () {
+            return operator=(operator()()+1);
+        };
+
         operator Base() const {
             static_assert(sizeof(Base) * 8 >= Width + MemoryFlagWidth);
             return static_cast<Base>(m & hw_sim::RegisterMask<Width>::value);
@@ -224,6 +228,34 @@ namespace hw_sim {
 
         std::array<MemoryCell<Base, Width>, Size> m;
     };
+
+    /**
+     * @brief Some sytactic surgar to make the use of a shared pointer to memory easier
+     * @tparam Size The number of memory cells
+     * @tparam Base The base type of memory
+     * @tparam Width The number of bits in a memory cell
+     */
+    template <size_t Size, typename Base, size_t Width>
+    struct MemoryHelper
+    {
+        explicit MemoryHelper() : memory() {}
+
+        void set(std::shared_ptr<Memory<Size,Base,Width>> & m) {
+            memory = m;
+        };
+
+        MemoryCell<Base, Width> &operator [] (size_t ma) {
+            return memory->at(ma);
+        }
+
+        template <typename B2, class RT2>
+        MemoryCell<Base, Width> &operator [] (ScalarRegister<B2,RT2> & ma) {
+            return memory->at(ma());
+        }
+
+        std::shared_ptr<Memory<Size,Base,Width>> memory;
+    };
+
 
 } /* namespace pdp8 */
 

@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include "PDP8.h"
+#include "CPU.h"
 
 using namespace hw_sim;
 using namespace pdp8;
@@ -91,6 +92,7 @@ int main( int argc, char ** argv ) {
     Chassis *chassis = Chassis::instance();
 
     (*chassis)[DEV_MEM] = std::make_shared<Memory<MAXMEMSIZE, uint16_t, 12>>();
+    (*chassis)[DEV_CPU] = std::make_shared<CPU>();
 
     return 0;
 }

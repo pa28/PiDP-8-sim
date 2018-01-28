@@ -64,27 +64,9 @@ namespace pdp8
     int32_t stop_inst = 0;                              /* trap on ill inst */
 
 
-    auto memory = std::make_shared<Memory<MAXMEMSIZE, uint16_t, 12>>();
-
-    struct _M
-    {
-        MemoryCell<uint16_t, 12> &operator [] (size_t ma) {
-            return memory->at(ma);
-        }
-
-        template <typename B2, class RT2>
-        MemoryCell<uint16_t, 12> &operator [] (ScalarRegister<B2,RT2> & ma) {
-            return memory->at(ma());
-        }
-    }   M;
-
-//    template <typename B1, size_t S1, typename B2, class RT2>
-//    MemoryCell<B1,S1> & operator = (MemoryCell<B1,S1> & m, ScalarRegister<B2, RT2> &r) {
-//        m = r();
-//    };
-
     CPU::CPU() :
             Device("CPU", "Central Processing Unit"),
+            M(),
             rPC(0), rMQ(0), rIR(0), rIB(0), rOSR(0), rLAC(0), rDF(0), rIF(0), rSC(0), rMA(0),
             PC(rPC), MQ(rMQ), IR(rIR), IB(rIB), OSR(rOSR), LAC(rLAC), DF(rDF), IF(rIF), SC(rSC), AC(rLAC), L(rLAC),
             ION(int_req), MA(rMA), MA_F(rMA), MA_W(rMA),
@@ -195,23 +177,17 @@ namespace pdp8
 
         if ( (IR & 07000) <= 05000 ) {                                 // memory access function
             if ( IR & 0200 ) {      // current page
-                MA = (MA & 077600) | (IR() & 0177);
+                MA = (MA & 077600) | (IR & 0177);
             } else {                // page zero
-                MA_W = IR & 0177;
-                MA_F = IF;
+                setMA(IF, IR & 0177);
             }
 
-            if ( IR() & 0400 ) {      // indirect
+            if ( IR & 0400 ) {      // indirect
                 cpuState = Defer;
                 if ((MA_W & 07770) != 00010) { // not autoincrement
-                    MA_W = M[MA];
-                    MA_F = DF;
+                    setMA(DF, M[MA]);
                 } else {
-                    // ToDo: check this.
-                    int t = M[MA];
-                    M[MA] = t + 1;
-                    MA_W = t;
-                    MA_F = DF;
+                    setMA(DF, ++M[MA]);
                 }
 
                 // End of the Defer state
@@ -234,8 +210,7 @@ namespace pdp8
                     break;
                 case 02000: // ISZ
                     cycleTime = 3000;
-                    M[MA] = (M[MA] + 1);               /* field must exist */
-                    if (memory->MB() == 0)
+                    if (++M[MA] == 0)
                         ++PC;
                     break;
                 case 03000: // DCA
@@ -258,7 +233,7 @@ namespace pdp8
                         tsc_cdf = 0;                                /* clear flag */
                     }
                     if (UF && tsc_enb) {                            /* user mode, TSC enab? */
-                        tsc_pc = (PC - 1) & 07777;                /* save PC */
+                        tsc_pc = (PC - 1) & 07777;                  /* save PC */
                         int_req = int_req | INT_TSC;                /* request intr */
                     }
                     else {                                          /* normal */
@@ -282,24 +257,24 @@ namespace pdp8
                        word of the subroutine) happens. When the TSC8-75 is disabled, the JMS is performed
                        as usual. */
                     if (UF) {                                       /* user mode? */
-                        tsc_ir = IR();                              /* save instruction */
+                        tsc_ir = IR;                                /* save instruction */
                         tsc_cdf = 0;                                /* clear flag */
                         if (tsc_enb) {                              /* TSC8 enabled? */
-                            tsc_pc = (PC - 1) & 07777;            /* save PC */
+                            tsc_pc = (PC - 1) & 07777;              /* save PC */
                             int_req = int_req | INT_TSC;            /* request intr */
                         }
                     }
 
                     if ( !(IR & 0400) ) {   // direct jump test for idle
                         if ( IF == IB ) {
-                            if (MA_W() == ((PC - 2) & 07777)) {         // JMP .-1
+                            if (MA_W == ((PC - 2) & 07777)) {       // JMP .-1
                                 int32_t no = M[MA];
                                 if ( (no == OP_KSF) ||              // next instruction is KSF
                                      (no == OP_CLSC)                // next instruction is CLSC
                                         )  {
                                     reason = STOP_IDLE;
                                 }
-                            } else if (MA_W == ((PC - 1) & 07777)) {  // JMP .
+                            } else if (MA_W == ((PC - 1) & 07777)) {    // JMP .
                                 if (!(int_req & INT_ION)) {             /*    iof? */
                                     reason = STOP_ENDLESS_LOOP;         /* then infinite loop */
                                 } else if (!(int_req & INT_ALL)) {      /*    ion, not intr? */
@@ -320,6 +295,8 @@ namespace pdp8
                     }
 
                     break;
+                default:
+                    break;
             }
         } else if ( (IR & 07000) == 06000) {    // IOT
             cycleTime = 4250;
@@ -331,46 +308,46 @@ namespace pdp8
 
             if (UF) {                                       /* privileged? */
                 int_req = int_req | INT_UF;                 /* request intr */
-                tsc_ir = IR;                              /* save instruction */
+                tsc_ir = IR;                                /* save instruction */
                 if ((IR & 07707) == 06201)                  /* set/clear flag */
                     tsc_cdf = 1;
                 else tsc_cdf = 0;
             } else {
-                device = (IR >> 3) & 077;                     /* device = IR<3:8> */
-                pulse = IR & 07;                                /* pulse = IR<9:11> */
-                iot_data = AC;                                /* AC unchanged */
-                switch (device) {                               /* decode IR<3:8> */
+                device = (IR >> 3) & 077;                   /* device = IR<3:8> */
+                pulse = IR & 07;                            /* pulse = IR<9:11> */
+                iot_data = AC;                              /* AC unchanged */
+                switch (device) {                           /* decode IR<3:8> */
 
-                    case 000:                                       /* CPU control */
-                        switch (pulse) {                            /* decode IR<9:11> */
+                    case 000:                               /* CPU control */
+                        switch (pulse) {                    /* decode IR<9:11> */
 
-                            case 0:                                     /* SKON */
+                            case 0:                         /* SKON */
                                 if (int_req & INT_ION)
                                     ++PC;
                                 int_req = int_req & ~INT_ION;
                                 break;
 
-                            case 1:                                     /* ION */
+                            case 1:                         /* ION */
                                 int_req = (int_req | INT_ION) & ~INT_NO_ION_PENDING;
                                 break;
 
-                            case 2:                                     /* IOF */
+                            case 2:                         /* IOF */
                                 int_req = int_req & ~INT_ION;
                                 break;
 
-                            case 3:                                     /* SRQ */
+                            case 3:                         /* SRQ */
                                 if (int_req & INT_ALL)
                                     ++PC;
                                 break;
 
-                            case 4:                                     /* GTF */
+                            case 4:                         /* GTF */
                                 LAC = (LAC & 010000) |
                                       ((LAC & 010000) >> 1) | (gtf << 10) |
                                       (((int_req & INT_ALL) != 0) << 9) |
                                       (((int_req & INT_ION) != 0) << 7) | SF;
                                 break;
 
-                            case 5:                                     /* RTF */
+                            case 5:                         /* RTF */
                                 gtf = ((LAC & 02000) >> 10);
                                 UB = (LAC & 0100) >> 6;
                                 IB = (LAC & 0070) << 9;
@@ -379,22 +356,24 @@ namespace pdp8
                                 int_req = (int_req | INT_ION) & ~INT_NO_CIF_PENDING;
                                 break;
 
-                            case 6:                                     /* SGT */
+                            case 6:                         /* SGT */
                                 if (gtf)
                                     ++PC;
                                 break;
 
-                            case 7:                                     /* CAF */
+                            case 7:                         /* CAF */
                                 gtf = 0;
                                 emode = 0;
                                 int_req = int_req & INT_NO_CIF_PENDING;
                                 dev_done = 0;
                                 int_enable = INT_INIT_ENABLE;
                                 LAC = 0;
-                                reset_all (1);                          /* reset all dev */
+                                reset_all (1);              /* reset all dev */
                                 break;
-                        }                                       /* end switch pulse */
-                        break;                                      /* end case 0 */
+                            default:
+                                break;
+                        }                                   /* end switch pulse */
+                        break;                              /* end case 0 */
 
                     case 020:case 021:case 022:case 023:
                     case 024:case 025:case 026:case 027:            /* memory extension */
@@ -417,7 +396,7 @@ namespace pdp8
                             case 4:
                                 switch (device & 07) {                  /* decode IR<6:8> */
 
-                                    case 0:                                 /* CINT */
+                                    case 0:                             /* CINT */
                                         int_req = int_req & ~INT_UF;
                                         break;
 
@@ -454,13 +433,15 @@ namespace pdp8
                                         UB = 1;
                                         int_req = int_req & ~INT_NO_CIF_PENDING;
                                         break;
+                                    default:
+                                        break;
                                 }                                   /* end switch device */
                                 break;
 
                             default:
                                 reason = STOP_ILL_INS;
                                 break;
-                        }                                       /* end switch pulse */
+                        }                                           /* end switch pulse */
                         break;                                      /* end case 20-27 */
 
                     case 010:                                       /* power fail */
@@ -561,6 +542,8 @@ namespace pdp8
                         case 017:                                       /* CLA CLL CMA CML */
                             LAC = 017777;
                             break;
+                        default:
+                            break;
                     }                                           /* end switch opers */
 
                     if (IR & 01)                                    /* IAC */
@@ -591,6 +574,8 @@ namespace pdp8
                         case 7:                                         /* RTL RTR - undef */
                             AC = (MA & 07600) | (IR & 0177);
                             break;                                      /* uses address path */
+                        default:
+                            break;
                     }                                           /* end switch shifts */
                     break;                                          /* end group 1 */
 
@@ -662,6 +647,8 @@ namespace pdp8
                             case 017:                                   /* SPA & SNA & SZL */
                                 if ((LAC < 04000) && (LAC != 0))
                                     ++PC;
+                                break;
+                            default:
                                 break;
                         }                                       /* end switch skips */
                         if (IR & 0200)                              /* CLA */
@@ -955,8 +942,12 @@ namespace pdp8
                             ++PC;
                             SC = emode? 037: 0;                         /* SC = 0 if mode A */
                             break;
+                        default:
+                            break;
                     }                                           /* end switch */
                     break;                                          /* end case 7 */
+                default:
+                    break;
             }
         }
         // End of the Execute state
@@ -1007,18 +998,6 @@ namespace pdp8
     }
 
     bool CPU::testTick( bool clear ) {
-
-        /*
-        bool r = false;
-        try {
-            Lock	lock(timerTickMutex);
-            r = timerTickFlag;
-            if (clear)
-                timerTickFlag = false;
-        } catch ( LockException &le ) {
-            Console::instance()->printf(le.what());
-        }
-        */
 
         bool r = timerTickFlag;
         if (clear)

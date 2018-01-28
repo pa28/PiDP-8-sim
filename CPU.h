@@ -142,20 +142,6 @@ namespace pdp8
     using SCRegister_t = RegisterType<8, 5, 0>;
     using IntReqRegister_t = RegisterType<8, 1, INT_V_ION>;
 
-#define CPU_REGISTERS \
-        X(PC, PC, 8, 12, 0, 12 ) \
-        X(MQ, MQ, 8, 12, 0, 12 ) \
-        X(IR, IR, 8, 12, 0, 12 ) \
-        X(IB, IB, 8, 12, 0, 12 ) \
-        X(OSR, OSR, 8, 12, 0, 12 ) \
-        X(LAC, LAC, 8, 13, 0, 13 ) \
-        X(L, LAC, 8, 1, 12, 1 ) \
-        X(AC, LAC, 8, 12, 0, 12 ) \
-        X(DF, DF, 8, 3, 12, 3 ) \
-        X(IF, IF, 8, 3, 12, 3 ) \
-        X(SC, SC, 8, 5, 0, 5 ) \
-        X(ION, int_req, 8, 1, INT_V_ION, 1 )
-
 #define IDLE_DETECT_MASK    0x1
 #define THROTTLE_MASK       0X2
 
@@ -167,12 +153,23 @@ namespace pdp8
 
     class CPU: public Device, Thread
     {
-        CPU();
-        ~CPU();
-
     public:
-        virtual void initialize() { start(); }
+        CPU();
+        virtual ~CPU();
+
+        virtual void initialize()
+        {
+            auto devItr = hw_sim::Chassis::instance()->find(DEV_MEM);
+            if (devItr != hw_sim::Chassis::instance()->end()) {
+                auto memory = std::dynamic_pointer_cast<Memory<MAXMEMSIZE, uint16_t, 12>>(devItr->second);
+
+                M.set(memory);
+            }
+            start();
+        }
+
         virtual void reset() {}
+        virtual void tick(int) {}
 
         CPUState		getState() const { return cpuState; }
         CPUCondition	getCondition() const { return cpuCondition; }
@@ -209,6 +206,7 @@ namespace pdp8
         ScalarRegister<register_base_t, WordRegister_t > MA_W;
 
     protected:
+        MemoryHelper<MAXMEMSIZE, uint16_t, 12>M;
         register_base_t rPC, rMQ, rIR, rIB, rOSR, rLAC, rDF, rIF, rSC, rMA;
         CPUState	    cpuState;
         CPUCondition	cpuCondition;
@@ -223,6 +221,11 @@ namespace pdp8
 
         pthread_mutex_t     mutexCondition;
         pthread_cond_t      condition;
+
+        void setMA(register_base_t field, register_base_t word) {
+            MA_W = word;
+            MA_F = field;
+        }
 
         long cycleCpu();
 
