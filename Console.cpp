@@ -42,8 +42,6 @@ using namespace hw_sim;
 
 namespace pdp8
 {
-    Console * Console::_instance = nullptr;
-
     Console::Console(bool headless) :
             Device("CONS", "Console"),
             runConsole(false),

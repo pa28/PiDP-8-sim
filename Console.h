@@ -37,8 +37,6 @@ namespace pdp8
 
         virtual ~Console();
 
-        static Console * instance(bool headless = false);
-
         int printf( const char *format, ... );
 
         virtual void initialize();
@@ -56,7 +54,6 @@ namespace pdp8
         static std::shared_ptr<Console> getConsole();
 
     protected:
-        static	Console * _instance;
         bool	runConsole;
         bool    stopMode;
 
