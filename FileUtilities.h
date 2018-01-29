@@ -99,54 +99,95 @@ namespace pdp8 {
         }
     };
 
-    template<typename Base, size_t Width>
-    std::string disassemble(hw_sim::MemoryCell<Base, Width> &m, unsigned long address) {
+    template<size_t Size, typename Base, size_t Width>
+    std::string disassemble(std::shared_ptr<hw_sim::Memory<Size, Base, Width>> &memory,
+                            unsigned long address,
+                            register_base_t dataField,
+                            register_base_t insField) {
         std::stringstream ss;
-        switch (m() & 07000) {
+
+        memory_base_t m = memory->at(address);
+
+        switch (m & 07000) {
             case 06000:
-                switch (m() & 0770) {
-                    case 0000:
-                        switch (m() & 07) {
-                            case 00:
-                                ss << "SKON ";
-                                break;
-                            case 01:
-                                ss << "ION ";
-                                break;
-                            case 02:
-                                ss << "IOF ";
-                                break;
-                            case 03:
-                                ss << "SRQ ";
-                                break;
-                            case 04:
-                                ss << "GTF ";
-                                break;
-                            case 05:
-                                ss << "RTF ";
-                                break;
-                            case 06:
-                                ss << "SGT ";
-                                break;
-                            case 07:
-                                ss << "CAF ";
-                                break;
-                        }
-                        break;
-                    default:
-                        ss << "IOT "
-                           << std::oct
-                           << setw(2)
-                           << setfill('0')
-                           << ((m() & 0770) >> 3)
-                           << setw(2)
-                           << setfill(' ')
-                           << (m() & 07);
+                if ((m & 06200) == 06200) {
+                    switch (m & 07) {
+                        case 1:
+                            ss << "CDF " << std::oct << ((m & 070) >> 3);
+                            break;
+                        case 2:
+                            ss << "CIF " << std::oct << ((m & 070) >> 3);
+                            break;
+                        case 3:
+                            ss << "CDF CIF " << std::oct << ((m & 070) >> 3);
+                        case 4:
+                            switch (m & 070) {
+                                case 1:
+                                    ss << "RDF ";
+                                    break;
+                                case 2:
+                                    ss << "RIF ";
+                                    break;
+                                case 3:
+                                    ss << "RIB ";
+                                    break;
+                                case 4:
+                                    ss << "RMF ";
+                                    break;
+                                default:
+                                    break;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                } else {
+                    switch (m & 0770) {
+                        case 0000:
+                            switch (m & 07) {
+                                case 00:
+                                    ss << "SKON ";
+                                    break;
+                                case 01:
+                                    ss << "ION ";
+                                    break;
+                                case 02:
+                                    ss << "IOF ";
+                                    break;
+                                case 03:
+                                    ss << "SRQ ";
+                                    break;
+                                case 04:
+                                    ss << "GTF ";
+                                    break;
+                                case 05:
+                                    ss << "RTF ";
+                                    break;
+                                case 06:
+                                    ss << "SGT ";
+                                    break;
+                                case 07:
+                                    ss << "CAF ";
+                                    break;
+                                default:
+                                    break;
+                            }
+                            break;
+                        default:
+                            ss << "IOT "
+                               << std::oct
+                               << setw(2)
+                               << setfill('0')
+                               << ((m & 0770) >> 3)
+                               << setw(2)
+                               << setfill(' ')
+                               << (m & 07);
+                    }
                 }
                 break;
             case 07000:
-                if ((m() & 0400) == 0000) {
-                    int opr = m() & 0377;
+                if ((m & 0400) == 0000) {
+                    int opr = m & 0377;
 
                     if (opr == 0) {
                         ss << "NOP ";
@@ -203,9 +244,9 @@ namespace pdp8 {
                         }
                         if (opr & 002) ss << "BSW ";
                     }
-                } else if ((m() & 0401) == 0400) {
-                    int opr = m() & 0376;
-                    switch (opr & 0130) {
+                } else if ((m & 0401) == 0400) {
+                    int opr = m & 0376;
+                    switch (opr & 0170) {
                         case 010:
                             ss << "SKP ";
                             break;
@@ -236,8 +277,8 @@ namespace pdp8 {
                         ss << "OSR ";
                     if (opr & 02)
                         ss << "HLT ";
-                } else if ((m() & 0401) == 0401) {
-                    switch (m()) {
+                } else if ((m & 0401) == 0401) {
+                    switch (m) {
                         case 07403:
                             ss << "SCL ";
                             break;
@@ -286,11 +327,13 @@ namespace pdp8 {
                         case 07641:
                             ss << "SCA CLA ";
                             break;
+                        default:
+                            break;
                     }
                 }
                 break;
             default:
-                switch (m() & 07000) {
+                switch (m & 07000) {
                     case 00000:
                         ss << "AND ";
                         break;
@@ -309,26 +352,45 @@ namespace pdp8 {
                     case 05000:
                         ss << "JMP ";
                         break;
+                    default:
+                        break;
                 }
 
-                if (m() & 00400) {
+                bool ind = false, page0 = false;
+
+                if (m & 00400) {
                     ss << 'I';
+                    ind = true;
                 } else {
                     ss << ' ';
                 }
 
-                if (m() & 00200) {
+                if (m & 00200) {
                     ss << "  ";
                 } else {
                     ss << "Z ";
+                    page0 = true;
                 }
 
-                int a = m() & 0177;
+                size_t a = static_cast<size_t >(m & 0177);
+
                 unsigned long p = address & 07600;
-                if (m() & 00200) {
+                if (not page0) {
                     a |= p;
+                } else {
+                    a |= address & 07000;
                 }
-                ss << std::oct << setw(4) << setfill('0') << a;
+
+                memory_base_t arg = memory->at(a);
+                ss << oct << setw(4) << setfill('0') << a
+                   << setw(0) << " -> "
+                   << oct << setw(4) << setfill('0') << arg;
+
+                if (ind) {
+                    a = (dataField << 12) | arg;
+                    ss << " -> "
+                       << oct << setw(4) << setfill('0') << memory->at(a);
+                }
         }
 
         return ss.str();
