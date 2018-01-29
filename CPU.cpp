@@ -391,16 +391,16 @@ namespace pdp8
                         switch (pulse) {                            /* decode IR<9:11> */
 
                             case 1:                                     /* CDF */
-                                DF = (IR & 0070) << 9;
+                                DF = (IR & 0070) >> 3;
                                 break;
 
                             case 2:                                     /* CIF */
-                                IB = (IR & 0070) << 9;
+                                IF = (IR & 0070) >> 3;
                                 int_req = int_req & ~INT_NO_CIF_PENDING;
                                 break;
 
                             case 3:                                     /* CDF CIF */
-                                DF = IB = (IR & 0070) << 9;
+                                DF = IF = (IR & 0070) >> 3;
                                 int_req = int_req & ~INT_NO_CIF_PENDING;
                                 break;
 
@@ -412,11 +412,11 @@ namespace pdp8
                                         break;
 
                                     case 1:                                 /* RDF */
-                                        LAC = LAC() | (DF() >> 9);
+                                        LAC = LAC() | (DF());
                                         break;
 
                                     case 2:                                 /* RIF */
-                                        LAC = LAC() | (IF() >> 9);
+                                        LAC = LAC() | (IF());
                                         break;
 
                                     case 3:                                 /* RIB */
