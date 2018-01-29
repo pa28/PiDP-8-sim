@@ -56,12 +56,12 @@ namespace pdp8
         if (!headless) {
             consoleTerm = new VirtualPanel();
         }
-        pthread_mutex_init( &mutex, nullptr );
+        pthread_mutex_init( &accessMutex, nullptr );
     }
 
     Console::~Console()
     {
-        pthread_mutex_destroy( &mutex );
+        pthread_mutex_destroy( &accessMutex );
     }
 
     int Console::printf( const char * format, ... ) {
@@ -69,6 +69,7 @@ namespace pdp8
             return 0;
         }
 
+        Lock lock(accessMutex);
         int n = -1;
         try {
             va_list args;
@@ -87,6 +88,13 @@ namespace pdp8
 
     void Console::reset() {
 
+    }
+
+    void Console::update() {
+        if (consoleTerm) {
+            Lock lock(accessMutex);
+            consoleTerm->updatePanel();
+        }
     }
 
     std::shared_ptr<Console> Console::getConsole() {
@@ -135,6 +143,8 @@ namespace pdp8
 #else
             s = select( n, &rd_set, nullptr, nullptr, nullptr);
 #endif
+
+            Lock lock(accessMutex);
 
             if (s < 0) {
                 switch(errno) {

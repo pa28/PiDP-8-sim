@@ -51,6 +51,7 @@ namespace pdp8
         bool    getStopMode() const { return stopMode; }
         int     getStopCount() const { return stopCount; }
         void    oneSecond();
+        void    update();
 
         static std::shared_ptr<Console> getConsole();
 
@@ -67,7 +68,7 @@ namespace pdp8
 //        CPU     &cpu;
 
         VirtualPanel    *consoleTerm;
-        pthread_mutex_t     mutex;
+        pthread_mutex_t     accessMutex;
 
     };
 

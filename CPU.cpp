@@ -30,6 +30,7 @@
 #include "Chassis.h"
 
 #include "PDP8.h"
+#include "Console.h"
 
 using namespace hw_sim;
 
@@ -118,6 +119,7 @@ namespace pdp8
             if (cpuStepping == PanelCommand || reason != STOP_NO_REASON || cpuCondition == CPUStopped) {
                 if (cpuStepping == PanelCommand || reason > STOP_IDLE) {
                     cpuCondition = CPUStopped;
+                    Console::getConsole()->update();
                 }
 //                debug(1, "cpuStepping %d, reason %d, cpuCondition %d\n", cpuStepping, reason, cpuCondition);
                 throttleTimerReset = waitOnCondition();
