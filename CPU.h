@@ -158,8 +158,7 @@ namespace pdp8
         CPU();
         virtual ~CPU();
 
-        virtual void initialize()
-        {
+        virtual void initialize() {
             auto memory = Memory<MAXMEMSIZE,memory_base_t,12>::getMemory(DEV_MEM);
             if (memory != nullptr)
                 M.set(memory);
@@ -201,7 +200,8 @@ namespace pdp8
         ScalarRegister<int32_t, IntReqRegister_t> ION;
         ScalarRegister<register_base_t, AddressRegister_t> MA;
         ScalarRegister<register_base_t, FieldRegister_t> MA_F;
-        ScalarRegister<register_base_t, WordRegister_t > MA_W;
+        ScalarRegister<register_base_t, WordRegister_t> MA_W;
+        ScalarRegister<register_base_t, WordRegister_t> MB;
 
         void setMA(register_base_t field, register_base_t word) {
             MA_W = word;
@@ -210,10 +210,40 @@ namespace pdp8
 
         MemoryHelper<MAXMEMSIZE, uint16_t, 12>M;
 
+        memory_base_t readMemory() {
+            MB = M[MA];
+            return MB();
+        }
+
+        template <typename B, class RegType>
+        memory_base_t writeMemory(ScalarRegister<B,RegType> &r) {
+            MB = r();
+            M[MA] = r();
+            return r();
+        }
+
+        memory_base_t writeMemory(memory_base_t v) {
+            MB = v;
+            M[MA] = v;
+            return v;
+        }
+
+        memory_base_t writeMemory(size_t addr, memory_base_t v) {
+            MB = v;
+            MA = addr;
+            M[MA] = v;
+            return v;
+        }
+
+        memory_base_t incrementMemory() {
+            MB = ++M[MA];
+            return MB();
+        }
+
         static std::shared_ptr<CPU> getCPU();
 
     protected:
-        register_base_t rPC, rMQ, rIR, rIB, rOSR, rLAC, rDF, rIF, rSC, rMA;
+        register_base_t rPC, rMQ, rIR, rIB, rOSR, rLAC, rDF, rIF, rSC, rMA, rMB;
         CPUState	    cpuState;
         CPUCondition	cpuCondition;
         CPUStepping		cpuStepping;
