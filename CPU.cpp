@@ -67,9 +67,9 @@ namespace pdp8
     CPU::CPU() :
             Device("CPU", "Central Processing Unit"),
             M(),
-            rPC(0), rMQ(0), rIR(0), rIB(0), rOSR(0), rLAC(0), rDF(0), rIF(0), rSC(0), rMA(0),
+            rPC(0), rMQ(0), rIR(0), rIB(0), rOSR(0), rLAC(0), rDF(0), rIF(0), rSC(0), rMA(0), rMB(0),
             PC(rPC), MQ(rMQ), IR(rIR), IB(rIB), OSR(rOSR), LAC(rLAC), DF(rDF), IF(rIF), SC(rSC), AC(rLAC), L(rLAC),
-            ION(int_req), MA(rMA), MA_F(rMA), MA_W(rMA),
+            ION(int_req), MA(rMA), MA_F(rMA), MA_W(rMA), MB(rMB),
             cpuState(NoState),
             cpuCondition(CPUStopped),
             cpuStepping(NotStepping),
@@ -164,7 +164,7 @@ namespace pdp8
             int_req = int_req & ~INT_ION;                   /* interrupts off */
             SF = (UF << 6) | (IF() << 3) | (DF());          /* form save field */
             IF = IB = DF = UF = UB = 0;                     /* clear mem ext */
-            M[0] = PC;                                      /* save PC in 0 */
+            writeMemory(0, PC());                           /* save PC in 0 */
             PC = 1;                                         /* fetch next from 1 */
         }
 
@@ -172,7 +172,7 @@ namespace pdp8
 
         MA_W = PC;
         MA_F = IF;                // create memory address
-        IR = M[MA]();               // fetch instruction
+        IR = readMemory();        // fetch instruction
         ++PC;
 
         int_req = int_req | INT_NO_ION_PENDING;             /* clear ION delay */
@@ -196,9 +196,9 @@ namespace pdp8
             if ( IR & 0400 ) {      // indirect
                 cpuState = Defer;
                 if ((MA_W & 07770) != 00010) { // not autoincrement
-                    setMA(DF, M[MA]);
+                    setMA(DF, readMemory());
                 } else {
-                    setMA(DF, ++M[MA]);
+                    setMA(DF, incrementMemory());
                 }
 
                 // End of the Defer state
@@ -213,20 +213,20 @@ namespace pdp8
             switch ( IR & 07000 ) {
                 case 00000: // AND
                     cycleTime = 3000;
-                    AC = AC & M[MA];
+                    AC = AC & readMemory();
                     break;
                 case 01000: // TAD
                     cycleTime = 3000;
-                    LAC = (LAC + M[MA]);
+                    LAC = (LAC + readMemory());
                     break;
                 case 02000: // ISZ
                     cycleTime = 3000;
-                    if (++M[MA] == 0)
+                    if (incrementMemory() == 0)
                         ++PC;
                     break;
                 case 03000: // DCA
                     cycleTime = 3000;
-                    M[MA] = AC;
+                    writeMemory(AC);
                     AC = 0;
                     break;
                 case 04000: // JMS
@@ -252,7 +252,7 @@ namespace pdp8
                         UF = UB;                                    /* change UF */
                         int_req = int_req | INT_NO_CIF_PENDING;     /* clr intr inhibit */
                         MA_F = IF;
-                        M[MA] = PC;
+                        writeMemory(PC);
                         PC = MA_W;
                         ++PC;
                     }
@@ -279,7 +279,7 @@ namespace pdp8
                     if ( !(IR & 0400) ) {   // direct jump test for idle
                         if ( IF == IB ) {
                             if (MA_W == ((PC - 2) & 07777)) {       // JMP .-1
-                                int32_t no = M[MA];
+                                int32_t no = readMemory();
                                 if ( (no == OP_KSF) ||              // next instruction is KSF
                                      (no == OP_CLSC)                // next instruction is CLSC
                                         )  {
@@ -762,16 +762,16 @@ namespace pdp8
                                 MA_W = PC;
                                 MA_F = IF;
                                 if ((MA & 07770) != 00010) {             /* indirect; autoinc? */
-                                    MA_W = M[MA];
+                                    MA_W = readMemory();
                                     MA_F = DF;
                                 } else {
-                                    MA_W = M[MA] = M[MA] + 1;
+                                    MA_W = incrementMemory();
                                     MA_F = DF;
                                 } /* incr before use */
-                                MQ = MQ + M[MA];
+                                MQ = MQ + readMemory();
                                 ++MA_W;
                                 MA_F = DF;
-                                LAC = AC + M[MA] + (MQ >> 12);
+                                LAC = AC + readMemory() + (MQ >> 12);
                                 MQ = MQ & 07777;
                                 ++PC;
                                 break;
@@ -786,7 +786,7 @@ namespace pdp8
                             else {                                      /* mode A: SCL */
                                 MA_W = PC;
                                 MA_F = IF;
-                                SC = (~M[MA]()) & 037;
+                                SC = (~readMemory()) & 037;
                                 ++PC;
                             }
                             break;
@@ -796,16 +796,16 @@ namespace pdp8
                                 MA_W = PC;
                                 MA_F = IF;
                                 if ((MA & 07770) != 00010) {            /* indirect; autoinc? */
-                                    MA_W = M[MA];
+                                    MA_W = readMemory();
                                     MA_F = DF;
                                 } else {
-                                    MA_W = M[MA] = M[MA] + 1;
+                                    MA_W = incrementMemory();
                                     MA_F = DF;
                                 } /* incr before use */
-                                M[MA] = MQ;
+                                writeMemory(MQ);
                                 ++MA_W;
                                 MA_F = DF;
-                                M[MA] = AC;
+                                writeMemory(AC);
                                 ++PC;
                                 break;
                             }
@@ -816,14 +816,14 @@ namespace pdp8
                             MA_F = IF;
                             if (emode) {                                /* mode B: defer */
                                 if ((MA & 07770) != 00010) {            /* indirect; autoinc? */
-                                    MA_W = M[MA];
+                                    MA_W = readMemory();
                                     MA_F = DF;
                                 } else {
-                                    MA_W = M[MA] = M[MA] + 1;
+                                    MA_W = incrementMemory();
                                     MA_F = DF;
                                 } /* incr before use */
                             }
-                            temp = (MQ * M[MA]) + AC;
+                            temp = (MQ * readMemory()) + AC;
                             AC = (temp >> 12) & 07777;
                             MQ = temp & 07777;
                             ++PC;
@@ -840,22 +840,22 @@ namespace pdp8
                             MA_F = IF;
                             if (emode) {                                /* mode B: defer */
                                 if ((MA & 07770) != 00010) {            /* indirect; autoinc? */
-                                    MA_W = M[MA];
+                                    MA_W = readMemory();
                                     MA_F = DF;
                                 } else {
-                                    MA_W = M[MA] = M[MA] + 1;
+                                    MA_W = incrementMemory();
                                     MA_F = DF;
                                 } /* incr before use */
                             }
-                            if (AC >= M[MA]) {               /* overflow? */
-                                L = 1;                     /* set link */
+                            if (AC >= readMemory()) {                   /* overflow? */
+                                L = 1;                                  /* set link */
                                 MQ = ((MQ << 1) + 1) & 07777;           /* rotate MQ */
                                 SC = 0;                                 /* no shifts */
                             }
                             else {
                                 temp = (AC << 12) | MQ;
-                                MQ = temp / M[MA];
-                                LAC = temp % M[MA];
+                                MQ = temp / readMemory();
+                                LAC = temp % readMemory();
                                 SC = 015;                               /* 13 shifts */
                             }
                             ++PC;
@@ -892,7 +892,7 @@ namespace pdp8
                         case 5:                                         /* SHL */
                             MA_W = PC;
                             MA_F = IF;
-                            SC = (M[MA] & 037) + (emode ^ 1);      /* shift+1 if mode A */
+                            SC = (readMemory() & 037) + (emode ^ 1);      /* shift+1 if mode A */
                             if (SC > 25)                                /* >25? result = 0 */
                                 temp = 0;
                             else temp = ((LAC << 12) | MQ) << SC;       /* <=25? shift LAC:MQ */
@@ -914,7 +914,7 @@ namespace pdp8
                         case 6:                                         /* ASR */
                             MA_W = PC;
                             MA_F = IF;
-                            SC = (M[MA] & 037) + (emode ^ 1);      /* shift+1 if mode A */
+                            SC = (readMemory() & 037) + (emode ^ 1);      /* shift+1 if mode A */
                             temp = (AC << 12) | MQ;          /* sext from AC0 */
                             if (LAC & 04000)
                                 temp = temp | ~037777777;
@@ -941,7 +941,7 @@ namespace pdp8
                         case 7:                                         /* LSR */
                             MA_W = PC;
                             MA_F = IF;
-                            SC = (M[MA] & 037) + (emode ^ 1);      /* shift+1 if mode A */
+                            SC = (readMemory() & 037) + (emode ^ 1);      /* shift+1 if mode A */
                             temp = (AC << 12) | MQ;          /* clear link */
                             if (emode && (SC != 0))
                                 gtf = (temp >> (SC - 1)) & 1;

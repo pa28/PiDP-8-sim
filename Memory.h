@@ -159,7 +159,7 @@ namespace hw_sim {
     class Memory : public Device
     {
     public:
-        Memory() : Device("MEM", "Core Memory"), ma(), mb(), m() {}
+        Memory() : Device("MEM", "Core Memory"), m() {}
 
         virtual ~Memory() = default;
 
@@ -180,9 +180,8 @@ namespace hw_sim {
 
         MemoryCell<Base, Width> &at(size_t memoryAddress) {
             if (memoryAddress < size()) {
-                ma = begin() + memoryAddress;
-                mb = *ma;
-                return *ma;
+                auto addr = begin() + memoryAddress;
+                return *addr;
             }
             throw MemoryOutOfRange{};
         }
@@ -196,10 +195,6 @@ namespace hw_sim {
         MemoryCell<Base, Width> &at(ScalarRegister<B2,RT2> &ma) {
             return at(ma());
         }
-
-        MemoryCell<Base, Width> &MB() { return mb; }
-
-        auto MA() { return ma; }
 
         auto begin() { return m.begin(); }
 
@@ -233,9 +228,6 @@ namespace hw_sim {
         }
 
     protected:
-        typename std::array<MemoryCell<Base, Width>, Size>::iterator ma;
-        MemoryCell<Base, Width> mb;
-
         std::array<MemoryCell<Base, Width>, Size> m;
     };
 
