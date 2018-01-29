@@ -31,9 +31,10 @@ namespace hw_sim
 
         static 		Chassis * instance();
 
-        void    	stop(bool halt=true);
+        void    	stop(bool halt=false);
         void		timerHandler();
         void		reset();
+        void        initialize();
 
         void		setTimerFreq( bool f120 = true );
 

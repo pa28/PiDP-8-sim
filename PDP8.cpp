@@ -13,7 +13,7 @@
 using namespace hw_sim;
 using namespace pdp8;
 
-bool    daemonMode = true;
+bool    daemonMode = false;
 
 int32_t	DeepThought[] = {
         000000, 006133, 007000, 007200, 007404, 003071, 001071, 000177,
@@ -89,6 +89,8 @@ int main( int argc, char ** argv ) {
         close(STDERR_FILENO);
     }
 
+    //sleep(20);
+
     signal( SIGINT, sigintHandler );
     signal( SIGTERM, sigintHandler );
 
@@ -96,7 +98,18 @@ int main( int argc, char ** argv ) {
 
     (*chassis)[DEV_MEM] = std::make_shared<Memory<MAXMEMSIZE, uint16_t, 12>>();
     (*chassis)[DEV_CPU] = std::make_shared<CPU>();
-    (*chassis)[DEV_CONSOLE] = std::make_shared<Console>(true);
+    (*chassis)[DEV_CONSOLE] = std::make_shared<Console>(false);
+
+    auto mi = Memory<MAXMEMSIZE,memory_base_t,12>::getMemory(DEV_MEM)->begin();
+    for (auto d: DeepThought) {
+        *mi = d;
+        ++mi;
+    }
+
+    chassis->reset();
+    chassis->initialize();
+
+    Console::getConsole()->run();
 
     return 0;
 }

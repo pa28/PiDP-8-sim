@@ -109,6 +109,10 @@ namespace pdp8
         }
 
         uint32_t switchstatus[SWITCHSTATUS_COUNT] = { 0 };
+
+        if (consoleTerm)
+            consoleTerm->updatePanel(switchstatus);
+
         while (runConsole) {
             FD_ZERO(&rd_set);
             FD_ZERO(&wr_set);

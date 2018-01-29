@@ -76,12 +76,13 @@ namespace hw_sim
 
         // Initialize devices
 
+        setTimerFreq(true);
+    }
+
+    void Chassis::initialize() {
         for (auto device: *this) {
             device.second->initialize();
-            device.second->reset();
         }
-
-        setTimerFreq(true);
     }
 
     void Chassis::reset() {
@@ -123,7 +124,8 @@ namespace hw_sim
 
     void Chassis::timerHandler() {
         for (auto device: *this) {
-            device.second->tick(timerFreq ? 120 : 100);
+            if (device.second)
+                device.second->tick(timerFreq ? 120 : 100);
         }
     }
 

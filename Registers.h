@@ -72,6 +72,10 @@ namespace hw_sim
             return operator=(operator()()+1);
         };
 
+        ScalarRegister<Base,RegType> &operator--() {
+            return operator=(operator()()-1);
+        };
+
         Base operator & (int o) const {
             return operator()() & o;
         }

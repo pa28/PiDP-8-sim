@@ -30,6 +30,7 @@
 #include "PDP8.h"
 #include "Chassis.h"
 #include "VirtualPanel.h"
+#include "FileUtilities.h"
 #include "CPU.h"
 
 using namespace std;
@@ -55,22 +56,29 @@ namespace pdp8
         cpu = CPU::getCPU();
         M = Memory<MAXMEMSIZE, memory_base_t, 12>::getMemory(DEV_MEM);
 
-        vPanel=subwin(stdscr,4,80,0,0);
+        int maxy = 0, maxx = 0;
+        getmaxyx(stdscr, maxy, maxx);
+
+        vPanel = subwin(stdscr, 4, maxx, 0, 0);
+        console = subwin(stdscr, maxy - 5, maxx, 4, 0);
+        command = subwin(stdscr, 1, maxx, maxy-1, 0);
+
         scrollok(vPanel,true);
         keypad(vPanel,true);
         wbkgd(vPanel,COLOR_PAIR(1));
+        touchwin(stdscr);
         wrefresh(vPanel);
 
-        console = subwin(stdscr, 20, 80, 5, 0);
         scrollok(console,true);
         keypad(console,true);
         wbkgd(console, COLOR_PAIR(2));
+        touchwin(stdscr);
         wrefresh(console);
 
-        command = subwin(stdscr, 1, 80, 26, 0);
         keypad(command, true);
         wbkgd(command, COLOR_PAIR(3));
         updateCommandDisplay();
+        touchwin(stdscr);
         wrefresh(command);
 
         curs_set(0);
@@ -118,19 +126,24 @@ namespace pdp8
     }
 
     void VirtualPanel::updatePanel() {
+
+        uint16_t dF = cpu->DF;
+        uint16_t iF = cpu->IF;
+        uint16_t pc = cpu->PC;
+        uint16_t ma = cpu->MA_W;
+        uint16_t mb = M->MB();
+        uint16_t l = cpu->L;
+        uint16_t ac = cpu->AC;
+
+        std::string da = disassemble<memory_base_t,12>(M->MB(), cpu->MA());
+
         werase( vPanel );
         wmove( vPanel, 1, 5 );
-        wprintw( vPanel, " Sw Reg    Df If  PC    MA    MB   L  AC" );
+        wprintw( vPanel, " SReg    Df If   PC    MA    MB  L   AC  Disassembly" );
         wmove( vPanel, 2, 5 );
-        wprintw( vPanel, "%1o %1o %04o    %1o  %1o %04o  %04o  %04o  %1o %04o",
-                 ((switches[1] >> 9) & 07),
-                 ((switches[1] >> 6) & 07),
+        wprintw( vPanel, " %04o     %1o  %1o %04o  %04o  %04o  %1o %04o  %s",
                  switches[0] & 07777,
-                 cpu->DF,
-                 cpu->IF,
-                 cpu->PC, cpu->MA_W, M->MB(),
-                 cpu->L,
-                 cpu->AC
+                 cpu->DF(), cpu->IF(), cpu->PC(), cpu->MA_W(), M->MB()(), cpu->L(), cpu->AC(), da.c_str()
         );
         wrefresh( vPanel );
         setCursorLocation();
@@ -153,14 +166,17 @@ namespace pdp8
 #endif
             switch (ch) {
                 case KEY_F(1):  // Set and clear virtual panel mode
+                case KEY_PPAGE:
                     consoleMode = PanelMode;
                     wmove( vPanel, 2, 12);
                     break;
                 case KEY_F(2):  // Set and clear command mode
+                case KEY_NPAGE:
                     consoleMode = CommandMode;
-                    wmove( vPanel, 2, 12);
+                    wmove( command, 0, 2);
                     break;
                 case KEY_F(3):   // Set and clear command mode
+                    break;
                 case 'q':
                     wprintw(console, "quit\n");
                     refresh();
@@ -183,7 +199,7 @@ namespace pdp8
     void VirtualPanel::setCursorLocation() {
         if (consoleMode == PanelMode) {
             curs_set(1);
-            mvwprintw( vPanel, 2, 12, "");
+            mvwprintw( vPanel, 2, 9, "");
             wrefresh(vPanel);
         } else {
             curs_set(1);
@@ -197,7 +213,6 @@ namespace pdp8
     }
 
     void VirtualPanel::updateSwitchRegister(uint32_t o) {
-        switches[1] = ((switches[1] & 0700) << 3) | ((switches[0] & 07000) >> 3);
         switches[0] = ((switches[0] << 3) & 07770) | (o & 07);
         updatePanel();
     }
@@ -216,8 +231,12 @@ namespace pdp8
                     break;
                 case '*':	// Address Load
                     cpu->PC = switches[0];
-                    cpu->DF = (switches[1] >> 9) & 07;
-                    cpu->IF = (switches[1] >> 6) & 07;
+                    switches[0] = switches[1] = 0;
+                    updatePanel();
+                    break;
+                case '/':   // IF/DF Load
+                    cpu->DF = (switches[0] >> 6) & 07;
+                    cpu->IF = (switches[0] >> 3) & 07;
                     switches[0] = switches[1] = 0;
                     updatePanel();
                     break;
@@ -233,6 +252,14 @@ namespace pdp8
                     cpu->setMA(cpu->IF, cpu->PC);
                     t = cpu->M[cpu->MA];
                     ++(cpu->PC);
+                    cpu->setState(ExamineState);
+                    switches[0] = switches[1] = 0;
+                    updatePanel();
+                    break;
+                case '-':   // Examing back
+                    --(cpu->PC);
+                    cpu->setMA(cpu->IF, cpu->PC);
+                    t = cpu->M[cpu->MA];
                     cpu->setState(ExamineState);
                     switches[0] = switches[1] = 0;
                     updatePanel();

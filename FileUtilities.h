@@ -136,11 +136,12 @@ namespace pdp8 {
                     default:
                         ss << "IOT "
                            << std::oct
-                           << setw(6)
+                           << setw(2)
                            << setfill('0')
                            << ((m() & 0770) >> 3)
-                           << setw(1)
-                           << (m() & 03);
+                           << setw(2)
+                           << setfill(' ')
+                           << (m() & 07);
                 }
                 break;
             case 07000:
@@ -202,7 +203,7 @@ namespace pdp8 {
                         }
                         if (opr & 002) ss << "BSW ";
                     }
-                } else if (m() & 0401 == 0400) {
+                } else if ((m() & 0401) == 0400) {
                     int opr = m() & 0376;
                     switch (opr & 0130) {
                         case 010:
@@ -237,17 +238,53 @@ namespace pdp8 {
                         ss << "HLT ";
                 } else if ((m() & 0401) == 0401) {
                     switch (m()) {
-                        case 07621:
-                            ss << "CAM ";
+                        case 07403:
+                            ss << "SCL ";
+                            break;
+                        case 07405:
+                            ss << "MUY ";
+                            break;
+                        case 07431:
+                            ss << "SWAB ";
+                            break;
+                        case 07407:
+                            ss << "DVI ";
+                            break;
+                        case 07411:
+                            ss << "NMI ";
+                            break;
+                        case 07413:
+                            ss << "SHL ";
+                            break;
+                        case 07415:
+                            ss << "ASR ";
+                            break;
+                        case 07417:
+                            ss << "LSR ";
+                            break;
+                        case 07441:
+                            ss << "SCA ";
+                            break;
+                        case 07447:
+                            ss << "SWBA ";
+                            break;
+                        case 07451:
+                            ss << "DPSZ ";
+                            break;
+                        case 07421:
+                            ss << "MQL ";
                             break;
                         case 07501:
                             ss << "MQA ";
                             break;
-                        case 07241:
-                            ss << "MQL ";
-                            break;
                         case 07521:
                             ss << "SWP ";
+                            break;
+                        case 07621:
+                            ss << "CAM ";
+                            break;
+                        case 07641:
+                            ss << "SCA CLA ";
                             break;
                     }
                 }
@@ -275,9 +312,15 @@ namespace pdp8 {
                 }
 
                 if (m() & 00400) {
-                    ss << "I ";
+                    ss << 'I';
                 } else {
+                    ss << ' ';
+                }
+
+                if (m() & 00200) {
                     ss << "  ";
+                } else {
+                    ss << "Z ";
                 }
 
                 int a = m() & 0177;
