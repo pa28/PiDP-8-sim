@@ -21,6 +21,7 @@ namespace pdp8
     enum ConsoleMode {
         PanelMode,
         CommandMode,
+        RunMode,
     };
 
     class VirtualPanel: public Terminal
@@ -40,6 +41,7 @@ namespace pdp8
         int printw( const char *foramt, ... );
 
         void updatePanel(uint32_t sx[3]);
+        void updatePanel();
 
     protected:
         WINDOW      *vPanel, *console, *command;
@@ -53,10 +55,10 @@ namespace pdp8
         std::string     cmdBuffer;
         size_t	      	cmdCurLoc;
 
-        void updatePanel();
         void updateSwitchRegister(uint32_t o);
         void processPanelMode(int);
         void processCommandMode(int);
+        void processRunMode(int);
         void updateCommandDisplay();
         void setCursorLocation();
     };

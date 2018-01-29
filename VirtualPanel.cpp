@@ -131,19 +131,40 @@ namespace pdp8
         uint16_t iF = cpu->IF;
         uint16_t pc = cpu->PC;
         uint16_t ma = cpu->MA_W;
-        uint16_t mb = M->MB();
+        uint16_t mb = cpu->MB;
         uint16_t l = cpu->L;
         uint16_t ac = cpu->AC;
 
-        std::string da = disassemble<memory_base_t,12>(M->MB(), cpu->MA());
+        std::string da;
+
+        int maxy = 0, maxx = 0;
+        getmaxyx(vPanel, maxy, maxx);
 
         werase( vPanel );
+        wmove( vPanel, 0, maxx - 6 );
+        switch (consoleMode) {
+            size_t addr;
+            case ConsoleMode::RunMode:
+                addr = (cpu->IF() << 12) | cpu->PC();
+                da = disassemble<MAXMEMSIZE,memory_base_t,WORD_SIZE>(M, addr, cpu->DF(), cpu->IF());
+                wprintw( vPanel, "RUN");
+                break;
+            case ConsoleMode::CommandMode:
+                da = disassemble<MAXMEMSIZE,memory_base_t,WORD_SIZE>(M, cpu->MA(), cpu->DF(), cpu->IF());
+                wprintw( vPanel, "CMD");
+                break;
+            case ConsoleMode ::PanelMode:
+                da = disassemble<MAXMEMSIZE,memory_base_t,WORD_SIZE>(M, cpu->MA(), cpu->DF(), cpu->IF());
+                wprintw( vPanel, "PNL");
+                break;
+        }
+
         wmove( vPanel, 1, 5 );
         wprintw( vPanel, " SReg    Df If   PC    MA    MB  L   AC  Disassembly" );
         wmove( vPanel, 2, 5 );
         wprintw( vPanel, " %04o     %1o  %1o %04o  %04o  %04o  %1o %04o  %s",
                  switches[0] & 07777,
-                 cpu->DF(), cpu->IF(), cpu->PC(), cpu->MA_W(), M->MB()(), cpu->L(), cpu->AC(), da.c_str()
+                 cpu->DF(), cpu->IF(), cpu->PC(), cpu->MA_W(), cpu->MB(), cpu->L(), cpu->AC(), da.c_str()
         );
         wrefresh( vPanel );
         setCursorLocation();
@@ -165,15 +186,20 @@ namespace pdp8
             wrefresh(console);
 #endif
             switch (ch) {
+                case KEY_F(12):
+                case KEY_HOME:
+                    consoleMode = RunMode;
+                    updatePanel();
+                    break;
                 case KEY_F(1):  // Set and clear virtual panel mode
                 case KEY_PPAGE:
                     consoleMode = PanelMode;
-                    wmove( vPanel, 2, 12);
+                    updatePanel();
                     break;
                 case KEY_F(2):  // Set and clear command mode
                 case KEY_NPAGE:
                     consoleMode = CommandMode;
-                    wmove( command, 0, 2);
+                    updatePanel();
                     break;
                 case KEY_F(3):   // Set and clear command mode
                     break;
@@ -190,6 +216,9 @@ namespace pdp8
                         case CommandMode:
                             processCommandMode(ch);
                             break;
+                        case RunMode:
+                            processRunMode(ch);
+                            break;
                     }
             }
         }
@@ -197,24 +226,52 @@ namespace pdp8
     }
 
     void VirtualPanel::setCursorLocation() {
-        if (consoleMode == PanelMode) {
-            curs_set(1);
-            mvwprintw( vPanel, 2, 9, "");
-            wrefresh(vPanel);
-        } else {
-            curs_set(1);
-            if (cmdCurLoc == string::npos) {
-                mvwprintw( command, 0, cmdBuffer.size() + 2, "");
-            } else {
-                mvwprintw( command, 0, cmdCurLoc + 2, "");
-            }
-            wrefresh( command );
+        switch (consoleMode) {
+            case PanelMode:
+                curs_set(1);
+                wmove(vPanel, 2, 9);
+                wrefresh(vPanel);
+                break;
+            case CommandMode:
+                if (cmdCurLoc == string::npos) {
+                    wmove( command, 0, cmdBuffer.size() + 2);
+                } else {
+                    wmove( command, 0, cmdCurLoc + 2);
+                }
+                curs_set(1);
+                wrefresh( command );
+                break;
+            case RunMode:
+                curs_set(0);
+                break;
         }
     }
 
     void VirtualPanel::updateSwitchRegister(uint32_t o) {
         switches[0] = ((switches[0] << 3) & 07770) | (o & 07);
         updatePanel();
+    }
+
+    void VirtualPanel::processRunMode(int ch) {
+        size_t addr;
+        std::string da;
+
+        switch (ch) {
+            case '+':
+                addr = (cpu->IF() << 12) | cpu->PC();
+                da = disassemble<MAXMEMSIZE,memory_base_t,WORD_SIZE>(M, addr, cpu->DF(), cpu->IF());
+                printw(". %05o  L: %1o  AC: %04o  MA: %05o  MB: %04o  %s\n",
+                       addr, cpu->L(), cpu->AC(), cpu->MA(), cpu->MB(),
+                       da.c_str());
+
+                cpu->setStepping(CPUStepping::PanelCommand);
+                cpu->setCondition(CPURunning);
+                cpu->cpuContinue();
+                updatePanel();
+                break;
+            default:
+                break;
+        }
     }
 
     void VirtualPanel::processPanelMode(int ch) {
@@ -263,6 +320,8 @@ namespace pdp8
                     cpu->setState(ExamineState);
                     switches[0] = switches[1] = 0;
                     updatePanel();
+                    break;
+                default:
                     break;
             }
         }
