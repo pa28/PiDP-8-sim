@@ -32,10 +32,10 @@ int32_t	DeepThought[] = {
         000000, 000000, 000000, 000000, 000000, 000000, 000000, 000000,
         000000, 000000, 000000, 000000, 000000, 000000, 000000, 000000,
         000000, 000000, 000000, 000000, 000010, 000070, 000007, 000077,
-        007200, 003236, 001234, 003204, 006211, 007200, 001236, 000377,
+        007200, 003236, 001234, 003234, 006211, 007200, 001236, 000377,
         001233, 003636, 002236, 005206, 001204, 001376, 003204, 001204,
         000232, 007440, 005204, 006201, 007200, 006135, 001235, 006134,
-        006131, 005001, 000070, 005200, 006211, 000006, 000000, 000000,
+        006131, 005001, 000070, 005200, 000211, 000006, 000000, 000000,
         000000, 000000, 000000, 000000, 000000, 000000, 000000, 000000,
         000000, 000000, 000000, 000000, 000000, 000000, 000000, 000000,
         000000, 000000, 000000, 000000, 000000, 000000, 000000, 000000,
@@ -89,7 +89,7 @@ int main( int argc, char ** argv ) {
         close(STDERR_FILENO);
     }
 
-    //sleep(20);
+    getchar(); // Allow time to attach the debugger if needed.
 
     signal( SIGINT, sigintHandler );
     signal( SIGTERM, sigintHandler );
@@ -100,14 +100,14 @@ int main( int argc, char ** argv ) {
     (*chassis)[DEV_CPU] = std::make_shared<CPU>();
     (*chassis)[DEV_CONSOLE] = std::make_shared<Console>(false);
 
+    chassis->reset();
+    chassis->initialize();
+
     auto mi = Memory<MAXMEMSIZE,memory_base_t,12>::getMemory(DEV_MEM)->begin();
     for (auto d: DeepThought) {
         *mi = d;
         ++mi;
     }
-
-    chassis->reset();
-    chassis->initialize();
 
     Console::getConsole()->run();
 

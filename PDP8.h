@@ -22,7 +22,7 @@
 #define LOG(...) syslog(LOG_INFO,  __VA_ARGS__)
 
 #else
-#define debug(l,...) do{if(l<DEBUG_LEVEL) Console::instance()->printf(__VA_ARGS__);} while(false)
+#define debug(l,...) do{if(l<DEBUG_LEVEL) Console::getConsole()->printf(__VA_ARGS__);} while(false)
 #define ERROR(...)
 #define LOG(...)
 #endif
@@ -61,6 +61,7 @@ namespace pdp8 {
     using register_base_t = uint16_t;
     using memory_base_t = uint16_t;
 
+    constexpr register_base_t WORD_SIZE = 12;
 }
 
 
