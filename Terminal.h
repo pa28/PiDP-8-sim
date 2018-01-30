@@ -26,6 +26,9 @@ namespace pdp8
         virtual int fdOfInput() { return fileno(stdin); }
         virtual int fdOfOutput() { return fileno(stdout); }
 
+        void start();
+        void stop();
+
     protected:
         WINDOW	* mainwin;
 

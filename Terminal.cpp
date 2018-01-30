@@ -30,8 +30,15 @@
 namespace pdp8
 {
 
-    Terminal::Terminal()
-    {
+    Terminal::Terminal() {
+        start();
+    }
+
+    Terminal::~Terminal() {
+        stop();
+    }
+
+    void Terminal::start() {
         mainwin = initscr();
         noecho();
         //raw();
@@ -44,8 +51,7 @@ namespace pdp8
         init_pair(3,COLOR_BLUE,COLOR_WHITE);
     }
 
-    Terminal::~Terminal()
-    {
+    void Terminal::stop() {
         endwin();			/* End curses mode		  */
     }
 

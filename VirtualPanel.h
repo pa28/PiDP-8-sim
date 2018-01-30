@@ -34,7 +34,9 @@ namespace pdp8
         VirtualPanel();
         virtual ~VirtualPanel();
 
-        virtual void processStdin();
+        void processStdin();
+        void processWinch(int);
+
 
         int vconf(const char * format, va_list args);
         int panelf( int y, int x, const char * format, ... );
@@ -53,7 +55,8 @@ namespace pdp8
         uint32_t	switches[3];
 
         std::string     cmdBuffer;
-        size_t	      	cmdCurLoc;
+        size_t          cmdCurLoc;
+        int             maxx, maxy;
 
         void updateSwitchRegister(uint32_t o);
         void processPanelMode(int);
@@ -61,6 +64,7 @@ namespace pdp8
         void processRunMode(int);
         void updateCommandDisplay();
         void setCursorLocation();
+        void handleResize();
     };
 
 } /* namespace pdp8 */

@@ -28,6 +28,7 @@
 
 #include <cstdio>
 #include <cstdarg>
+#include <cstring>
 #include <unistd.h>
 #include <ncurses.h>
 #include <sys/time.h>
@@ -42,10 +43,18 @@ using namespace hw_sim;
 
 namespace pdp8
 {
+    int pipefd[2];
+    wchar_t winchBuf[] { KEY_RESIZE };
+
+    void winchHandler(int) {
+        write( pipefd[1], winchBuf, sizeof(wchar_t));
+    }
+
     Console::Console(bool headless) :
             Device("CONS", "Console"),
             runConsole(false),
             stopMode(false),
+            winchPipe(false),
             switchPipe(-1),
             stopCount(0),
             tickCount(0),
@@ -55,6 +64,18 @@ namespace pdp8
             consoleTerm = new VirtualPanel();
         }
         pthread_mutex_init( &accessMutex, nullptr );
+
+        if (pipe(pipefd))
+            throw std::runtime_error("Pipe error.");
+        else {
+            struct sigaction sa{};
+
+            std::memset( &sa, 0, sizeof(sa));
+            sa.sa_handler = &winchHandler;
+            sigaction( SIGWINCH, &sa, nullptr);
+
+            winchPipe = true;
+        }
     }
 
     Console::~Console()
@@ -134,6 +155,11 @@ namespace pdp8
                 n = max(n,switchPipe + 1);
             }
 
+            if (winchPipe) {
+                FD_SET(pipefd[0], &rd_set);
+                n = max(n,pipefd[0] + 1);
+            }
+
             int s;
 
 #ifdef HAS_PSELECT
@@ -163,7 +189,15 @@ namespace pdp8
                     if (FD_ISSET(consoleTerm->fdOfInput(), &rd_set)) {
                         consoleTerm->processStdin();
                     }
-                } else if (FD_ISSET(switchPipe, &rd_set)) {
+                }
+
+                if (winchPipe) {
+                    if (FD_ISSET(pipefd[0], &rd_set)) {
+                        consoleTerm->processWinch(pipefd[0]);
+                    }
+                }
+
+                if (FD_ISSET(switchPipe, &rd_set)) {
                     // Panel
                     uint32_t switchReport[2];
 

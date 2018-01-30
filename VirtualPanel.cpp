@@ -27,6 +27,7 @@
 
 #include <ncurses.h>
 #include <cctype>
+#include <unistd.h>
 #include "PDP8.h"
 #include "Chassis.h"
 #include "VirtualPanel.h"
@@ -56,7 +57,6 @@ namespace pdp8
         cpu = CPU::getCPU();
         M = Memory<MAXMEMSIZE, memory_base_t, 12>::getMemory(DEV_MEM);
 
-        int maxy = 0, maxx = 0;
         getmaxyx(stdscr, maxy, maxx);
 
         vPanel = subwin(stdscr, 4, maxx, 0, 0);
@@ -88,6 +88,41 @@ namespace pdp8
     {
         delwin(console);
         delwin(vPanel);
+    }
+
+    void VirtualPanel::handleResize() {
+        wclear(stdscr);
+        wrefresh(stdscr);
+
+        stop();
+        start();
+        getmaxyx(stdscr, maxy, maxx);
+
+        vPanel = subwin(stdscr, 4, maxx, 0, 0);
+        console = subwin(stdscr, maxy - 5, maxx, 4, 0);
+        command = subwin(stdscr, 1, maxx, maxy - 1, 0);
+
+        scrollok(vPanel,true);
+        keypad(vPanel,true);
+        wbkgd(vPanel,COLOR_PAIR(1));
+        touchwin(stdscr);
+        wrefresh(vPanel);
+
+        scrollok(console,true);
+        keypad(console,true);
+        wbkgd(console, COLOR_PAIR(2));
+        touchwin(stdscr);
+        wrefresh(console);
+
+        keypad(command, true);
+        wbkgd(command, COLOR_PAIR(3));
+        updateCommandDisplay();
+        touchwin(stdscr);
+        wrefresh(command);
+
+        curs_set(0);
+
+        updatePanel();
     }
 
     int VirtualPanel::vconf( const char *format, va_list list ) {
@@ -168,6 +203,15 @@ namespace pdp8
         );
         wrefresh( vPanel );
         setCursorLocation();
+    }
+
+    void VirtualPanel::processWinch(int fd) {
+        ssize_t n;
+        wchar_t c[1];
+        while (( n = read( fd, &c, sizeof(wchar_t))) > 0) {
+            if ( c[0] == KEY_RESIZE)
+                handleResize();
+        }
     }
 
     void VirtualPanel::processStdin() {

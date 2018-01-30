@@ -56,8 +56,9 @@ namespace pdp8
     protected:
         bool	runConsole;
         bool    stopMode;
+        bool    winchPipe;
 
-        int	    switchPipe;
+        int     switchPipe;
         int     stopCount;
         int     tickCount;
 
