@@ -40,6 +40,7 @@
 
 using namespace std;
 using namespace hw_sim;
+using namespace util;
 
 namespace pdp8
 {

@@ -1,12 +1,25 @@
 #include <iostream>
+#include <iterator>
 
-#include "VirtualPanel.h"
+#include "ConsoleAPI.h"
 
+using namespace util;
 using namespace pdp8;
-
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
 
-    VirtualPanel *vp = new VirtualPanel();
+    MyServer  server{};
+
+    try {
+        server.open();
+        server.start();
+
+        server.loop = true;
+        while (server.loop)
+            sleep(1);
+
+    } catch (ServerException &se) {
+        std::cerr << se.what() << std::endl;
+    }
 }
