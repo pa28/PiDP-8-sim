@@ -48,7 +48,7 @@ namespace util
     void Lock::construct() {
         int s = pthread_mutex_lock( mutex );
         if (s) {
-            std::stringstream ss;
+            std::stringstream ss{};
             ss << "Lock failed "
                << strerror(errno);
             throw LockException(ss.str());
@@ -57,9 +57,6 @@ namespace util
 
     Lock::~Lock() {
         int s = pthread_mutex_unlock( mutex );
-        if (s) {
-            ERROR("Mutex unlock error %s", strerror(errno));
-        }
     }
 
     Thread::Thread() :
@@ -95,37 +92,25 @@ namespace util
         int rc = 0;
         bool r = false;
 
-        try {
-            Lock	waitLock(mutex);
-            if (!test)
-                while (!test && rc == 0) {
-                    rc = pthread_cond_wait( &condition, &mutex );
-                }
-            r = test = true;
-        } catch (LockException &le) {
-            auto console = Console::getConsole();
-            if (console != nullptr)
-                console->printf(le.what());
-        }
+        Lock	waitLock(mutex);
+        if (!test)
+            while (!test && rc == 0) {
+                rc = pthread_cond_wait( &condition, &mutex );
+            }
+        r = test = true;
 
         return r;
     }
 
     void ConditionWait::releaseOnCondition(bool all) {
-        try {
-            Lock	waitLock(mutex);
-            if (!test) {
-                if (all) {
-                    pthread_cond_broadcast( &condition );
-                } else {
-                    pthread_cond_signal( &condition );
-                }
-                test = true;
+        Lock	waitLock(mutex);
+        if (!test) {
+            if (all) {
+                pthread_cond_broadcast( &condition );
+            } else {
+                pthread_cond_signal( &condition );
             }
-        } catch (LockException &le) {
-            auto console = Console::getConsole();
-            if (console != nullptr)
-                console->printf(le.what());
+            test = true;
         }
     }
 

@@ -40,6 +40,8 @@ namespace util
     class Lock
     {
     public:
+        Lock() = delete;
+
         explicit Lock( pthread_mutex_t * mutex );
 
         explicit Lock( pthread_mutex_t & mutex );
@@ -51,12 +53,17 @@ namespace util
         virtual ~Lock() noexcept;
 
     private:
-        Lock();
 
         pthread_mutex_t * mutex;
         void construct();
     };
 
+    /**
+     * The Thread class implements a Posix thread. When start() is
+     * called it will execute the run() function on the thread. The
+     * stop() function should be implemented to cause the run() function
+     * to exit which will terminate and destroy the thread.
+     */
     class Thread
     {
     public:
@@ -94,6 +101,6 @@ namespace util
 
     };
 
-} /* namespace pdp8 */
+} /* namespace util */
 
 #endif //PIDP_THREAD_H
