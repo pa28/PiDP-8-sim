@@ -15,11 +15,7 @@
 #include <sys/time.h>
 
 #include "Device.h"
-//#include "CPU.h"
-//#include "Memory.h"
-//#include "Console.h"
-//#include "Panel.h"
-//#include "DK8EA.h"
+#include "SignalHandler.h"
 
 namespace hw_sim
 {
@@ -39,9 +35,10 @@ namespace hw_sim
         void		setTimerFreq( bool f120 = true );
 
     protected:
-        static		Chassis * _instance;
+        static      Chassis * _instance;
         int         timeoutCounter;
         bool        timerFreq;
+        util::SignalHandler<SIGALRM> sigalrm;
     };
 
 } /* namespace hw_sim */

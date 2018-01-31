@@ -36,18 +36,23 @@
 
 #include "Chassis.h"
 
-void timerHandler(int) {
-    hw_sim::Chassis::instance()->timerHandler();
-}
+//void timerHandler(int) {
+//    hw_sim::Chassis::instance()->timerHandler();
+//}
 
 namespace hw_sim
 {
 
     Chassis * Chassis::_instance = nullptr;
 
+    void chassisTimeHandler(int) {
+        Chassis::instance()->timerHandler();
+    }
+
     Chassis::Chassis() :
             timeoutCounter(0),
-            timerFreq(false)
+            timerFreq(false),
+            sigalrm(chassisTimeHandler)
     {
         int sxfd[2];
 
@@ -56,11 +61,13 @@ namespace hw_sim
             exit(1);
         }
 
-        struct sigaction sa{};
 
-        memset( &sa, 0, sizeof(sa));
-        sa.sa_handler = &::timerHandler;
-        sigaction( SIGALRM, &sa, nullptr);
+
+//        struct sigaction sa{};
+//
+//        memset( &sa, 0, sizeof(sa));
+//        sa.sa_handler = &::timerHandler;
+//        sigaction( SIGALRM, &sa, nullptr);
 
         // Create and assign devices.
 

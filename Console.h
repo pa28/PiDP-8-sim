@@ -15,6 +15,7 @@
 #include "Memory.h"
 #include "Thread.h"
 #include "VirtualPanel.h"
+#include "SignalHandler.h"
 
 namespace pdp8
 {
@@ -67,6 +68,8 @@ namespace pdp8
 
         VirtualPanel    *consoleTerm;
         pthread_mutex_t     accessMutex;
+
+        util::SignalHandler<SIGWINCH>   sigwinch;
 
     };
 

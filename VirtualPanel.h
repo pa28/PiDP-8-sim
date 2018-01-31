@@ -44,6 +44,7 @@ namespace pdp8
 
         void updatePanel(uint32_t sx[3]);
         void updatePanel();
+        void handleResize();
 
     protected:
         WINDOW      *vPanel, *console, *command;
@@ -64,7 +65,6 @@ namespace pdp8
         void processRunMode(int);
         void updateCommandDisplay();
         void setCursorLocation();
-        void handleResize();
     };
 
 } /* namespace pdp8 */
