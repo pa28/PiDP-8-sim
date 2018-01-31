@@ -15,7 +15,7 @@
 #include <exception>
 #include <stdexcept>
 
-namespace pdp8
+namespace util
 {
     class LockException : public std::runtime_error {
     public:

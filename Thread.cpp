@@ -27,13 +27,9 @@
 
 #include <sstream>
 #include <cstring>
-#include <cerrno>
 #include "Thread.h"
 
-#include "PDP8.h"
-#include "Console.h"
-
-namespace pdp8
+namespace util
 {
     void * _threadStart(void *t) {
         auto *thread = (Thread*)t;
@@ -133,4 +129,4 @@ namespace pdp8
         }
     }
 
-} /* namespace pdp8 */
+} /* namespace util */
