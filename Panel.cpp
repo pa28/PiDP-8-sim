@@ -306,7 +306,7 @@ namespace pdp8
 
             for (i=0; i < SWITCHSTATUS_COUNT; ++i)
             {
-                INP_GPIO(rows[i]);//            GPIO_CLR = 1 << rows[i];    // and output 0V to overrule built-in pull-up from column input pin
+                INP_GPIO(rows[i]);          // GPIO_CLR = 1 << rows[i];    // and output 0V to overrule built-in pull-up from column input pin
                 OUT_GPIO(rows[i]);          // turn on one switch row
                 GPIO_CLR = 1 << rows[i];    // and output 0V to overrule built-in pull-up from column input pin
 
@@ -386,7 +386,7 @@ namespace pdp8
                 break;
             case Execute:
                 ledstatus[5] |= (1 << (11 - ((cpu.getIR() & 07000) >> 9)));
-                ledstatus[5] |= (1 << 2); // fetch
+                ledstatus[5] |= (1 << 2); // execute
                 break;
             case Defer:
                 ledstatus[5] |= (1 << (11 - ((cpu.getIR() & 07000) >> 9)));
