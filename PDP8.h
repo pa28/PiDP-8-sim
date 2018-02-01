@@ -58,6 +58,9 @@ namespace pdp8 {
     constexpr int32_t DEV_DTA =       076;                            /* TC08 */
     constexpr int32_t DEV_TD8E =      077;                            /* TD8E */
 
+    constexpr int32_t LEDSTATUS_COUNT = 8;
+    constexpr int32_t SWITCHSTATUS_COUNT = 3;
+
     using register_base_t = uint16_t;
     using memory_base_t = uint16_t;
 

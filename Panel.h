@@ -9,6 +9,7 @@
 #define PIDP_PANNEL_H
 
 
+#include "PDP8.h"
 #include "Device.h"
 #include "Thread.h"
 #include "CPU.h"
@@ -28,9 +29,6 @@
 //#define GPIO_BASE               (BCM2708_PERI_BASE + 0x200000)    // GPIO controller
 
 #define BLOCK_SIZE      (4*1024)
-
-#define LEDSTATUS_COUNT 8
-#define SWITCHSTATUS_COUNT 3
 
 // IO Acces
 struct bcm2835_peripheral {
