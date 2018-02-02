@@ -15,18 +15,11 @@ using namespace util;
 
 namespace pdp8
 {
-    enum DataTypes : u_int8_t
-    {
-        DT_LED_Status = 1,      // LED status - from Chassis
-        DT_SX_Status,           // Switch status - to Chassis
-    };
-
-    using LEDStatus_t = std::array<register_base_t,LEDSTATUS_COUNT>;
-    using SXStatus_t = std::array<register_base_t,SWITCHSTATUS_COUNT>;
-
     template <typename T>
     T hton(T v) {
-        if constexpr(std::is_same<T, uint16_t>::value) {
+        if constexpr(std::is_same<T, char>::value) {
+            return v;
+        } if constexpr(std::is_same<T, uint16_t>::value) {
             return htons(v);
         } else if constexpr (std::is_same<T, uint32_t>::value) {
             return htonl(v);
@@ -37,7 +30,9 @@ namespace pdp8
 
     template <typename T>
     T ntoh(T v) {
-        if constexpr(std::is_same<T, uint16_t>::value) {
+        if constexpr(std::is_same<T, char>::value) {
+            return v;
+        } else if constexpr(std::is_same<T, uint16_t>::value) {
             return ntohs(v);
         } else if constexpr (std::is_same<T, uint32_t>::value) {
             return ntohl(v);
@@ -63,24 +58,90 @@ namespace pdp8
     }
 
 
+    enum DataTypes : u_int8_t
+    {
+        DT_STX = 2,             // Start of text
+        DT_ETX = 3,             // End of text
+        DT_SO = 14,             // Shift Out
+        DT_SI = 15,             // Shift In
+        DT_SYN = 22,            // Sychronous idle
+        DT_String,
+        DT_LED_Status,          // LED status - from Chassis
+        DT_SX_Status,           // Switch status - to Chassis
+    };
+
+    using LEDStatus_t = std::array<register_base_t,LEDSTATUS_COUNT>;
+    using SXStatus_t = std::array<register_base_t,SWITCHSTATUS_COUNT>;
+
+
     template <class CharT, class Traits = std::char_traits<CharT>>
     class ApiConnection : public Connection<CharT,Traits>, Thread
     {
     public:
+        ApiConnection(int fd) :
+                Connection<CharT,Traits>{fd},
+                strmbuf{fd},
+                istrm{&strmbuf},
+                ostrm{&strmbuf},
+                ss{},
+                loop{true}
+        {
+            start();
+        }
+
         ApiConnection(int fd, struct sockaddr_in &addr, socklen_t &len) :
                 Connection<CharT,Traits>(fd, addr, len),
                 strmbuf{fd},
+                istrm{&strmbuf},
+                ostrm{&strmbuf},
+                ss{},
                 loop{true}
         {
             start();
         }
 
         void * run() override {
-            std::istream is{&strmbuf};
-            while (not is.eof() && loop) {
+            bool idle = true;
+            bool error = false;
+            bool ready = false;
+
+            while (not istrm.eof()) {
                 char c;
-                while (is.get(c)) {
-                    std::cout << c;
+                while (istrm.get(c)) {
+                    if (idle) {
+                        switch (c) {
+                            case DT_STX:
+                                idle = false;
+                                ss.clear();
+                                break;
+                            case DT_SYN:
+                                break;
+                            default:
+                                break;          // Technically a protocol error.
+                        }
+                    } else {
+                        switch (c) {
+                            case DT_SO:
+                            case DT_SI:
+                                istrm.get(c);
+                                ss.put(c);
+                                break;
+                            case DT_STX:
+                            case DT_SYN:
+                                error = true;
+                            case DT_ETX:
+                                idle = true;
+                                ready = true;
+                                break;
+                            default:
+                                ss.put(c);
+                        }
+                    }
+                    if (ready && not error) {
+                        ready = false;
+                        std::cout << "Received packet " << ss.str().length() << " bytes." << std::endl;
+                        // process ss
+                    }
                 }
             }
 
@@ -91,8 +152,59 @@ namespace pdp8
             loop = false;
         }
 
+        void sendLeader() {
+            ostrm.put(DT_SYN);
+            ostrm.put(DT_STX);
+        }
+
+        void sendTrailer() {
+            ostrm.put(DT_ETX);
+            ostrm.put(DT_SYN);
+        }
+
+        template <typename T>
+        void sendData(T d) {
+            for (size_t i = 0; i < sizeof(d); ++i) {
+                sendChar(static_cast<char>(d & 0xFF));
+                d >>= 8;
+            }
+        }
+
+        void sendChar(char c) {
+            switch (c) {
+                case DT_STX:
+                case DT_ETX:
+                case DT_SYN:
+                    ostrm.put(DT_SO);
+                    break;
+                case DT_SO:
+                    ostrm.put(DT_SI);
+                    break;
+                default:
+                    break;
+            }
+            ostrm.put(c);
+        }
+
+        template <class InputIt>
+        void send(DataTypes t, InputIt first, InputIt last) {
+            sendLeader();
+            sendChar(t);
+            while (first != last) {
+                auto l = hton(*first);
+                sendData(l);
+                ++first;
+            }
+            sendTrailer();
+            ostrm.flush();
+        }
+
     protected:
         fdstreambuf<CharT>  strmbuf;
+        std::basic_istream<CharT,Traits>  istrm;
+        std::basic_ostream<CharT,Traits>  ostrm;
+        std::stringstream   ss;
+
         bool loop;
     };
 

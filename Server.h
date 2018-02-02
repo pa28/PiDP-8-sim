@@ -108,8 +108,8 @@ namespace util {
     template <class CharT, class Traits = std::char_traits<CharT>>
     class Connection {
     public:
-        Connection() :
-                clientfd{-1},
+        explicit Connection(int fd = -1) :
+                clientfd{fd},
                 client_addr{},
                 length{},
                 pendingWrite{false}
