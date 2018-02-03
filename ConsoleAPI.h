@@ -90,6 +90,14 @@ namespace pdp8
         };
 
 
+        ApiConnection<CharT, Traits> &skipPacket() {
+            while (not encoder.isAtEnd()) {
+                CharT c;
+                read(&c, 1);
+            }
+            return *this;
+        };
+
         void write(const CharT *buf, size_t l) {
             encoder.sputn(buf, l);
         }

@@ -16,11 +16,28 @@ int main() {
 
     SXStatus_t sxStatus{0x0123, 0x4567, 0x89ab};
 
-    tx.beginEncoding().put(DT_SX_Status).put(sxStatus.begin(), sxStatus.end()).endEncoding();
+    tx.beginEncoding().
+            put(DT_SX_Status).
+            put(sxStatus.begin(), sxStatus.end()).
+            endEncoding();
+
     DataTypes dt{};
 
     try {
-        rx.beginDecoding().get(dt).get(sxStatus.begin(), sxStatus.end()).endDecoding();
+        rx.beginDecoding().get(dt);
+        switch (dt) {
+            case DT_SX_Status:
+                rx.get(sxStatus.begin(), sxStatus.end()).
+                        endDecoding();
+                break;
+            case DT_LED_Status:
+                rx.skipPacket().
+                        endDecoding();
+                break;
+            default:
+                rx.skipPacket().
+                        endDecoding();
+        }
     } catch (DecodingError &de) {
         cout << de.what() << endl;
     }
