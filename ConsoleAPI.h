@@ -70,6 +70,7 @@ namespace pdp8
         DT_SX_Status,           // Switch status - to Chassis
     };
 
+
     using LEDStatus_t = std::array<register_base_t,LEDSTATUS_COUNT>;
     using SXStatus_t = std::array<register_base_t,SWITCHSTATUS_COUNT>;
 
