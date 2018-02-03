@@ -2,37 +2,28 @@
 #include <iterator>
 #include <iomanip>
 #include <vector>
+#include <sstream>
 #include <algorithm>
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "ConsoleAPI.h"
+#include "Encoder.h"
 
 using namespace util;
-using namespace pdp8;
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
 
-    LEDStatus_t ledStatus { 0x0008, 0x0104, 0x0202, 0x0401, 0x0008, 0x0104, 0x0202, 0x0401 };
+    std::stringbuf  sb;
+    Encoder<char>   encoder{sb};
 
-    std::vector<uint16_t> lv{ 0x0008, 0x0104, 0x0202, 0x0401, 0x0008, 0x0104, 0x0202, 0x0401 };
+    ostream os{&encoder};
+    istream is{&encoder};
 
-    int p[2];
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, p) == -1) {
-//    int f;
-//    f = open("test.dat", O_CREAT | O_WRONLY);
-//    if (f < 0) {
-        std::cerr << strerror(errno) << std::endl;
-        return 1;
-    }
+    os << "Hello";
+    flush(os);
 
-    ApiConnection<char>   rx{p[0]};
-    ApiConnection<char>   tx{p[1]};
+    string  s;
+    is >> s;
 
-    tx.send(DT_LED_Status, ledStatus.begin(), ledStatus.end());
-
-    while(true) {
-        sleep(1);
-    }
+    cout << s << endl;
 }
