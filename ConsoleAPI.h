@@ -17,7 +17,7 @@ using namespace util;
 
 namespace pdp8
 {
-    enum DataTypes : u_int8_t
+    enum DataTypes : uint8_t
     {
         DT_LED_Status,          // LED status - from Chassis
         DT_SX_Status,           // Switch status - to Chassis
@@ -90,26 +90,50 @@ namespace pdp8
         };
 
 
-        void write(CharT *buf, size_t l) {
+        void write(const CharT *buf, size_t l) {
             encoder.sputn(buf, l);
         }
 
-        template<class T>
-        ApiConnection<CharT, Traits> &put(const T value) {
-            if constexpr(std::is_same<T, CharT>::value) {
-                ostrm.put(value);
-            } else if constexpr(std::is_same<std::decay_t<T>, uint16_t>::value) {
-                T tvalue = hton(value);
-                write(reinterpret_cast<CharT *>(&tvalue), sizeof(T));
-            } else if constexpr(std::is_same<std::decay_t<T>, uint32_t>::value) {
-                T tvalue = hton(value);
-                write(reinterpret_cast<CharT *>(&tvalue), sizeof(T));
-            } else if constexpr(std::is_same<std::decay_t<T>, std::string>::value) {
-                ostrm << value;
-            } else {
-                static_assert(std::is_same<std::decay_t<T>, uint32_t>::value,
-                              "No implementation of operation for type.");
+
+        template <class T, size_t N>
+        struct PutImpl {
+#if 0
+            ApiConnection<CharT, Traits> &operator()(ApiConnection<CharT, Traits> &api, const T value) {
+                throw std::exception();
             }
+#endif
+        };
+
+        template <class T>
+        struct PutImpl<T,1> {
+            ApiConnection<CharT, Traits> &operator()(ApiConnection<CharT, Traits> &api, const T value) {
+                CharT c = static_cast<CharT>(value);
+                api.write(&c, 1);
+                return api;
+            }
+        };
+
+        template <class T>
+        struct PutImpl<T,2> {
+            ApiConnection<CharT, Traits> &operator()(ApiConnection<CharT, Traits> &api, const T value) {
+                uint16_t tvalue = ::htons(value);
+                api.write(reinterpret_cast<const char*>(&tvalue), 2);
+                return api;
+            }
+        };
+
+        template <class T>
+        struct PutImpl<T,4> {
+            ApiConnection<CharT, Traits> &operator()(ApiConnection<CharT, Traits> &api, const T value) {
+                uint32_t tvalue = ::htonl(value);
+                api.write(reinterpret_cast<const char*>(&tvalue), 4);
+                return api;
+            }
+        };
+
+        template<class T>
+        ApiConnection<CharT, Traits> &put(const T& value) {
+            PutImpl<T,sizeof(T)>{}(*this, value);
             return *this;
         }
 
@@ -158,24 +182,51 @@ namespace pdp8
             }
         }
 
+
+        template <class T, size_t N>
+        struct GetImpl {
+#if 0
+            ApiConnection<CharT, Traits> &operator()(ApiConnection<CharT, Traits> &api, const T value) {
+                throw std::exception();
+            }
+#endif
+        };
+
+
+        template <class T>
+        struct GetImpl<T,1> {
+            ApiConnection<CharT, Traits> &operator()(ApiConnection<CharT, Traits> &api, T& value) {
+                CharT c;
+                api.read(&c, 1);
+                value = static_cast<T>(c);
+                return api;
+            }
+        };
+
+
+        template <class T>
+        struct GetImpl<T,2> {
+            ApiConnection<CharT, Traits> &operator()(ApiConnection<CharT, Traits> &api, T& value) {
+                api.read(reinterpret_cast<CharT*>(&value), 2);
+                value = static_cast<T>(::ntohs(value));
+                return api;
+            }
+        };
+
+
+        template <class T>
+        struct GetImpl<T,4> {
+            ApiConnection<CharT, Traits> &operator()(ApiConnection<CharT, Traits> &api, T& value) {
+                api.read(reinterpret_cast<CharT*>(&value), 4);
+                value = static_cast<T>(::ntohl(value));
+                return api;
+            }
+        };
+
+
         template<class T>
         ApiConnection<CharT, Traits> &get(T &value) {
-            if constexpr(std::is_same<T, CharT>::value) {
-                istrm.get(value);
-            } else if constexpr(std::is_same<std::decay_t<T>, uint16_t>::value) {
-                T tvalue{};
-                read(reinterpret_cast<CharT *>(&tvalue), sizeof(T));
-                T value = ntoh(tvalue);
-            } else if constexpr(std::is_same<std::decay_t<T>, uint32_t>::value) {
-                T tvalue{};
-                read(reinterpret_cast<CharT *>(&tvalue), sizeof(T));
-                T value = ntoh(tvalue);
-            } else if constexpr(std::is_same<std::decay_t<T>, std::string>::value) {
-                readString(value);
-            } else {
-                static_assert(std::is_same<std::decay_t<T>, uint32_t>::value,
-                              "No implementation of operation for type.");
-            }
+            GetImpl<T,sizeof(T)>{}(*this, value);
             return *this;
         }
 

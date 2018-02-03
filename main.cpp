@@ -16,8 +16,14 @@ int main() {
 
     SXStatus_t sxStatus{0x0123, 0x4567, 0x89ab};
 
-    tx.beginEncoding().put(sxStatus.begin(), sxStatus.end()).endEncoding();
-    rx.beginDecoding().get(sxStatus.begin(), sxStatus.end()).endDecoding();
+    tx.beginEncoding().put(DT_SX_Status).put(sxStatus.begin(), sxStatus.end()).endEncoding();
+    DataTypes dt{};
+
+    try {
+        rx.beginDecoding().get(dt).get(sxStatus.begin(), sxStatus.end()).endDecoding();
+    } catch (DecodingError &de) {
+        cout << de.what() << endl;
+    }
 
     for (auto sx: sxStatus) {
         cout << hex << setw(4) << setfill('0') << sx << "  ";
