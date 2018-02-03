@@ -32,7 +32,7 @@ namespace pdp8
     class ApiConnection : public Connection<CharT,Traits>, Thread
     {
     public:
-        ApiConnection(int fd) :
+        explicit ApiConnection(int fd) :
                 Connection<CharT,Traits>{fd},
                 strmbuf{fd},
                 encoder(strmbuf),
@@ -107,7 +107,7 @@ namespace pdp8
         template <class T>
         struct PutImpl<T,1> {
             ApiConnection<CharT, Traits> &operator()(ApiConnection<CharT, Traits> &api, const T value) {
-                CharT c = static_cast<CharT>(value);
+                auto c{static_cast<CharT>(value)};
                 api.write(&c, 1);
                 return api;
             }
@@ -171,14 +171,14 @@ namespace pdp8
             return n;
         }
 
-        void readString(std::string &value) {
+        void readString(std::basic_string<CharT,Traits> &value) {
             value.clear();
 
             while (not encoder.isAtEnd() && not istrm.eof()) {
                 CharT c = istrm.get();
                 if (isspace(c))
                     return;
-                value.push_back(istrm.get());
+                value.push_back(Traits::to_char_type(istrm.get()));
             }
         }
 

@@ -77,10 +77,6 @@ namespace util {
         std::basic_streambuf<CharT> &_sb;
         bool outIdle, inIdle, atEnd;
 
-        static CharT leader[2];
-        static CharT trailer[2];
-
-
     public:
         bool isAtEnd() const { return (this->gptr() == this->egptr() ? atEnd : false); }
 
@@ -289,12 +285,6 @@ namespace util {
         }
 
     };
-
-    template <class CharT, class Traits>
-    CharT Encoder<CharT,Traits>::leader[2]{ '<', '-' };
-
-    template <class CharT, class Traits>
-    CharT Encoder<CharT,Traits>::trailer[2]{ '!', '>' };
 
 }
 
