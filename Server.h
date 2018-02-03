@@ -157,6 +157,8 @@ namespace util {
     class Server : public Thread {
     public:
 
+        using ConnectionList_t = std::list<std::unique_ptr<ConnectionT>>;
+
         enum SelectClients
         {
             SC_None = 0,
@@ -261,10 +263,8 @@ namespace util {
             return FD_ISSET(c->fd(), &ex_set);
         }
 
-        void close(std::unique_ptr<ConnectionT> &c) {
-            auto i = std::find(begin(), end(), c);
-            if (i != end())
-                clients.erase(i);
+        auto close(typename ConnectionList_t::iterator c) {
+            clients.erase(c);
         }
 
         fd_set  rd_set, wr_set, ex_set;
