@@ -2,10 +2,7 @@
 #include <iterator>
 #include <iomanip>
 #include <vector>
-#include <sstream>
 #include <algorithm>
-#include <unistd.h>
-#include <fcntl.h>
 
 #include "Encoder.h"
 
@@ -13,17 +10,23 @@ using namespace util;
 
 int main() {
 
-    std::stringbuf  sb;
-    Encoder<char>   encoder{sb};
+    std::stringbuf sbo;
+    Encoder<char> encoder{sbo};
 
     ostream os{&encoder};
     istream is{&encoder};
 
-    os << "Hello";
+    encoder.beginEncoding();
+    os << "Hello World!";
+    encoder.endEncoding();
     flush(os);
 
-    string  s;
-    is >> s;
+    string s{};
 
+    encoder.beginDecodeing();
+    while (not encoder.isAtEnd()) {
+        s.push_back(is.get());
+    }
+    encoder.endDecoding();
     cout << s << endl;
 }
