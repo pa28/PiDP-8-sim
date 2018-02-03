@@ -28,6 +28,76 @@ namespace util {
     };
 
     /**
+     * @brief A template type safe wrapper around htons and htonl
+     * @tparam T the type of the argument
+     * @param v the value of the argument
+     * @return the transformed value
+     */
+    template<typename T>
+    T hton(T v) {
+        if constexpr(std::is_same<T, char>::value) {
+            return v;
+        }
+        if constexpr(std::is_same<T, uint16_t>::value) {
+            return htons(v);
+        } else if constexpr (std::is_same<T, uint32_t>::value) {
+            return htonl(v);
+        } else {
+            static_assert(std::is_same<std::decay_t<T>, uint32_t>::value, "No implementation of hton for type.");
+        }
+    }
+
+
+    /**
+     * @brief A template type safe wrapper around ntohs and ntohl
+     * @tparam T the type of the argument
+     * @param v the value of the argument
+     * @return the transformed value
+     */
+    template<typename T>
+    T ntoh(T v) {
+        if constexpr(std::is_same<T, char>::value) {
+            return v;
+        } else if constexpr(std::is_same<T, uint16_t>::value) {
+            return ntohs(v);
+        } else if constexpr (std::is_same<T, uint32_t>::value) {
+            return ntohl(v);
+        } else {
+            static_assert(std::is_same<T, uint32_t>::value, "No implementation of ntoh for type.");
+        }
+    }
+
+
+    /**
+     * @brief A function to transorm a range from host to network format.
+     * @tparam C The iterator type
+     * @param first the beginning of the range
+     * @param last the end of the range
+     */
+    template<class C>
+    void Host2Net(C first, C last) {
+        for (auto i = first; i != last; ++i) {
+            auto v = hton(*i);
+            *i = v;
+        }
+    }
+
+    /**
+     * @brief A function to transorm a range from network to host format.
+     * @tparam C The iterator type
+     * @param first the beginning of the range
+     * @param last the end of the range
+     */
+    template<class C>
+    void Net2Host(C first, C last) {
+        for (auto i = first; i != last; ++i) {
+            auto v = ntoh(*i);
+            *i = v;
+        }
+    }
+
+
+    /**
      * @brief A streambuf which abstracts the socket file descriptor allowing the use of
      * standard iostreams.
      */
