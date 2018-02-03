@@ -35,7 +35,9 @@ namespace pdp8
         ApiConnection(int fd) :
                 Connection<CharT,Traits>{fd},
                 strmbuf{fd},
-                encoder{&strmbuf},
+                encoder(strmbuf),
+                ostrm{&encoder},
+                istrm{&encoder},
                 ss{},
                 loop{true}
         {
@@ -45,9 +47,9 @@ namespace pdp8
         ApiConnection(int fd, struct sockaddr_in &addr, socklen_t &len) :
                 Connection<CharT,Traits>(fd, addr, len),
                 strmbuf{fd},
-                encoder{&strmbuf},
-                ostream{&encoder},
-                istream{&encoder},
+                encoder{strmbuf},
+                ostrm{&encoder},
+                istrm{&encoder},
                 ss{},
                 loop{true}
         {
@@ -63,16 +65,45 @@ namespace pdp8
         }
 
 
+        ApiConnection<CharT, Traits> &beginEncoding() {
+            encoder.beginEncoding();
+            return *this;
+        };
+
+
+        ApiConnection<CharT, Traits> &endEncoding() {
+            encoder.endEncoding();
+            encoder.pubsync();
+            return *this;
+        };
+
+
+        ApiConnection<CharT, Traits> &beginDecoding() {
+            encoder.beginDecoding();
+            return *this;
+        };
+
+
+        ApiConnection<CharT, Traits> &endDecoding() {
+            encoder.endDecoding();
+            return *this;
+        };
+
+
+        void write(CharT *buf, size_t l) {
+            encoder.sputn(buf, l);
+        }
+
         template<class T>
         ApiConnection<CharT, Traits> &put(const T value) {
             if constexpr(std::is_same<T, CharT>::value) {
                 ostrm.put(value);
             } else if constexpr(std::is_same<std::decay_t<T>, uint16_t>::value) {
                 T tvalue = hton(value);
-                ostrm.write(static_cast<CharT *>(&tvalue), sizeof(T));
+                write(reinterpret_cast<CharT *>(&tvalue), sizeof(T));
             } else if constexpr(std::is_same<std::decay_t<T>, uint32_t>::value) {
                 T tvalue = hton(value);
-                ostrm.write(static_cast<CharT *>(&tvalue), sizeof(T));
+                write(reinterpret_cast<CharT *>(&tvalue), sizeof(T));
             } else if constexpr(std::is_same<std::decay_t<T>, std::string>::value) {
                 ostrm << value;
             } else {
@@ -83,15 +114,26 @@ namespace pdp8
         }
 
 
+        template<class C>
+        ApiConnection<CharT, Traits> &put(C first, C last) {
+            for (auto i = first; i != last; ++i) {
+                put(*i);
+            }
+
+            return *this;
+        }
+
+
         template<class T>
         ApiConnection<CharT, Traits> &operator<<(const T value) {
             return put(value);
         };
 
+
         int read(CharT *buf, size_t l) {
             int n{0};
 
-            while (not encoder.isAtEnd()) {
+            while (not encoder.isAtEnd() && n < l) {
                 if (istrm.eof())
                     throw DecodingError("Unexpected EOF in packet.");
 
@@ -122,11 +164,11 @@ namespace pdp8
                 istrm.get(value);
             } else if constexpr(std::is_same<std::decay_t<T>, uint16_t>::value) {
                 T tvalue{};
-                read(static_cast<CharT *>(&tvalue), sizeof(T));
+                read(reinterpret_cast<CharT *>(&tvalue), sizeof(T));
                 T value = ntoh(tvalue);
             } else if constexpr(std::is_same<std::decay_t<T>, uint32_t>::value) {
                 T tvalue{};
-                read(static_cast<CharT *>(&tvalue), sizeof(T));
+                read(reinterpret_cast<CharT *>(&tvalue), sizeof(T));
                 T value = ntoh(tvalue);
             } else if constexpr(std::is_same<std::decay_t<T>, std::string>::value) {
                 readString(value);
@@ -136,6 +178,18 @@ namespace pdp8
             }
             return *this;
         }
+
+
+        template<class C>
+        ApiConnection<CharT, Traits> &get(C first, C last) {
+            while (not encoder.isAtEnd() && first != last) {
+                if (istrm.eof())
+                    throw DecodingError("Unexpeded end of file in data.");
+                get(*first);
+                ++first;
+            }
+            return *this;
+        };
 
 
         template<class T>
@@ -149,8 +203,8 @@ namespace pdp8
         Encoder<CharT> encoder;
 
     public:
-        std::basic_ostream ostrm;
-        std::basic_istream istrm;
+        std::basic_ostream<CharT> ostrm;
+        std::basic_istream<CharT> istrm;
 
     protected:
         std::stringstream   ss;

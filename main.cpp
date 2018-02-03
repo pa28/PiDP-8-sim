@@ -1,32 +1,28 @@
 #include <iostream>
-#include <iterator>
 #include <iomanip>
-#include <vector>
-#include <algorithm>
 
-#include "Encoder.h"
+#include "ConsoleAPI.h"
 
 using namespace util;
+using namespace pdp8;
 
 int main() {
 
-    std::stringbuf sbo;
-    Encoder<char> encoder{sbo};
+    int s[2]{};
 
-    ostream os{&encoder};
-    istream is{&encoder};
+    socketpair(AF_UNIX, SOCK_STREAM, 0, s);
+    ApiConnection<char> tx{s[1]};
+    ApiConnection<char> rx{s[0]};
 
-    encoder.beginEncoding();
-    os << "Hello World!";
-    encoder.endEncoding();
-    flush(os);
+    SXStatus_t sxStatus{0x0123, 0x4567, 0x89ab};
 
-    string s{};
+    tx.beginEncoding().put(sxStatus.begin(), sxStatus.end()).endEncoding();
+    rx.beginDecoding().get(sxStatus.begin(), sxStatus.end()).endDecoding();
 
-    encoder.beginDecodeing();
-    while (not encoder.isAtEnd()) {
-        s.push_back(is.get());
+    for (auto sx: sxStatus) {
+        cout << hex << setw(4) << setfill('0') << sx << "  ";
     }
-    encoder.endDecoding();
-    cout << s << endl;
+
+    cout << endl;
+
 }

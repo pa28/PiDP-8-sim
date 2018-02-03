@@ -102,7 +102,7 @@ namespace util {
      * standard iostreams.
      */
     template <class CharT, class Traits = std::char_traits<CharT>>
-    class fdstreambuf : public std::basic_streambuf<CharT>
+    class fdstreambuf : public std::basic_streambuf<CharT, Traits>
     {
     public:
 

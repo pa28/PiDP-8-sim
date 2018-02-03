@@ -195,7 +195,7 @@ namespace util {
 
 
     public:
-        int beginDecodeing() {
+        int beginDecoding() {
             if (!inIdle)
                 throw DecodingError("Begin must be in idle mode.");
 
@@ -257,12 +257,13 @@ namespace util {
 
             while (put != end && !atEnd) {
                 CharT c = _sb.sbumpc();
-                if (c == traits_type::eof() || c <= 0)
+                if (c == traits_type::eof())
                     return traits_type::to_int_type(c);
 
                 if (escape) {
                     *put = c;
                     ++put;
+                    escape = false;
                 } else {
                     switch (c) {
                         case SO:
