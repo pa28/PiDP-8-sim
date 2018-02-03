@@ -8,64 +8,17 @@
 #include <iostream>
 #include <array>
 #include <iterator>
+#include <sstream>
 #include "PDP8.h"
 #include "Server.h"
+#include "Encoder.h"
 
 using namespace util;
 
 namespace pdp8
 {
-    template <typename T>
-    T hton(T v) {
-        if constexpr(std::is_same<T, char>::value) {
-            return v;
-        } if constexpr(std::is_same<T, uint16_t>::value) {
-            return htons(v);
-        } else if constexpr (std::is_same<T, uint32_t>::value) {
-            return htonl(v);
-        } else {
-            static_assert(std::is_same<std::decay_t<T>, uint32_t>::value, "No implementation of hton for type.");
-        }
-    }
-
-    template <typename T>
-    T ntoh(T v) {
-        if constexpr(std::is_same<T, char>::value) {
-            return v;
-        } else if constexpr(std::is_same<T, uint16_t>::value) {
-            return ntohs(v);
-        } else if constexpr (std::is_same<T, uint32_t>::value) {
-            return ntohl(v);
-        } else {
-            static_assert(std::is_same<T, uint32_t>::value, "No implementation of ntoh for type.");
-        }
-    }
-
-    template <class C>
-    void Host2Net(C first, C last) {
-        for (auto i = first; i != last; ++i) {
-            auto v = hton(*i);
-            *i = v;
-        }
-    }
-
-    template <class C>
-    void Net2Host(C first, C last) {
-        for (auto i = first; i != last; ++i) {
-            auto v = ntoh(*i);
-            *i = v;
-        }
-    }
-
-
     enum DataTypes : u_int8_t
     {
-        DT_STX = 2,             // Start of text
-        DT_ETX = 3,             // End of text
-        DT_SO = 14,             // Shift Out
-        DT_SI = 15,             // Shift In
-        DT_SYN = 22,            // Sychronous idle
-        DT_String,
         DT_LED_Status,          // LED status - from Chassis
         DT_SX_Status,           // Switch status - to Chassis
     };
@@ -82,8 +35,7 @@ namespace pdp8
         ApiConnection(int fd) :
                 Connection<CharT,Traits>{fd},
                 strmbuf{fd},
-                istrm{&strmbuf},
-                ostrm{&strmbuf},
+                encoder{&strmbuf},
                 ss{},
                 loop{true}
         {
@@ -93,8 +45,9 @@ namespace pdp8
         ApiConnection(int fd, struct sockaddr_in &addr, socklen_t &len) :
                 Connection<CharT,Traits>(fd, addr, len),
                 strmbuf{fd},
-                istrm{&strmbuf},
-                ostrm{&strmbuf},
+                encoder{&strmbuf},
+                ostream{&encoder},
+                istream{&encoder},
                 ss{},
                 loop{true}
         {
@@ -102,50 +55,6 @@ namespace pdp8
         }
 
         void * run() override {
-            bool idle = true;
-            bool error = false;
-            bool ready = false;
-
-            while (not istrm.eof()) {
-                char c;
-                while (istrm.get(c)) {
-                    if (idle) {
-                        switch (c) {
-                            case DT_STX:
-                                idle = false;
-                                ss.clear();
-                                break;
-                            case DT_SYN:
-                                break;
-                            default:
-                                break;          // Technically a protocol error.
-                        }
-                    } else {
-                        switch (c) {
-                            case DT_SO:
-                            case DT_SI:
-                                istrm.get(c);
-                                ss.put(c);
-                                break;
-                            case DT_STX:
-                            case DT_SYN:
-                                error = true;
-                            case DT_ETX:
-                                idle = true;
-                                ready = true;
-                                break;
-                            default:
-                                ss.put(c);
-                        }
-                    }
-                    if (ready && not error) {
-                        ready = false;
-                        std::cout << "Received packet " << ss.str().length() << " bytes." << std::endl;
-                        // process ss
-                    }
-                }
-            }
-
             stop();
         }
 
@@ -153,61 +62,102 @@ namespace pdp8
             loop = false;
         }
 
-        void sendLeader() {
-            ostrm.put(DT_SYN);
-            ostrm.put(DT_STX);
+
+        template<class T>
+        ApiConnection<CharT, Traits> &put(const T value) {
+            if constexpr(std::is_same<T, CharT>::value) {
+                ostrm.put(value);
+            } else if constexpr(std::is_same<std::decay_t<T>, uint16_t>::value) {
+                T tvalue = hton(value);
+                ostrm.write(static_cast<CharT *>(&tvalue), sizeof(T));
+            } else if constexpr(std::is_same<std::decay_t<T>, uint32_t>::value) {
+                T tvalue = hton(value);
+                ostrm.write(static_cast<CharT *>(&tvalue), sizeof(T));
+            } else if constexpr(std::is_same<std::decay_t<T>, std::string>::value) {
+                ostrm << value;
+            } else {
+                static_assert(std::is_same<std::decay_t<T>, uint32_t>::value,
+                              "No implementation of operation for type.");
+            }
+            return *this;
         }
 
-        void sendTrailer() {
-            ostrm.put(DT_ETX);
-            ostrm.put(DT_SYN);
+
+        template<class T>
+        ApiConnection<CharT, Traits> &operator<<(const T value) {
+            return put(value);
+        };
+
+        int read(CharT *buf, size_t l) {
+            int n{0};
+
+            while (not encoder.isAtEnd()) {
+                if (istrm.eof())
+                    throw DecodingError("Unexpected EOF in packet.");
+
+                buf[n] = istrm.get();
+                ++n;
+            }
+
+            if (n != l)
+                throw DecodingError("Unexpected end of packet.");
+
+            return n;
         }
 
-        template <typename T>
-        void sendData(T d) {
-            for (size_t i = 0; i < sizeof(d); ++i) {
-                sendChar(static_cast<char>(d & 0xFF));
-                d >>= 8;
+        void readString(std::string &value) {
+            value.clear();
+
+            while (not encoder.isAtEnd() && not istrm.eof()) {
+                CharT c = istrm.get();
+                if (isspace(c))
+                    return;
+                value.push_back(istrm.get());
             }
         }
 
-        void sendChar(char c) {
-            switch (c) {
-                case DT_STX:
-                case DT_ETX:
-                case DT_SYN:
-                    ostrm.put(DT_SO);
-                    break;
-                case DT_SO:
-                    ostrm.put(DT_SI);
-                    break;
-                default:
-                    break;
+        template<class T>
+        ApiConnection<CharT, Traits> &get(T &value) {
+            if constexpr(std::is_same<T, CharT>::value) {
+                istrm.get(value);
+            } else if constexpr(std::is_same<std::decay_t<T>, uint16_t>::value) {
+                T tvalue{};
+                read(static_cast<CharT *>(&tvalue), sizeof(T));
+                T value = ntoh(tvalue);
+            } else if constexpr(std::is_same<std::decay_t<T>, uint32_t>::value) {
+                T tvalue{};
+                read(static_cast<CharT *>(&tvalue), sizeof(T));
+                T value = ntoh(tvalue);
+            } else if constexpr(std::is_same<std::decay_t<T>, std::string>::value) {
+                readString(value);
+            } else {
+                static_assert(std::is_same<std::decay_t<T>, uint32_t>::value,
+                              "No implementation of operation for type.");
             }
-            ostrm.put(c);
+            return *this;
         }
 
-        template <class InputIt>
-        void send(DataTypes t, InputIt first, InputIt last) {
-            sendLeader();
-            sendChar(t);
-            while (first != last) {
-                auto l = hton(*first);
-                sendData(l);
-                ++first;
-            }
-            sendTrailer();
-            ostrm.flush();
-        }
+
+        template<class T>
+        ApiConnection<CharT, Traits> &operator>>(const T value) {
+            return get(value);
+        };
+
 
     protected:
         fdstreambuf<CharT>  strmbuf;
-        std::basic_istream<CharT,Traits>  istrm;
-        std::basic_ostream<CharT,Traits>  ostrm;
+        Encoder<CharT> encoder;
+
+    public:
+        std::basic_ostream ostrm;
+        std::basic_istream istrm;
+
+    protected:
         std::stringstream   ss;
 
         bool loop;
     };
+
 
     class MyServer : public Server<ApiConnection<char>>
     {
