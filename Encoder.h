@@ -14,6 +14,9 @@ using namespace std;
 
 namespace util {
 
+    /**
+     * Exception thrown on encoding errors.
+     */
     class EncodingError : public std::logic_error {
     public:
         EncodingError() = delete;
@@ -24,6 +27,9 @@ namespace util {
     };
 
 
+    /**
+     * Exception thrown on decoding errors.
+     */
     class DecodingError : public std::logic_error {
     public:
         DecodingError() = delete;
@@ -34,6 +40,15 @@ namespace util {
     };
 
 
+    /**
+     * @brief A encoder/decoder stream buffer.
+     * @tparam CharT The character type supported
+     * @tparam Traits The traits for the supported character type
+     * @details The Encoder class provides packetizing and depacketizing of
+     * stream data. This provides an easier means of detected protocol implementation
+     * differences between endpoints, and allows an endpoint to skip unsupported
+     * packets.
+     */
     template <class CharT, class Traits = std::char_traits<CharT>>
     class Encoder : public std::basic_streambuf<CharT>
     {
@@ -43,6 +58,10 @@ namespace util {
         typedef Traits traits_type;
         typedef typename Traits::int_type int_type;
 
+        /**
+         * (constructor)
+         * @param sb a reference to an underlying stream buffer that will carry the data.
+         */
         explicit Encoder(std::basic_streambuf<CharT> &sb) :
                 _sb(sb),
                 outIdle{true},
@@ -78,9 +97,18 @@ namespace util {
         bool outIdle, inIdle, atEnd;
 
     public:
+
+        /**
+         * @brief Determine if the decoder has reached the end of a packet.
+         * @return true if at the end of a packet
+         */
         bool isAtEnd() const { return (this->gptr() == this->egptr() ? atEnd : false); }
 
 
+        /**
+         * @brief Start encoding a packet by inserting the leader code protocol
+         * @return -1 if an error occured
+         */
         int beginEncoding() {
             if (!outIdle)
                 throw EncodingError("Begin must be in idle mode.");
@@ -90,24 +118,37 @@ namespace util {
             if (this->sputc(STX) == traits_type::eof())
                 return -1;
             outIdle = false;
+
+            return 0;
         }
 
 
+        /**
+         * @brief End encoding a packet by inserting the trailer code protocol
+         * @return -1 if an error occured
+         */
         int endEncoding() {
             if (outIdle)
                 throw EncodingError("End must not be in idle mode.");
 
-            outIdle = true;
             if (this->sputc(ETX) == traits_type::eof())
                 return -1;
             if (this->sputc(SYN) == traits_type::eof())
                 return -1;
+            outIdle = true;
 
             return 0;
         }
 
 
     protected:
+
+        /**
+         * @brief Sync the Encoder by flusing the output buffer to the underlying stream, then
+         * sync the underlying stream.
+         * @return -1 if an error occured sycing the Encoder or the return from the unerlying
+         * stream sync
+         */
         int sync() {
             if (realSync() < 0)
                 return -1;
@@ -116,6 +157,10 @@ namespace util {
         }
 
 
+        /**
+         * @brief The sync routing used by the Encoder output. This will not sync the underlying stream
+         * @return -1 on error.
+         */
         int realSync() {
             std::streamsize n = _sb.sputn(obuf, this->pptr() - obuf);
 
@@ -134,6 +179,11 @@ namespace util {
         }
 
 
+        /**
+         * @brief the function called when the internal buffer overflows
+         * @param c the character that caused the overflow
+         * @return c or EOF
+         */
         int_type overflow( int_type c ) {
             if (realSync() < 0)
                 return traits_type::eof();
