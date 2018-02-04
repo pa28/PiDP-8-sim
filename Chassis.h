@@ -47,8 +47,10 @@ namespace hw_sim
                 if (n > 0) {
                     ssize_t m = ::send(this->clientfd, buf, n, 0);
                     if (m < n) {
-                        return nullptr;
+                        break;
                     }
+                } else {
+                    break;
                 }
             }
             return nullptr;

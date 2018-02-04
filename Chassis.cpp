@@ -52,11 +52,10 @@ namespace hw_sim
             sigalrm(chassisTimeHandler)
     {
         setTimerFreq(timerFreq);
-
-        commandServer.open();
     }
 
     void Chassis::start() {
+        commandServer.open();
         commandServer.run();
     }
 
