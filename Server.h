@@ -208,6 +208,10 @@ namespace util {
             return clientfd < other.clientfd;
         }
 
+        bool operator == (const Connection &other) {
+            return clientfd == other.clientfd;
+        }
+
     protected:
         int clientfd;
         struct sockaddr_in client_addr;
@@ -238,7 +242,7 @@ namespace util {
             SC_All = 7
         };
 
-        explicit Server(in_addr_t listenAddress = INADDR_ANY, uint16_t port = 8000) :
+        explicit Server(uint16_t port = 8000, in_addr_t listenAddress = INADDR_LOOPBACK) :
                 rd_set{},
                 wr_set{},
                 ex_set{},
@@ -258,7 +262,7 @@ namespace util {
             if (sockfd >= 0) {
                 memset(&server_addr, 0, sizeof(server_addr));
                 server_addr.sin_family = AF_INET;
-                server_addr.sin_addr.s_addr = server_in_addr;
+                server_addr.sin_addr.s_addr = htonl(server_in_addr);
                 server_addr.sin_port = htons(portno);
             }
 
@@ -278,8 +282,12 @@ namespace util {
             socklen_t length;
 
             int clientfd = ::accept(sockfd, (struct sockaddr *) &client_addr, &length);
-            if (clientfd >= 0)
+            if (clientfd >= 0) {
                 clients.push_back(std::make_unique<ConnectionT>(clientfd, client_addr, length));
+                return clientfd;
+            }
+
+            return -1;
         }
 
         int select(SelectClients selectClients = SC_Read | SC_Write | SC_Except,
@@ -334,7 +342,7 @@ namespace util {
         }
 
         auto close(typename ConnectionList_t::iterator c) {
-            clients.erase(c);
+            return clients.erase(c);
         }
 
         fd_set  rd_set, wr_set, ex_set;
