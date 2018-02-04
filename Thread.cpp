@@ -34,7 +34,11 @@ namespace util
     void * _threadStart(void *t) {
         auto *thread = (Thread*)t;
 
-        return thread->run();
+        void * r = thread->run();
+
+        thread->thread_complete = 1;
+
+        return r;
     }
 
     Lock::Lock( pthread_mutex_t * m ) : mutex(m) { construct(); }
@@ -60,7 +64,9 @@ namespace util
     }
 
     Thread::Thread() :
-            thread(0)
+            thread{0},
+            _runFlag{true},
+            thread_complete{0}
     {
     }
 
@@ -73,6 +79,7 @@ namespace util
                 return -1;
         }
 
+        thread_complete = 0;
         return 0;
     }
 

@@ -77,9 +77,14 @@ namespace util
 
         virtual bool waitCondition() { return true; }
 
+        bool threadComplete() const { return thread_complete != 0; }
+
     protected:
         pthread_t	thread;
+        bool        _runFlag;
+        volatile __sig_atomic_t thread_complete;
 
+        friend void * _threadStart(void *t);
     };
 
     class ConditionWait
