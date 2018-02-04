@@ -60,43 +60,44 @@ namespace hw_sim
 
     };
 
-    static char BusyMsg[] = "Console connection in use.";
+    static char BusyMsg[] = "Console connection in use.\r\n";
 
     template <class Cmd>
     class CommandServer :
             public Server<Cmd>
     {
     public:
-        explicit CommandServer(uint16_t port = 8000, in_addr_t listenAddress = INADDR_LOOPBACK) :
+        explicit CommandServer(uint16_t port = 8000, const in6_addr listenAddress = in6addr_loopback) :
                 Server<Cmd>{port, listenAddress}
         {}
 
         void * run() override {
-            while (this->_runFlag) {
-                int fd = this->accept();
-                if (fd >= 0) {
-                    auto c = this->begin();
-                    while (c != this->end()) {
-                        if ((*c)->threadComplete()) {
-                            c = this->close(c);
-                        } else {
-                            ++c;
-                        }
-                    }
 
-                    if (this->clients.size()) {
-                        ::send((*c)->fd(), BusyMsg, sizeof(BusyMsg), 0);
+            while (this->_runFlag) {
+
+                this->clean_clients();
+
+                int fd = this->select_accept();
+                if (fd >= 0) {
+                    if (this->clients.size() > 1) {
+                        ::send(fd, BusyMsg, sizeof(BusyMsg), 0);
+                        auto ci = this->find(fd);
+                        (*ci)->stop();
+                        this->close(ci);
                     } else {
-                        c = this->begin();
-                        while (c != this->end()) {
-                            if ((*c)->fd() == fd) {
-                                (*c)->start();
-                                break;
-                            }
-                            ++c;
-                        }
+                        auto ci = this->find(fd);
+                        auto &&c = *ci;
+                        c->start();
                     }
-                }
+                } else if (fd < 0) {
+                    switch (errno) {
+                        case EINTR:     // A signal was caught
+                            break;
+                        default:
+                            throw ServerException(strerror(errno));
+                    }
+                } // else a timeout occured.
+
             }
             return nullptr;
         }

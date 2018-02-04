@@ -242,7 +242,17 @@ namespace util {
             SC_All = 7
         };
 
-        explicit Server(uint16_t port = 8000, in_addr_t listenAddress = INADDR_LOOPBACK) :
+        /**
+         * @brief (constructor)
+         * @param port The port to listen on
+         * @param listenAddress The address to listen on
+         * @details The default listen address is in6addr_loopback wich will only allow IPV6
+         * connections on the lo device. This provides the greatest security without some sort
+         * of client authentication. Setting the listen address to in6addr_any will allow IPV4
+         * and IPV6 connections on any interface. This is suitable for a widely accessible
+         * service but should probably be combined with some sort of client authentication.
+         */
+        explicit Server(uint16_t port = 8000, const in6_addr listenAddress = in6addr_loopback) :
                 rd_set{},
                 wr_set{},
                 ex_set{},
@@ -251,20 +261,29 @@ namespace util {
                 portno{port},
                 server_in_addr{listenAddress},
                 server_addr{}
-        {
-
-        }
+        {}
 
         ~Server() override = default;
 
         int open() {
-            sockfd = socket(AF_INET, SOCK_STREAM, 0);
-            if (sockfd >= 0) {
-                memset(&server_addr, 0, sizeof(server_addr));
-                server_addr.sin_family = AF_INET;
-                server_addr.sin_addr.s_addr = htonl(server_in_addr);
-                server_addr.sin_port = htons(portno);
+            sockfd = socket(AF_INET6, SOCK_STREAM, 0);
+
+            if (sockfd < 0) {
+                throw ServerException(std::string("socket() error: ") + strerror(errno));
             }
+
+            int on = 1;
+            int off = 0;
+            if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&off, sizeof(off)) < 0)
+                throw ServerException(std::string("setsockopt() error: ") + strerror(errno));
+
+            if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
+                throw ServerException(std::string("setsockopt() error: ") + strerror(errno));
+
+            memset(&server_addr, 0, sizeof(server_addr));
+            server_addr.sin6_family = AF_INET6;
+            server_addr.sin6_addr = server_in_addr;
+            server_addr.sin6_port = htons(portno);
 
             if (bind(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
                 ::close(sockfd);
@@ -350,8 +369,8 @@ namespace util {
     protected:
         int sockfd, listenCount;
         uint16_t portno;
-        in_addr_t server_in_addr;
-        struct sockaddr_in server_addr;
+        in6_addr server_in_addr;
+        struct sockaddr_in6 server_addr;
 
         std::list<std::unique_ptr<ConnectionT>> clients;
     };
