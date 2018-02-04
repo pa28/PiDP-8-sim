@@ -271,7 +271,7 @@ namespace pdp8
         bool loop;
     };
 
-
+#if 0
     class MyServer : public Server<ApiConnection<char>>
     {
     public:
@@ -300,7 +300,7 @@ namespace pdp8
         }
 
     }
-
+#endif
 }
 
 #endif //PIDP_CONSOLEAPI_H

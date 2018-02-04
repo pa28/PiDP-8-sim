@@ -94,22 +94,28 @@ int main( int argc, char ** argv ) {
     signal( SIGINT, sigintHandler );
     signal( SIGTERM, sigintHandler );
 
-    Chassis *chassis = Chassis::instance();
+    Chassis *chassis = nullptr;
+    try {
+        chassis = Chassis::instance();
 
-    (*chassis)[DEV_MEM] = std::make_shared<Memory<MAXMEMSIZE, uint16_t, 12>>();
-    (*chassis)[DEV_CPU] = std::make_shared<CPU>();
-    (*chassis)[DEV_CONSOLE] = std::make_shared<Console>(false);
+        (*chassis)[DEV_MEM] = std::make_shared<Memory<MAXMEMSIZE, uint16_t, 12>>();
+        (*chassis)[DEV_CPU] = std::make_shared<CPU>();
 
-    chassis->reset();
-    chassis->initialize();
+        chassis->reset();
+        chassis->initialize();
 
-    auto mi = Memory<MAXMEMSIZE,memory_base_t,12>::getMemory(DEV_MEM)->begin();
-    for (auto d: DeepThought) {
-        *mi = d;
-        ++mi;
+        auto mi = Memory<MAXMEMSIZE,memory_base_t,12>::getMemory(DEV_MEM)->begin();
+        for (auto d: DeepThought) {
+            *mi = d;
+            ++mi;
+        }
+
+        chassis->start();
+
+    } catch (ServerException &se) {
+        std::cerr << se.what() << std::endl;
+        return 0;
     }
-
-    Console::getConsole()->run();
 
     return 0;
 }
