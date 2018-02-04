@@ -40,12 +40,27 @@ namespace hw_sim
                 Thread{}
         {}
 
-        void * run() override;
+        void * run() override {
+            while (_runFlag) {
+                char buf[2048];
+                ssize_t n = ::recv(this->clientfd, buf, sizeof(buf), 0);
+                if (n > 0) {
+                    ssize_t m = ::send(this->clientfd, buf, n, 0);
+                    if (m < n) {
+                        return nullptr;
+                    }
+                }
+            }
+            return nullptr;
+        }
 
-        void stop() override;
+        void stop() override {
+            _runFlag = false;
+        }
 
     };
 
+    static char BusyMsg[] = "Console connection in use.";
 
     template <class Cmd>
     class CommandServer :
@@ -56,9 +71,42 @@ namespace hw_sim
                 Server<Cmd>{port, listenAddress}
         {}
 
-        void * run() override;
+        void * run() override {
+            while (this->_runFlag) {
+                int fd = this->accept();
+                if (fd >= 0) {
+                    auto c = this->begin();
+                    while (c != this->end()) {
+                        if ((*c)->threadComplete()) {
+                            c = this->close(c);
+                        } else {
+                            ++c;
+                        }
+                    }
 
-        void stop() override;
+                    if (this->clients.size()) {
+                        ::send((*c)->fd(), BusyMsg, sizeof(BusyMsg), 0);
+                    } else {
+                        c = this->begin();
+                        while (c != this->end()) {
+                            if ((*c)->fd() == fd) {
+                                (*c)->start();
+                                break;
+                            }
+                            ++c;
+                        }
+                    }
+                }
+            }
+            return nullptr;
+        }
+
+        void stop() override {
+            for (auto &&c: this->clients) {
+                c->stop();
+            }
+            this->_runFlag = false;
+        }
 
     };
 
