@@ -52,38 +52,16 @@ namespace hw_sim
     Chassis::Chassis() :
             timeoutCounter(0),
             timerFreq(false),
+            commandServer{8000},
             sigalrm(chassisTimeHandler)
     {
-        int sxfd[2];
+        setTimerFreq(timerFreq);
 
-        if (pipe(sxfd)) {
-            perror("pipe");
-            exit(1);
-        }
+        commandServer.open();
+    }
 
-
-
-//        struct sigaction sa{};
-//
-//        memset( &sa, 0, sizeof(sa));
-//        sa.sa_handler = &::timerHandler;
-//        sigaction( SIGALRM, &sa, nullptr);
-
-        // Create and assign devices.
-
-//        deviceList[DEV_MEM] = Memory::instance();
-//        deviceList[DEV_CPU] = CPU::instance();
-//        deviceList[DEV_PANEL] = Panel::instance();
-//        deviceList[DEV_CONSOLE] = Console::instance(daemonMode);
-//
-//        deviceList[DEV_CLK] = DK8EA::instance();
-//
-//        Panel::instance()->setSwitchFd(sxfd[1]);
-//        Console::instance()->setSwitchFd(sxfd[0]);
-
-        // Initialize devices
-
-        setTimerFreq(true);
+    void Chassis::start() {
+        commandServer.run();
     }
 
     void Chassis::initialize() {

@@ -13,6 +13,7 @@
 #include "Registers.h"
 
 using namespace hw_sim;
+using namespace util;
 
 namespace pdp8
 {

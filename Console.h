@@ -19,8 +19,6 @@
 
 namespace pdp8
 {
-    constexpr size_t SWITCHSTATUS_COUNT = 3;
-
     enum PanelCmdButton {
         PanelStart = 040,
         PanelLoadAdr = 020,
