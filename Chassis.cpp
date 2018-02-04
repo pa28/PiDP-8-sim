@@ -114,4 +114,64 @@ namespace hw_sim
         }
     }
 
+    template <typename CharT>
+    void *CommandConnection<CharT>::run() {
+        while (_runFlag) {
+            char buf[2048];
+            ssize_t n = ::recv(Connection<CharT>::clientfd, buf, sizeof(buf), 0);
+            if (n > 0) {
+                ssize_t m = ::send(Connection<CharT>::clientfd, buf, n, 0);
+                if (m < n) {
+                    return nullptr;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    template <typename CharT>
+    void CommandConnection<CharT>::stop() {
+        _runFlag = false;
+    }
+
+    static char BusyMsg[] = "Console connection in use.";
+    template <typename CharT>
+    void *CommandServer<CharT>::run() {
+        while (this->_runFlag) {
+            int fd = this->accept();
+            if (fd >= 0) {
+                auto c = this->begin();
+                while (c != this->end()) {
+                    if ((*c)->threadComplete()) {
+                        c = this->close(c);
+                    } else {
+                        ++c;
+                    }
+                }
+
+                if (this->clients.size()) {
+                    ::send((*c)->fd(), BusyMsg, sizeof(BusyMsg), 0);
+                } else {
+                    c = this->begin();
+                    while (c != this->end()) {
+                        if ((*c)->fd() == fd) {
+                            (*c)->start();
+                            break;
+                        }
+                        ++c;
+                    }
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    template <typename CharT>
+    void CommandServer<CharT>::stop() {
+        for (auto &&c: this->clients) {
+            c->stop();
+        }
+        this->_runFlag = false;
+    }
+
 } /* namespace hw_sim */
