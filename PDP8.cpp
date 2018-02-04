@@ -89,8 +89,6 @@ int main( int argc, char ** argv ) {
         close(STDERR_FILENO);
     }
 
-    getchar(); // Allow time to attach the debugger if needed.
-
     signal( SIGINT, sigintHandler );
     signal( SIGTERM, sigintHandler );
 

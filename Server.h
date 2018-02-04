@@ -309,6 +309,24 @@ namespace util {
             return -1;
         }
 
+        int select_accept(struct timeval *timeout = nullptr) {
+            FD_ZERO(&rd_set);
+
+            FD_SET(sockfd, &rd_set);
+
+            int n = sockfd + 1;
+
+            int s = ::select( n, &rd_set, nullptr, nullptr, timeout);
+
+            if (s > 0) {
+                if (FD_ISSET(sockfd, &rd_set)) {
+                    return accept();
+                }
+            }
+
+            return s;
+        }
+
         int select(SelectClients selectClients = SC_Read | SC_Write | SC_Except,
                    struct timeval *timeout = nullptr) {
             FD_ZERO(&rd_set);
@@ -345,8 +363,26 @@ namespace util {
             return s;
         }
 
+        void clean_clients() {
+            auto c = begin();
+            while (c != end()) {
+                if ((*c)->threadComplete())
+                    c = close(c);
+                else
+                    ++c;
+            }
+        }
+
         auto begin() { return clients.begin(); }
         auto end() { return clients.end(); }
+
+        auto find(int fd) {
+            auto c = begin();
+            for (; c != end(); ++c)
+                if (fd == (*c)->fd())
+                    return c;
+            return c;
+        }
 
         bool isRead(std::unique_ptr<ConnectionT> &c) {
             return FD_ISSET(c->fd(), &rd_set);
@@ -362,6 +398,10 @@ namespace util {
 
         auto close(typename ConnectionList_t::iterator c) {
             return clients.erase(c);
+        }
+
+        auto close(int fd) {
+            return close(find(fd));
         }
 
         fd_set  rd_set, wr_set, ex_set;
