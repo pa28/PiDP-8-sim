@@ -181,16 +181,14 @@ namespace util {
         explicit Connection(int fd = -1) :
                 clientfd{fd},
                 client_addr{},
-                length{},
-                pendingWrite{false}
+                length{}
         {
         }
 
         Connection(int fd, struct sockaddr_in &addr, socklen_t &len) :
                 clientfd{-1},
                 client_addr{},
-                length{len},
-                pendingWrite{false}
+                length{len}
         {
             clientfd = fd;
             length = len;
@@ -216,7 +214,6 @@ namespace util {
         int clientfd;
         struct sockaddr_in client_addr;
         socklen_t length;
-        bool pendingWrite;
 
         template <class ConnectionT>
         friend class Server;
