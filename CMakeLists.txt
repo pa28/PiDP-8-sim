@@ -13,6 +13,8 @@ add_executable(PiDP PDP8.cpp PDP8.h Registers.h Device.cpp Device.h Memory.h Cha
 
 target_link_libraries(PiDP ${CMAKE_THREAD_LIBS_INIT} ${CURSES_LIBRARIES})
 
+add_executable(CmdConsole CmdConsole.cpp CmdConsole.h)
+
 add_executable(Test main.cpp Server.h Thread.cpp Thread.h ConsoleAPI.h)
 
 target_link_libraries(Test ${CMAKE_THREAD_LIBS_INIT} ${CURSES_LIBRARIES})
