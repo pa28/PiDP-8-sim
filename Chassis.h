@@ -32,27 +32,38 @@ namespace hw_sim
     public:
         explicit CommandConnection(int fd = -1) :
                 Connection<CharT>{fd},
-                Thread{}
+                Thread{},
+                strm{fd},
+                istrm{&strm},
+                ostrm{&strm}
         {}
 
         CommandConnection(int fd, struct sockaddr_in &addr, socklen_t &len) :
                 Connection<CharT>{fd, addr, len},
-                Thread{}
+                Thread{},
+                strm{fd},
+                istrm{&strm},
+                ostrm{&strm}
         {}
 
         void * run() override {
             while (_runFlag) {
-                char buf[2048];
-                ssize_t n = ::recv(this->clientfd, buf, sizeof(buf), 0);
-                if (n > 0) {
-                    ssize_t m = ::send(this->clientfd, buf, n, 0);
-                    if (m < n) {
-                        break;
-                    }
-                } else {
+                if (istrm.eof())
                     break;
+
+                CharT c = istrm.get();
+                switch (c) {
+                    case '\t':
+                        ostrm << "[tab]";
+                        break;
+                    default:
+                        ostrm << c;
+                        std::cout << c;
                 }
+
+                ostrm.flush();
             }
+            std::cout << "Connection closed." << std::endl;
             return nullptr;
         }
 
@@ -60,6 +71,10 @@ namespace hw_sim
             _runFlag = false;
         }
 
+    protected:
+        fdstreambuf<CharT>  strm;
+        std::basic_istream<CharT> istrm;
+        std::basic_ostream<CharT> ostrm;
     };
 
     static char BusyMsg[] = "Console connection in use.\r\n";
@@ -69,11 +84,12 @@ namespace hw_sim
             public Server<Cmd>
     {
     public:
-        explicit CommandServer(uint16_t port = 8000, const in6_addr listenAddress = in6addr_loopback) :
+        explicit CommandServer(uint16_t port = 8000, const in6_addr listenAddress = in6addr_any) :
                 Server<Cmd>{port, listenAddress}
         {}
 
         void * run() override {
+            char buf[2048];
 
             while (this->_runFlag) {
 
@@ -81,6 +97,7 @@ namespace hw_sim
 
                 int fd = this->select_accept();
                 if (fd >= 0) {
+                    std::cout << "Connection on " << fd << std::endl;
                     if (this->clients.size() > 1) {
                         ::send(fd, BusyMsg, sizeof(BusyMsg), 0);
                         auto ci = this->find(fd);
