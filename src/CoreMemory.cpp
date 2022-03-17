@@ -5,7 +5,7 @@
  * @date 2022-03-10
  */
 
-#include "core_memory.h"
+#include "CoreMemory.h"
 
 namespace sim {
 

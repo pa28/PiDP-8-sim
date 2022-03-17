@@ -99,7 +99,7 @@ int main() {
     while (!cpu.getHaltFlag()) {
         cpu.instruction_cycle();
         cpu.printPanel(terminal);
-        if (cpu.getCycleStat() == sim::cpu_pdp8::CycleState::Interrupt) {
+        if (cpu.getCycleStat() == sim::PDP8I::CycleState::Interrupt) {
             terminalSocket.write("\033[1;1H");
             terminalSocket.write("\033[2J");
             cpu.printPanelSilk(terminal);

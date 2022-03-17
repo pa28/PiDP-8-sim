@@ -14,7 +14,7 @@
 #include <fmt/format.h>
 #include <variant>
 #include "hardware.h"
-#include "core_memory.h"
+#include "CoreMemory.h"
 #include "Terminal.h"
 
 namespace sim {
@@ -34,7 +34,7 @@ namespace sim {
      * @class cpu
      * @brief
      */
-    class cpu_pdp8 {
+    class PDP8I {
     public:
 
         enum class Instruction : unsigned int {
@@ -117,16 +117,16 @@ namespace sim {
         register_index<3, 3> tri4;
         register_index<3, 0> tri5;
 
-        core_memory coreMemory;
+        CoreMemory coreMemory;
 
     public:
-        ~cpu_pdp8() = default;
+        ~PDP8I() = default;
 
-        cpu_pdp8() : cpu_pdp8(1u) {}
+        PDP8I() : PDP8I(1u) {}
 
         template<typename U>
         requires std::unsigned_integral<U>
-        explicit cpu_pdp8(U memoryFields) : coreMemory(memoryFields) {
+        explicit PDP8I(U memoryFields) : coreMemory(memoryFields) {
 
         }
 
@@ -282,7 +282,7 @@ namespace sim {
         bool resetCPU;
     };
 
-    class TestCPU : public cpu_pdp8 {
+    class TestCPU : public PDP8I {
     public:
         template<size_t length>
         void loadTestProgram(uint16_t start, std::array<uint16_t, length> code);

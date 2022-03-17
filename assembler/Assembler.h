@@ -12,7 +12,7 @@
 #include <exception>
 #include <utility>
 #include "src/hardware.h"
-#include "src/core_memory.h"
+#include "src/CoreMemory.h"
 
 namespace asmbl {
 

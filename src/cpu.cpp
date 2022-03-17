@@ -9,7 +9,7 @@
 
 namespace sim {
 
-    void cpu_pdp8::fetch() {
+    void PDP8I::fetch() {
         // Instruction address in field from program counter
         cpma[wordIndex] = program_counter[wordIndex]();
         // Read memory into the memory buffer
@@ -30,7 +30,7 @@ namespace sim {
         }
     }
 
-    void cpu_pdp8::defer() {
+    void PDP8I::defer() {
         if (cpma[page_index]() == 0 && (cpma[addr_index]() & 0170u) == 0010u) {
             writeInstructionCore(readInstructionCore()[wordIndex]() + 1);
         }
@@ -38,7 +38,7 @@ namespace sim {
         cpma[wordIndex] = memory_buffer[wordIndex]();
     }
 
-    void cpu_pdp8::instruction_step() {
+    void PDP8I::instruction_step() {
         auto cycleToInterruptState = [this]() {
             while (cycleState != CycleState::Interrupt)
                 instruction_cycle();
@@ -50,7 +50,7 @@ namespace sim {
         cycleToInterruptState();
     }
 
-    void cpu_pdp8::instruction_cycle() {
+    void PDP8I::instruction_cycle() {
         switch (cycleState) {
             case CycleState::Fetch:
                 fetch();
@@ -88,7 +88,7 @@ namespace sim {
         }
     }
 
-    void cpu_pdp8::execute() {
+    void PDP8I::execute() {
         switch (instruction_register) {
             case Instruction::AND:
                 memory_buffer[wordIndex] = readDataCore()[wordIndex]();
@@ -150,7 +150,7 @@ namespace sim {
         }
     }
 
-    void cpu_pdp8::execute_opr() {
+    void PDP8I::execute_opr() {
         auto bits = memory_buffer[opr_bits]();
 
         if (bits == 0) // NOP
@@ -227,7 +227,7 @@ namespace sim {
         }
     }
 
-    void cpu_pdp8::execute_iot() {
+    void PDP8I::execute_iot() {
         if (memory_buffer[deviceSelect]() == 0u) {
             switch (memory_buffer[deviceOpr]()) {
                 case 0: //SKON
@@ -283,30 +283,30 @@ namespace sim {
         // Other IOT instructions not supported yet.
     }
 
-    register_value cpu_pdp8::readCore(register_type field, register_type address) {
+    register_value PDP8I::readCore(register_type field, register_type address) {
         register_value word(coreMemory.readCore(field, address));
         return word;
     }
 
-    void cpu_pdp8::writeCore(register_type field, register_type address, register_type data) {
+    void PDP8I::writeCore(register_type field, register_type address, register_type data) {
         coreMemory.writeCore(field, address, data);
     }
 
-    void cpu_pdp8::deposit(register_type value) {
+    void PDP8I::deposit(register_type value) {
         cpma[wordIndex] = program_counter[wordIndex]();
         memory_buffer[wordIndex] = value;
         writeCore(field_register[instruction_field](), cpma[wordIndex](), memory_buffer[wordIndex]());
         ++program_counter[wordIndex];
     }
 
-    register_type cpu_pdp8::examine() {
+    register_type PDP8I::examine() {
         cpma[wordIndex] = program_counter[wordIndex]();
         memory_buffer[wordIndex] = readCore(field_register[instruction_field](), cpma[wordIndex]())[wordIndex]();
         ++program_counter[wordIndex];
         return memory_buffer[wordIndex]();
     }
 
-    bool cpu_pdp8::readBinaryFormat(std::istream &istrm) {
+    bool PDP8I::readBinaryFormat(std::istream &istrm) {
         bool addressSet = false;
         register_type word;
 
@@ -332,7 +332,7 @@ namespace sim {
         return addressSet;
     }
 
-    bool cpu_pdp8::writeBinaryFormat(std::ostream &ostrm, register_type first, register_type last) {
+    bool PDP8I::writeBinaryFormat(std::ostream &ostrm, register_type first, register_type last) {
         bool address_set = false;
         bool word_written = false;
 
@@ -358,7 +358,7 @@ namespace sim {
         return word_written;
     }
 
-    void cpu_pdp8::rimLoader() {
+    void PDP8I::rimLoader() {
         program_counter[wordIndex] = RIM_LOADER_START;
         for (auto &word: RIM_LOADER) {
             register_type instruction(word);
@@ -367,7 +367,7 @@ namespace sim {
         program_counter[wordIndex] = RIM_LOADER_START;
     }
 
-    void cpu_pdp8::reset() {
+    void PDP8I::reset() {
         link_accumulator[arithmetic] = 0u;
         interrupt_delayed = 0u;
         interrupt_enable = false;
@@ -378,7 +378,7 @@ namespace sim {
         halt_flag = false;
     }
 
-    void cpu_pdp8::printPanel(Terminal &terminal) {
+    void PDP8I::printPanel(Terminal &terminal) {
         using namespace TerminalConsts;
         terminal.print("{}", color(Regular, Yellow));
 
@@ -414,7 +414,7 @@ namespace sim {
         terminal.flush();
     }
 
-    void cpu_pdp8::printPanelSilk(Terminal &terminal) {
+    void PDP8I::printPanelSilk(Terminal &terminal) {
         using namespace TerminalConsts;
         terminal.setCursorPosition(2u,2u);
         terminal.print("{:^6}{:^6}{:^24}", "Data", "Inst", "Program Counter");

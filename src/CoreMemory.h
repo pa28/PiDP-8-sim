@@ -22,15 +22,15 @@ namespace sim {
     /**
      * @clase core_memory
      */
-    class core_memory : public std::vector<core_memory_field> {
+    class CoreMemory : public std::vector<core_memory_field> {
     protected:
         size_t fields;
 
     public:
-        core_memory() = delete;
-        ~core_memory() = default;
+        CoreMemory() = delete;
+        ~CoreMemory() = default;
 
-        explicit core_memory(size_t field_count) : std::vector<core_memory_field>() {
+        explicit CoreMemory(size_t field_count) : std::vector<core_memory_field>() {
             std::size_t lo = 1, hi = 8;
             fields = std::clamp(field_count, lo, hi);
             reserve(fields);
