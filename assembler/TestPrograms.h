@@ -15,7 +15,7 @@ namespace asmbl {
             .   = 0174;
 CycleCount:     07776;                  # 0 - Number of times to cycle before halting
 Accumulator:    00017;                  # Initial value and temp store for the ACC
-SeminCycle:     07770;                  # 0 - Semi cycle intiial count
+SemiCycle:      07770;                  # 0 - Semi cycle intiial count
 Counter:        07770;                  # Semi cycle counter
 Initialize:     CLA;                    # Clear ACC
 OuterLoop:      TAD SemiCycle;          # Init semi cycle count
@@ -35,5 +35,6 @@ Loop2:          RAR;
 #               ISZ CycleCount;         # Uncomment to cycle for a bin and end.
                 JMP OuterLoop;          # Outer loop ends.
                 HLT;
+                . = 0200;
 )";
 }

@@ -5,6 +5,7 @@
 #include "src/cpu.h"
 #include "src/Terminal.h"
 #include "assembler/Assembler.h"
+#include "assembler/TestPrograms.h"
 
 
 using namespace sim;
@@ -62,39 +63,20 @@ int main() {
     terminalSocket.write("\033[2J");
     terminalSocket.write("\033]0;PiDP-8/I Console\007");
 
-    TestCPU cpu{};
+    asmbl::Assembler assembler;
+    std::stringstream sourceCode(std::string{asmbl::PingPong});
+    assembler.pass1(sourceCode);
+    sourceCode.clear();
+    sourceCode.str(std::string{asmbl::PingPong});
+    std::stringstream binary;
+    assembler.pass2(sourceCode, std::cout, binary);
 
-    cpu.reset();
-    cpu.loadAddress(0174u);
-    cpu.deposit(07776u); // 0174
-    cpu.deposit(00017u); // 0175
-    cpu.deposit(07770u); // 0176
-    cpu.deposit(07770u); // 0177
-    cpu.deposit(07200u); // 0200 CLA
-    cpu.deposit(01176u); // 0201 TAD 0176
-    cpu.deposit(03177u); // 0202 DCA 0177
-    cpu.deposit(01175u); // 0203 TAD 0175
-    cpu.deposit(07004u); // 0204 RAl
-    cpu.deposit(02177u); // 0205 ISZ 0177
-    cpu.deposit(05204u); // 0206 JMP 0204
-    cpu.deposit(03175u); // 0207 DCA 0175
-    cpu.deposit(01176u); // 0210 TAD 0176
-    cpu.deposit(03177u); // 0211 DCA 0177
-    cpu.deposit(01175u); // 0212 TAD 0175
-    cpu.deposit(07010u); // 0213 RA4
-    cpu.deposit(02177u); // 0214 ISZ 0177
-    cpu.deposit(05213u); // 0215 JMP 0213
-    cpu.deposit(03175u); // 0216 DCA 0175
-//    cpu.deposit(02174u); // 2017 ISZ 0174
-    cpu.deposit(05201u); // 0220 JMP 0201
-    cpu.deposit(07402u); // 0221 HLT
-    cpu.loadAddress(0200u);
-    cpu.loadAddress(0200u);
-    cpu.reset();
+    TestCPU cpu{};
+    auto startAddress = cpu.readBinaryFormat(binary);
 
     std::chrono::milliseconds timespan(100);
     Terminal terminal(terminalSocket);
-    cpu.printPanelSilk(terminal);
+    TestCPU::printPanelSilk(terminal);
     cpu.setRunFlag(true);
     while (!cpu.getHaltFlag()) {
         cpu.instruction_cycle();

@@ -135,75 +135,77 @@ namespace asmbl {
 
                 while (!src.eof()) {
                     c = src.get();
-                    if (c == ';' || (!std::isblank(c) && std::isspace(c)))
+                    if (c == '\n')
                         break;
                 }
 
                 if (!tok.empty())
                     return tok;
-            }
-            if (std::isblank(c)) {
-                if (!buffer.empty()) {   // Blanks separate tokens
-                    tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                    buffer.clear();
-                } else
-                    continue;
-            } else if (!std::isblank(c) &&
-                       (std::isspace(c) || c == ';')) {   // Other white space or ';' ends instruction
-                if (!buffer.empty()) {
-                    tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                    buffer.clear();
-                }
-                return tok;
-            } else if (c == '=' || c == '.' || c == '+' || c == '-' || c == '@' || c == ':') {
-                if (!buffer.empty()) {
-                    tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                    buffer.clear();
-                }
-                buffer.push_back(c);
-                switch (c) {
-                    case '=':
-                        tok.emplace_back(TokenClass::ASSIGNMENT, buffer);
-                        break;
-                    case '.':
-                        tok.emplace_back(TokenClass::PC_TOKEN, buffer);
-                        break;
-                    case '+':
-                        tok.emplace_back(TokenClass::ADD, buffer);
-                        break;
-                    case '-':
-                        tok.emplace_back(TokenClass::SUB, buffer);
-                        break;
-                    case '@':
-                        tok.emplace_back(TokenClass::WORD_ALLOCATION, buffer);
-                        break;
-                    case ':':
-                        tok.emplace_back(TokenClass::LABEL_CREATE, buffer);
-                        break;
-                    default:
-                        break;
-                }
-                buffer.clear();
-            } else if (!buffer.empty()) {
-                if (std::isalpha(buffer.at(0))) {
-                    if (std::isalnum(c)) {
-                        buffer.push_back(c);
-                    } else {
-                        tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                        buffer.clear();
-                        buffer.push_back(c);
-                    }
-                } else if (std::isdigit(buffer.at(0))) {
-                    if (std::isdigit(c) || std::isxdigit(c) || (buffer.length() == 1 && std::toupper(c) == 'X')) {
-                        buffer.push_back(c);
-                    } else {
-                        tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                        buffer.clear();
-                        buffer.push_back(c);
-                    }
-                }
             } else {
-                buffer.push_back(c);
+                if (std::isblank(c)) {
+                    if (!buffer.empty()) {   // Blanks separate tokens
+                        tok.emplace_back(TokenClass::UNKNOWN, buffer);
+                        buffer.clear();
+                    } else
+                        continue;
+                } else if (!std::isblank(c) &&
+                           (std::isspace(c) || c == ';')) {   // Other white space or ';' ends instruction
+                    if (!buffer.empty()) {
+                        tok.emplace_back(TokenClass::UNKNOWN, buffer);
+                        buffer.clear();
+                    }
+                    if (!tok.empty())
+                        return tok;
+                } else if (c == '=' || c == '.' || c == '+' || c == '-' || c == '@' || c == ':') {
+                    if (!buffer.empty()) {
+                        tok.emplace_back(TokenClass::UNKNOWN, buffer);
+                        buffer.clear();
+                    }
+                    buffer.push_back(c);
+                    switch (c) {
+                        case '=':
+                            tok.emplace_back(TokenClass::ASSIGNMENT, buffer);
+                            break;
+                        case '.':
+                            tok.emplace_back(TokenClass::PC_TOKEN, buffer);
+                            break;
+                        case '+':
+                            tok.emplace_back(TokenClass::ADD, buffer);
+                            break;
+                        case '-':
+                            tok.emplace_back(TokenClass::SUB, buffer);
+                            break;
+                        case '@':
+                            tok.emplace_back(TokenClass::WORD_ALLOCATION, buffer);
+                            break;
+                        case ':':
+                            tok.emplace_back(TokenClass::LABEL_CREATE, buffer);
+                            break;
+                        default:
+                            break;
+                    }
+                    buffer.clear();
+                } else if (!buffer.empty()) {
+                    if (std::isalpha(buffer.at(0))) {
+                        if (std::isalnum(c)) {
+                            buffer.push_back(c);
+                        } else {
+                            tok.emplace_back(TokenClass::UNKNOWN, buffer);
+                            buffer.clear();
+                            buffer.push_back(c);
+                        }
+                    } else if (std::isdigit(buffer.at(0))) {
+                        if (std::isdigit(c) || std::isxdigit(c) || (buffer.length() == 1 && std::toupper(c) == 'X')) {
+                            buffer.push_back(c);
+                        } else {
+                            tok.emplace_back(TokenClass::UNKNOWN, buffer);
+                            buffer.clear();
+                            buffer.push_back(c);
+                        }
+                    }
+                } else {
+                    buffer.push_back(c);
+                }
             }
         }
         return tok;
@@ -337,7 +339,11 @@ namespace asmbl {
         bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
 //        bin << fmt::format("{:02o}\n{:02o}\n", ((code & 07700) >> 6), (code & 077));
 
-        list << fmt::format("{:04o}  {:04o}   {:>32} ", pc, code, (label == last ? "" : label->literal) );
+        list << fmt::format("{:04o}  {:04o}   ", pc, code );
+        if (label == last)
+            list << fmt::format("{:>16} ", "");
+        else
+            list << fmt::format("{:>16}:", label->literal);
         for (auto itr = first; itr != last; ++itr) {
             list << fmt::format(" {}", itr->literal);
         }

@@ -325,7 +325,8 @@ namespace sim {
                 program_counter[wordIndex] = word;
                 addressSet = true;
             } else if (addressSet) {
-                writeCore(field_register[instruction_field](), cpma[wordIndex](), word);
+                writeCore(field_register[instruction_field](), program_counter[wordIndex](), word);
+                ++program_counter[wordIndex];
             }
         }
 
@@ -433,7 +434,7 @@ namespace sim {
         terminal.setCursorPosition(6u, 40u);
         terminal.print("{:<8}{:<12}{:<6}", "Isz", "Defer", "Run");
         terminal.setCursorPosition(8u, 40u);
-        terminal.print("{:<8}{:<12}", "Dca", "Word Countt");
+        terminal.print("{:<8}{:<12}", "Dca", "Word Count");
         terminal.setCursorPosition(10u, 40u);
         terminal.print("{:<8}{:<12}", "Jms", "Current Address");
         terminal.setCursorPosition(12u, 40u);
