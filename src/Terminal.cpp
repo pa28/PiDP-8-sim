@@ -5,10 +5,8 @@
  * @date 2022-03-15
  */
 
-#include <sys/un.h>
 #include <sys/socket.h>
 #include <bits/socket.h>
-#include <cstring>
 #include <arpa/inet.h>
 #include "Terminal.h"
 
@@ -79,7 +77,7 @@ namespace sim {
 
         sock_address.sin_family = AF_INET;
         sock_address.sin_addr.s_addr = inet_addr("127.0.0.1");
-        sock_address.sin_port = htons(8888);
+        sock_address.sin_port = htons(0);
 
         if (bind(socket, (struct sockaddr *) &sock_address, sizeof(sock_address)) == -1) {
             perror("bind");
@@ -88,6 +86,10 @@ namespace sim {
 
         if (listen(socket, 1) == -1)
             throw TerminalPipeException("listen failed.");
+
+        socklen_t len = sizeof(sock_address);
+        getsockname(socket, (struct sockaddr *) &sock_address, &len);
+        auto port = ntohs(sock_address.sin_port);
 
         childPid = fork();
         if (childPid == -1) {
@@ -98,7 +100,7 @@ namespace sim {
             char *argv[4];
             asprintf(argv+0, "mate-terminal");
             asprintf(argv+1, "-e");
-            asprintf(argv+2, "telnet localhost %d", 8888);
+            asprintf(argv+2, "telnet localhost %d", port);
             argv[3] = nullptr;
             close(0);
             close(1);
