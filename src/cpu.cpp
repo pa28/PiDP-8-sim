@@ -434,9 +434,9 @@ namespace sim {
         terminal.setCursorPosition(6u, 40u);
         terminal.print("{:<8}{:<12}{:<6}", "Isz", "Defer", "Run");
         terminal.setCursorPosition(8u, 40u);
-        terminal.print("{:<8}{:<12}", "Dca", "Word Count");
+        terminal.print("{:<8}{:<12}", "Dca", "Wrd Cnt");
         terminal.setCursorPosition(10u, 40u);
-        terminal.print("{:<8}{:<12}", "Jms", "Current Address");
+        terminal.print("{:<8}{:<12}", "Jms", "Cur Adr");
         terminal.setCursorPosition(12u, 40u);
         terminal.print("{:<8}{:<12}", "Jmp", "Break");
         terminal.setCursorPosition(14u, 40u);

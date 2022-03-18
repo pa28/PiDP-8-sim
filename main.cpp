@@ -69,7 +69,7 @@ int main() {
     sourceCode.clear();
     sourceCode.str(std::string{asmbl::PingPong});
     std::stringstream binary;
-    assembler.pass2(sourceCode, std::cout, binary);
+    assembler.pass2(sourceCode, binary, std::cout);
 
     TestCPU cpu{};
     auto startAddress = cpu.readBinaryFormat(binary);

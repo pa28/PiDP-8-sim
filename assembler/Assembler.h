@@ -19,9 +19,12 @@ namespace asmbl {
     class AssemblerException : public std::runtime_error {
     public:
         AssemblerException() = delete;
-        explicit AssemblerException(const std::string& what_arg) : std::runtime_error(what_arg) {}
-        explicit AssemblerException(const char* what_arg) : std::runtime_error(what_arg) {}
-        AssemblerException(const AssemblerException& other) noexcept = default;
+
+        explicit AssemblerException(const std::string &what_arg) : std::runtime_error(what_arg) {}
+
+        explicit AssemblerException(const char *what_arg) : std::runtime_error(what_arg) {}
+
+        AssemblerException(const AssemblerException &other) noexcept = default;
     };
 
     /**
@@ -62,13 +65,19 @@ namespace asmbl {
             SymbolSatus status;
 
             Symbol() = default;
+
             ~Symbol() = default;
+
             Symbol(word_t value, std::string symbol, SymbolSatus status)
-            : value(value), symbol(std::move(symbol)), status(status) {}
-            Symbol(const Symbol&) = default;
-            Symbol(Symbol&&) = default;
-            Symbol& operator=(const Symbol &) = default;
-            Symbol& operator=(Symbol &&) = default;
+                    : value(value), symbol(std::move(symbol)), status(status) {}
+
+            Symbol(const Symbol &) = default;
+
+            Symbol(Symbol &&) = default;
+
+            Symbol &operator=(const Symbol &) = default;
+
+            Symbol &operator=(Symbol &&) = default;
         };
 
         static constexpr std::array<Instruction, 48> InstructionSet =
@@ -140,28 +149,40 @@ namespace asmbl {
         std::map<std::string, Symbol> symbolTable{};
 
         enum class TokenClass {
-            UNKNOWN, PC_TOKEN, WORD_ALLOCATION, ASSIGNMENT, OP_CODE, NUMBER, LITERAL, ADD, SUB, LABEL_CREATE
+            UNKNOWN, PC_TOKEN, WORD_ALLOCATION, ASSIGNMENT, OP_CODE, NUMBER, LITERAL, ADD, SUB, LABEL_CREATE, COMMENT
         };
 
         struct AssemblerToken {
             TokenClass tokenClass{TokenClass::UNKNOWN};
             std::string literal{};
+
             AssemblerToken() = default;
+
             ~AssemblerToken() = default;
-            AssemblerToken(TokenClass tokenClass, std::string& literal) : tokenClass(tokenClass), literal(literal) {}
+
+            AssemblerToken(TokenClass tokenClass, std::string &literal) : tokenClass(tokenClass), literal(literal) {}
+
             AssemblerToken(const AssemblerToken &) = default;
+
             AssemblerToken(AssemblerToken &&) = default;
-            AssemblerToken& operator=(const AssemblerToken&) = default;
-            AssemblerToken& operator=(AssemblerToken&&) = default;
+
+            AssemblerToken &operator=(const AssemblerToken &) = default;
+
+            AssemblerToken &operator=(AssemblerToken &&) = default;
         };
 
         std::optional<sim::register_type> get_token_value(const AssemblerToken &token);
 
         using TokenList = std::vector<AssemblerToken>;
-        void classify_tokens(TokenList& tokens);
+        using SyntaxTree = std::vector<TokenList>;
 
-        void generate_code(word_t pc, TokenList::iterator first, TokenList::iterator last, TokenList::iterator label,
-                           std::ostream &list, std::ostream &bin);
+        SyntaxTree syntaxTree{};
+
+        void classify_tokens(TokenList &tokens);
+
+        [[nodiscard]] sim::register_type
+        generate_code(word_t pc, TokenList::iterator first, TokenList::iterator last, TokenList::iterator label,
+                      std::ostream &bin);
 
     public:
 
@@ -175,7 +196,9 @@ namespace asmbl {
 
         void pass1(std::istream &src);
 
-        void pass2(std::istream &src, std::ostream &list, std::ostream &bin);
+        void pass2(std::istream &src, std::ostream &bin, std::ostream &list);
+
+        void listing(std::ostream &list, const TokenList &tokens, sim::register_type pc, sim::register_type code);
 
         void dump_symbols(std::ostream &strm);
     };

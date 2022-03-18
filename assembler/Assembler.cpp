@@ -58,6 +58,8 @@ namespace asmbl {
                     case TokenClass::OP_CODE:
                         ++pc;
                         break;
+                    case TokenClass::COMMENT:
+                        break;
                     default:
                         throw AssemblerException("Malformed instruction: ");
                 }
@@ -79,8 +81,8 @@ namespace asmbl {
         }
     }
 
-    void Assembler::pass2(std::istream &src, std::ostream &list, std::ostream &bin) {
-        sim::register_type pc = 0u;
+    void Assembler::pass2(std::istream &src, std::ostream &bin, std::ostream &list) {
+        sim::register_type pc = 0u, code = 0u;
         for (auto tokens = parse_tokens(src); !tokens.empty(); tokens = parse_tokens(src)) {
             try {
                 classify_tokens(tokens);
@@ -92,22 +94,26 @@ namespace asmbl {
                                 if (auto value = get_token_value(tokens[2]); value) {
                                     pc = value.value();
                                     bin << static_cast<char>(0100 | ((pc & 07700) >> 6)) << static_cast<char>(pc & 077);
-//                                    bin << fmt::format("{:02o}\n{:02o}\n", (0100 | ((pc & 07700) >> 6)), (pc & 077));
-                                }
-                                else
+                                    listing(list, tokens, pc, code);
+                                } else
                                     throw AssemblerException("PC assignment needs defined value.");
                             }
                         }
                         break;
                     case TokenClass::LITERAL:
                         if (tokens.size() >= 3 && tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
-                            generate_code(pc, tokens.begin() + 2, tokens.end(), tokens.begin(), list, bin);
+                            code = generate_code(pc, tokens.begin() + 2, tokens.end(), tokens.begin(), bin);
+                            listing(list, tokens, pc, code);
                             ++pc;
                         }
                         break;
                     case TokenClass::OP_CODE:
-                        generate_code(pc, tokens.begin(), tokens.end(), tokens.end(), list, bin);
+                        code = generate_code(pc, tokens.begin(), tokens.end(), tokens.end(), bin);
+                        listing(list, tokens, pc, code);
                         ++pc;
+                        break;
+                    case TokenClass::COMMENT:
+                        listing(list, tokens, pc, code);
                         break;
                     default:
                         throw AssemblerException("Malformed instruction: ");
@@ -127,7 +133,7 @@ namespace asmbl {
         std::string buffer;
         while (!src.eof()) {
             auto c = src.get();
-            if (c == '#') {                             // Comment, ignore rest of instruction
+            if (c == '/') {                             // Comment, ignore rest of instruction
                 if (!buffer.empty()) {
                     tok.emplace_back(TokenClass::UNKNOWN, buffer);
                     buffer.clear();
@@ -137,7 +143,10 @@ namespace asmbl {
                     c = src.get();
                     if (c == '\n')
                         break;
+                    buffer.push_back(c);
                 }
+
+                tok.emplace_back(TokenClass::COMMENT, buffer);
 
                 if (!tok.empty())
                     return tok;
@@ -148,8 +157,7 @@ namespace asmbl {
                         buffer.clear();
                     } else
                         continue;
-                } else if (!std::isblank(c) &&
-                           (std::isspace(c) || c == ';')) {   // Other white space or ';' ends instruction
+                } else if (c == '\n' || c == ';') {   // Other white space or ';' ends instruction
                     if (!buffer.empty()) {
                         tok.emplace_back(TokenClass::UNKNOWN, buffer);
                         buffer.clear();
@@ -178,7 +186,7 @@ namespace asmbl {
                         case '@':
                             tok.emplace_back(TokenClass::WORD_ALLOCATION, buffer);
                             break;
-                        case ':':
+                        case ',':
                             tok.emplace_back(TokenClass::LABEL_CREATE, buffer);
                             break;
                         default:
@@ -254,7 +262,7 @@ namespace asmbl {
                     token.tokenClass = TokenClass::ADD;
                 else if (token.literal == "-")
                     token.tokenClass = TokenClass::SUB;
-                else if (token.literal == ":")
+                else if (token.literal == ",")
                     token.tokenClass = TokenClass::LABEL_CREATE;
                 else if (std::isdigit(token.literal.at(0)))
                     token.tokenClass = TokenClass::NUMBER;
@@ -265,9 +273,9 @@ namespace asmbl {
         }
     }
 
-    void
+    sim::register_type
     Assembler::generate_code(word_t pc, TokenList::iterator first, TokenList::iterator last, TokenList::iterator label,
-                             std::ostream &list, std::ostream &bin) {
+                             std::ostream &bin) {
         word_t code = 0u;
         bool memoryOpr = false;
         CombinationType restrict{CombinationType::Gr};
@@ -337,17 +345,7 @@ namespace asmbl {
         }
 
         bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
-//        bin << fmt::format("{:02o}\n{:02o}\n", ((code & 07700) >> 6), (code & 077));
-
-        list << fmt::format("{:04o}  {:04o}   ", pc, code );
-        if (label == last)
-            list << fmt::format("{:>16} ", "");
-        else
-            list << fmt::format("{:>16}:", label->literal);
-        for (auto itr = first; itr != last; ++itr) {
-            list << fmt::format(" {}", itr->literal);
-        }
-        list << fmt::format("\n");
+        return code;
     }
 
     void Assembler::dump_symbols(std::ostream &strm) {
@@ -356,6 +354,45 @@ namespace asmbl {
                 strm << fmt::format("{:04o}  {:<21}\n", symbol.second.value, symbol.second.symbol);
             else
                 strm << fmt::format("Undef {:<21}\n", symbol.second.value, symbol.second.symbol);
+        }
+    }
+
+    void
+    Assembler::listing(std::ostream &list, const TokenList &tokens, sim::register_type pc, sim::register_type code) {
+        if (tokens.begin()->tokenClass == TokenClass::COMMENT) {
+            list << fmt::format("{:>14}{:<72}\n", "/", tokens.begin()->literal);
+        } else {
+            auto itr = tokens.begin();
+            list << fmt::format("{:04o}  {:04o}   ", pc, code);
+            while (itr != tokens.end()) {
+                if (itr->tokenClass == TokenClass::LITERAL) {
+                    list << fmt::format(" {:>16}, ", itr->literal);
+                    ++itr;
+                } else {
+                    list << fmt::format(" {:>16}  ", "");
+                }
+                std::stringstream instruction;
+                while (itr != tokens.end() && itr->tokenClass != TokenClass::COMMENT) {
+                    switch (itr->tokenClass) {
+                        case TokenClass::OP_CODE:
+                        case TokenClass::NUMBER:
+                        case TokenClass::LITERAL:
+                        case TokenClass::PC_TOKEN:
+                        case TokenClass::ASSIGNMENT:
+                            instruction << fmt::format("{} ", itr->literal);
+                            break;
+                        default:
+                            break;
+                    }
+                    ++itr;
+                }
+                list << fmt::format("{:<32}", instruction.str());
+                if (itr != tokens.end() && itr->tokenClass == TokenClass::COMMENT) {
+                    list << fmt::format("/ {}", itr->literal);
+                    ++itr;
+                }
+                list << '\n';
+            }
         }
     }
 }
