@@ -60,11 +60,14 @@ namespace sim {
         explicit TerminalPipeException(const std::string& what_arg) : std::runtime_error(what_arg) {}
     };
 
+    /**
+     * @brief TerminalConnection base class. This provides a standard interface to an open connection.
+     */
     class TerminalConnection {
         friend class Terminal;
     protected:
-        pid_t childPid{-1};
-        int terminalFd{-1};
+        pid_t childPid{-1};         ///< The terminal process pid.
+        int terminalFd{-1};         ///< The terminal file descriptor. Closed on destruction if open.
 
         std::unique_ptr<stdio_filebuf> iBuffer{};
         std::unique_ptr<stdio_filebuf> oBuffer{};
@@ -77,14 +80,20 @@ namespace sim {
                 close(terminalFd);
         }
 
+        /**
+         * @brief Write a string to the output file descriptor.
+         * @param buf
+         * @return
+         */
         size_t write(const char* buf) const {
             return ::write(terminalFd, buf, strlen(buf));
         }
     };
+
     /**
-     * @class TerminalPipe
-     * @brief Create a set of pipes to a new process and attach stdio_filebuf to the input of one and the output
-     * of the other
+     * @class TerminalPipe -- Deprecated due to poor support.
+     * @brief Use /dev/ptmx to set up a connection to a virtual terminal that supports adopting an open
+     * /dev/ptmx file descriptor. XTerm supports this.
      */
     class TerminalPipe : public TerminalConnection {
     protected:
@@ -108,22 +117,33 @@ namespace sim {
         void open(const std::string& title);
     };
 
+    /**
+     * @class TerminalSocket
+     * @brief Launch a TerminalConnection to a virtual terminal and run telnet to connect back to this
+     * process using TCP/IP and the loop back device and a system assigned server port number.
+     */
     class TerminalSocket : public TerminalConnection {
     protected:
-        struct sockaddr_in sock_address{};
-        struct sockaddr_in client_address{};
-        socklen_t client_addr_len{};
-        int socket{-1};
+        struct sockaddr_in sock_address{};      ///< Address of the this program
+        struct sockaddr_in client_address{};    ///< Address of the telnet client
+        socklen_t client_addr_len{};            ///< Client address structure size.
+        int socket{-1};                         ///< The listen socket file descriptor
 
     public:
 
-        TerminalSocket() = default;
+        TerminalSocket() = default;             ///< Constructor
 
+        /**
+         * @brief Destructor, wait for the client to exit.
+         */
         ~TerminalSocket() override {
             int waitStatus;
             wait(&waitStatus);
         }
 
+        /**
+         * @brief Open the connection.
+         */
         void open();
 
     };
@@ -136,36 +156,70 @@ namespace sim {
     public:
 
     private:
-        static NullStreamBuffer nullStreamBuffer;
-        std::ostream ostrm;
-        std::istream istrm;
+        static NullStreamBuffer nullStreamBuffer;   ///< Null buffer for unused streams
+        std::ostream ostrm;                         ///< Output stream
+        std::istream istrm;                         ///< Input stram
 
     public:
 
+        /**
+         * @brief Default constructor
+         * @details Both streams have null buffers. An object constructed with this won't communicate
+         * anything.
+         */
         Terminal() : ostrm(&nullStreamBuffer), istrm(&nullStreamBuffer) {}
 
+        /**
+         * @brief Construct an outbound only connection using a provided stream buffer.
+         * @param outbuff The output stream buffer.
+         */
         explicit Terminal(stdio_filebuf *outbuff) : ostrm(outbuff), istrm(&nullStreamBuffer) {}
 
+        /**
+         * @brief Construct a bi-directional connection using provided in and out stream buffers.
+         * @param inBuff The input buffer.
+         * @param outBuff The output buffer
+         */
         Terminal(stdio_filebuf *inBuff, stdio_filebuf *outBuff) : ostrm(outBuff), istrm(inBuff) {}
 
+        /**
+         * @brief Construct a bi-directional connection using buffers provided by a TerminalConnection
+         * @param terminalConnection The terminal connection
+         */
         explicit Terminal(TerminalConnection &terminalConnection)
         : Terminal(terminalConnection.iBuffer.get(), terminalConnection.oBuffer.get()) {}
 
-        std::ostream &out() { return ostrm; }
+        std::ostream &out() { return ostrm; }   ///< Get the out stream
 
-        std::istream &in() { return istrm; }
+        std::istream &in() { return istrm; }    ///< Get the in stream
 
+        /**
+         * @brief Use the format library to format output to the out stream.
+         * @tparam Args Argument template type
+         * @param args Arguments to format
+         * @return the ostream.
+         */
         template<typename...Args>
         std::ostream &print(Args...args) {
             return ostrm << fmt::format(std::forward<Args>(args)...);
         }
 
+        /**
+         * @brief Set the cursor position.
+         * @tparam U1 The type of line parameter.
+         * @tparam U2 The type of column parameter.
+         * @param line The line, starts at 1.
+         * @param column The column, starts at 1.
+         */
         template<typename U1, typename U2>
         requires std::unsigned_integral<U1> && std::unsigned_integral<U2>
         void setCursorPosition(U1 line, U2 column) {
             print("\033[{};{}H", line, column);
         }
 
+        /**
+         * @brief Flush the output stream.
+         */
         void flush() {
             ostrm.flush();
         }
