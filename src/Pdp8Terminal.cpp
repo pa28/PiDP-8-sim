@@ -241,4 +241,46 @@ namespace sim {
         out().flush();
     }
 
+    void Pdp8Terminal::loadPingPong() {
+        std::stringstream sourceCode(std::string{asmbl::PingPong});
+        assembler.pass1(sourceCode);
+        sourceCode.clear();
+        sourceCode.str(std::string{asmbl::PingPong});
+        std::stringstream binary;
+        std::ostream nullStrm(&nullStreamBuffer);
+        assembler.pass2(sourceCode, binary, nullStrm);
+        auto startAddress = cpu.readBinaryFormat(binary);
+        printPanel();
+    }
+
+    void Pdp8Terminal::printCommandHistory() {
+        if (commandHistory.empty())
+            return;
+
+        while (commandHistory.size() > 43 - 18)
+            commandHistory.erase(commandHistory.begin());
+
+        unsigned long availableLines = termHeight - 1 - 18;
+        unsigned long startLine = 18;
+        if (commandHistory.size() < availableLines)
+            startLine = startLine + availableLines - commandHistory.size();
+
+        auto itr = commandHistory.begin();
+        if (commandHistory.size() > availableLines) {
+            itr += static_cast<int>(commandHistory.size() - availableLines);
+        }
+
+        for (; itr != commandHistory.end(); ++itr, ++startLine) {
+            print("\033[{};{}H{:<80}\n", startLine, 1, *itr);
+        }
+        setCursorPosition();
+        out().flush();
+    }
+
+    void Pdp8Terminal::commandHelp() {
+        for (auto help : CommandLineHelp) {
+            commandHistory.emplace_back(help);
+        }
+    }
+
 }

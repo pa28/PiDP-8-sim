@@ -9,6 +9,7 @@
 
 #include "src/Terminal.h"
 #include "src/cpu.h"
+#include "assembler/Assembler.h"
 
 namespace sim {
 
@@ -22,6 +23,8 @@ namespace sim {
     protected:
 
         PDP8I cpu{};
+
+        asmbl::Assembler assembler;
 
         std::string lastCommand{};
 
@@ -80,6 +83,8 @@ namespace sim {
         void printPanelSilk();
 
         void printPanel();
+
+        void loadPingPong();
 
 
     public:

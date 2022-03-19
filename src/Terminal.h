@@ -166,7 +166,7 @@ namespace sim {
             Timeout, Data
         };
 
-    private:
+    protected:
         static NullStreamBuffer nullStreamBuffer;   ///< Null buffer for unused streams
         std::ostream ostrm;                         ///< Output stream
         std::istream istrm;                         ///< Input stream
