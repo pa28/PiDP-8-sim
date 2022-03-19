@@ -1,5 +1,5 @@
 /**
- * @file terminal.h
+ * @file Terminal.h
  * @author Richard Buckley <richard.buckley@ieee.org>
  * @version 1.0
  * @date 2022-03-15
@@ -29,13 +29,23 @@ namespace sim {
     // https://datatracker.ietf.org/doc/html/rfc1073
     // https://datatracker.ietf.org/doc/html/rfc1184
 
-    using stdio_filebuf = __gnu_cxx::stdio_filebuf<char>;
+    using stdio_filebuf = __gnu_cxx::stdio_filebuf<char>;   ///< Used to create NullStreamBuffer.
 
+    /**
+     * @class NullStreamBuffer
+     * @brief A Stream buffer that doesnt buffer data.
+     * @details A NullStreamBuffer may be used where you have to pass a std::istream or std::ostream but
+     * don't want any output. Create the required stream with a NullStreamBuffer and pass it wehre required.
+     */
     class NullStreamBuffer : public std::streambuf {
     protected:
         int overflow(int c) override { return c; }
     };
 
+    /**
+     * @namespace TerminalConsts
+     * @brief Useful value for terminals.
+     */
     namespace TerminalConsts {
         enum Colors : size_t {
             Regular = 0, Bold, LowIntensity, Italic, Underline, Blinking, Reverse, Background,
@@ -57,11 +67,15 @@ namespace sim {
         }
     }
 
-    class TerminalPipeException : public std::runtime_error {
+    /**
+     * @class TerminalConnectionException
+     * @brief Thrown by TerminalConnection and derivatives on errors.
+     */
+    class TerminalConnectionException : public std::runtime_error {
     public:
-        explicit TerminalPipeException(const char *what_arg) : std::runtime_error(what_arg) {}
+        explicit TerminalConnectionException(const char *what_arg) : std::runtime_error(what_arg) {}
 
-        explicit TerminalPipeException(const std::string &what_arg) : std::runtime_error(what_arg) {}
+        explicit TerminalConnectionException(const std::string &what_arg) : std::runtime_error(what_arg) {}
     };
 
     /**

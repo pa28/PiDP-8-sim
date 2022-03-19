@@ -23,13 +23,13 @@ namespace sim {
         ptsName = ptsname(ptmx);
 
         if (ptmx == -1) {
-            throw TerminalPipeException("Failed to open pseudo-terminal master-slave for use with xterm. Aborting...");
+            throw TerminalConnectionException("Failed to open pseudo-terminal master-slave for use with xterm. Aborting...");
         } else if (unlockpt(ptmx) != 0) {
             close(ptmx);
-            throw TerminalPipeException("Failed to unlock pseudo-terminal master-slave for use with xterm. Aborting...");
+            throw TerminalConnectionException("Failed to unlock pseudo-terminal master-slave for use with xterm. Aborting...");
         } else if (grantpt(ptmx) != 0) {
             close(ptmx);
-            throw TerminalPipeException("Failed to grant access rights to pseudo-terminal master-slave for use with xterm Aborting...");
+            throw TerminalConnectionException("Failed to grant access rights to pseudo-terminal master-slave for use with xterm Aborting...");
         }
 
         // open the corresponding pseudo-terminal slave (that's us)
@@ -39,14 +39,14 @@ namespace sim {
 
         if (terminalFd == -1) {
             close(ptmx);
-            throw TerminalPipeException("Failed to open client side terminal endpoint: " + ptsName);
+            throw TerminalConnectionException("Failed to open client side terminal endpoint: " + ptsName);
         }
 
         childPid = fork();
         if (childPid == -1) {
             close(ptmx);
             close(terminalFd);
-            throw TerminalPipeException("Failed to fork terminal process.");
+            throw TerminalConnectionException("Failed to fork terminal process.");
         }
 
         if (childPid == 0) {
@@ -60,7 +60,7 @@ namespace sim {
             argv[6] = nullptr;
 
             execvp(argv[0], argv);
-            throw TerminalPipeException("Failed to exec terminal program.");
+            throw TerminalConnectionException("Failed to exec terminal program.");
         } else {
             close(ptmx);
         }
@@ -71,11 +71,11 @@ namespace sim {
 
     void TerminalSocket::open() {
         if ((socket = ::socket(AF_INET, SOCK_STREAM, 0)) == -1)
-            throw TerminalPipeException("socket failed.");
+            throw TerminalConnectionException("socket failed.");
 
         int options = 1;
         if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &options, sizeof(options)))
-            throw TerminalPipeException("setsockopt failed.");
+            throw TerminalConnectionException("setsockopt failed.");
 
         sock_address.sin_family = AF_INET;
         sock_address.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -83,11 +83,11 @@ namespace sim {
 
         if (bind(socket, (struct sockaddr *) &sock_address, sizeof(sock_address)) == -1) {
             perror("bind");
-            throw TerminalPipeException("bind failed.");
+            throw TerminalConnectionException("bind failed.");
         }
 
         if (listen(socket, 1) == -1)
-            throw TerminalPipeException("listen failed.");
+            throw TerminalConnectionException("listen failed.");
 
         socklen_t len = sizeof(sock_address);
         getsockname(socket, (struct sockaddr *) &sock_address, &len);
@@ -95,7 +95,7 @@ namespace sim {
 
         childPid = fork();
         if (childPid == -1) {
-            throw TerminalPipeException("Failed to fork terminal process.");
+            throw TerminalConnectionException("Failed to fork terminal process.");
         }
 
         if (childPid == 0) {
@@ -109,11 +109,11 @@ namespace sim {
             close(2);
 
             execvp(argv[0], argv);
-            throw TerminalPipeException("Failed to exec terminal program.");
+            throw TerminalConnectionException("Failed to exec terminal program.");
         } else {
             if ((terminalFd = accept(socket, (struct sockaddr *) &client_address, (socklen_t *) &client_addr_len)) ==
                 -1)
-                throw TerminalPipeException("accept failed.");
+                throw TerminalConnectionException("accept failed.");
 
             iBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::in);
             oBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::out);
@@ -146,7 +146,7 @@ namespace sim {
         auto nfds = std::max(ifd,ofd) + 1;
 
         if (auto stat = ::select(nfds, &readFds, &writeFds, &exceptFds, &timeout); stat == -1) {
-            throw TerminalPipeException("Call to select failed.");
+            throw TerminalConnectionException("Call to select failed.");
         } else if (stat > 0) {
             if (FD_ISSET(ifd, &readFds))
                 readSelect = Data;
