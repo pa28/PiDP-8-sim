@@ -59,6 +59,16 @@ namespace asmbl {
             CombinationType orCombination;
         };
 
+        /**
+         * @struct Symbol
+         * @brief The information required for an assembler symbol.
+         * @details By implementation Symbols are case sensitive. However in mose PDP-8 assemblers symbols and
+         * op-codes can be used interchangeably (syntactically speaking). It is desirable to allow users to
+         * treat op-codes as if they are case insensitive. The way this is handled is that a token is first tested
+         * for membership in the op-code list, which is all upper case. If it not found it is searched for
+         * membership in the symbol table. If it is not found the all uppercase version of the token is
+         * searched for in the op-code list and classified an op code if found.
+         */
         struct Symbol {
             word_t value;
             std::string symbol;
