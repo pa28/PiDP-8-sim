@@ -48,7 +48,7 @@ namespace asmbl {
             Gr3,        ///< Group 3 microcode
         };
 
-        enum SymbolSatus {
+        enum SymbolStatus {
             Undefined,  ///< An undefined symbol
             Defined,    ///< A defined symbol
         };
@@ -70,15 +70,15 @@ namespace asmbl {
          * searched for in the op-code list and classified an op code if found.
          */
         struct Symbol {
-            word_t value;
-            std::string symbol;
-            SymbolSatus status;
+            word_t value{};
+            std::string symbol{};
+            SymbolStatus status{Undefined};
 
             Symbol() = default;
 
             ~Symbol() = default;
 
-            Symbol(word_t value, std::string symbol, SymbolSatus status)
+            Symbol(word_t value, std::string symbol, SymbolStatus status)
                     : value(value), symbol(std::move(symbol)), status(status) {}
 
             Symbol(const Symbol &) = default;
@@ -185,9 +185,6 @@ namespace asmbl {
         std::optional<sim::register_type> get_token_value(const AssemblerToken &token);
 
         using TokenList = std::vector<AssemblerToken>;
-        using SyntaxTree = std::vector<TokenList>;
-
-        SyntaxTree syntaxTree{};
 
         void classify_tokens(TokenList &tokens);
 
