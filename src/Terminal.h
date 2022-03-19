@@ -143,6 +143,9 @@ namespace sim {
          */
         ~TerminalSocket() override {
             int waitStatus;
+            if (terminalFd >= 0)
+                close(terminalFd);
+            terminalFd = -1;
             wait(&waitStatus);
         }
 

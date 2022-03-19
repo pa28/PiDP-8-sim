@@ -120,9 +120,9 @@ namespace sim {
         }
 
         // mate-terminal seems to fork to detach from its parent so we must reap the process.
-        close(socket);
-        int waitStatus;
-        auto c = wait(&waitStatus);
+//        close(socket);
+//        int waitStatus;
+//        auto c = wait(&waitStatus);
     }
 
     std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
