@@ -353,8 +353,9 @@ namespace asmbl {
                             code |= memoryOpr ? (symbol->second.value & 0177) : symbol->second.value;
                         } else
                             throw AssemblerException("Undefined symbol " + itr->literal);
-                    } else
+                    } else {
                         throw AssemblerException("Symbol not found " + itr->literal);
+                    }
                     break;
                 default:
                     break;
