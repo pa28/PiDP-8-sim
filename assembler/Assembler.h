@@ -181,8 +181,7 @@ namespace asmbl {
         void classify_tokens(TokenList &tokens);
 
         [[nodiscard]] sim::register_type
-        generate_code(word_t pc, TokenList::iterator first, TokenList::iterator last, TokenList::iterator label,
-                      std::ostream &bin);
+        generate_code(TokenList::iterator first, TokenList::iterator last);
 
     public:
 

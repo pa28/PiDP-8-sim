@@ -102,13 +102,15 @@ namespace asmbl {
                         break;
                     case TokenClass::LITERAL:
                         if (tokens.size() >= 3 && tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
-                            code = generate_code(pc, tokens.begin() + 2, tokens.end(), tokens.begin(), bin);
+                            code = generate_code(tokens.begin() + 2, tokens.end());
+                            bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
                             listing(list, tokens, pc, code);
                             ++pc;
                         }
                         break;
                     case TokenClass::OP_CODE:
-                        code = generate_code(pc, tokens.begin(), tokens.end(), tokens.end(), bin);
+                        code = generate_code(tokens.begin(), tokens.end());
+                        bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
                         listing(list, tokens, pc, code);
                         ++pc;
                         break;
@@ -143,7 +145,7 @@ namespace asmbl {
                     c = src.get();
                     if (c == '\n')
                         break;
-                    buffer.push_back(c);
+                    buffer.push_back(static_cast<char>(c));
                 }
 
                 tok.emplace_back(TokenClass::COMMENT, buffer);
@@ -169,7 +171,7 @@ namespace asmbl {
                         tok.emplace_back(TokenClass::UNKNOWN, buffer);
                         buffer.clear();
                     }
-                    buffer.push_back(c);
+                    buffer.push_back(static_cast<char>(c));
                     switch (c) {
                         case '=':
                             tok.emplace_back(TokenClass::ASSIGNMENT, buffer);
@@ -196,26 +198,27 @@ namespace asmbl {
                 } else if (!buffer.empty()) {
                     if (std::isalpha(buffer.at(0))) {
                         if (std::isalnum(c)) {
-                            buffer.push_back(c);
+                            buffer.push_back(static_cast<char>(c));
                         } else {
                             tok.emplace_back(TokenClass::UNKNOWN, buffer);
                             buffer.clear();
-                            buffer.push_back(c);
+                            buffer.push_back(static_cast<char>(c));
                         }
                     } else if (std::isdigit(buffer.at(0))) {
                         if (std::isdigit(c) || std::isxdigit(c) || (buffer.length() == 1 && std::toupper(c) == 'X')) {
-                            buffer.push_back(c);
+                            buffer.push_back(static_cast<char>(c));
                         } else {
                             tok.emplace_back(TokenClass::UNKNOWN, buffer);
                             buffer.clear();
-                            buffer.push_back(c);
+                            buffer.push_back(static_cast<char>(c));
                         }
                     }
                 } else {
-                    buffer.push_back(c);
+                    buffer.push_back(static_cast<char>(c));
                 }
             }
         }
+
         return tok;
     }
 
@@ -223,7 +226,10 @@ namespace asmbl {
         switch (token.tokenClass) {
             case TokenClass::NUMBER:
                 try {
-                    return stoul(token.literal, nullptr, 0);
+                    if (octalNumbersOnly)
+                        return stoul(token.literal, nullptr, 8);
+                    else
+                        return stoul(token.literal, nullptr, 0);
                 } catch (const std::invalid_argument &ia) {
                     throw AssemblerException("Invalid numeric argument: ");
                 } catch (const std::out_of_range &range) {
@@ -268,14 +274,25 @@ namespace asmbl {
                     token.tokenClass = TokenClass::NUMBER;
                 else if (instructionMap.find(token.literal) != instructionMap.end())
                     token.tokenClass = TokenClass::OP_CODE;
-                else token.tokenClass = TokenClass::LITERAL;
+                else {
+                    if (symbolTable.find(token.literal) != symbolTable.end()) {
+                        token.tokenClass = TokenClass::LITERAL;
+                    } else {
+                        std::string uppercase;
+                        std::transform(token.literal.begin(), token.literal.end(),
+                                       std::back_insert_iterator<std::string>(uppercase), ::toupper);
+                        if (instructionMap.find(uppercase) != instructionMap.end()) {
+                            token.literal = uppercase;
+                            token.tokenClass = TokenClass::OP_CODE;
+                        }
+                    }
+                }
             }
         }
     }
 
     sim::register_type
-    Assembler::generate_code(word_t pc, TokenList::iterator first, TokenList::iterator last, TokenList::iterator label,
-                             std::ostream &bin) {
+    Assembler::generate_code(TokenList::iterator first, TokenList::iterator last) {
         word_t code = 0u;
         bool memoryOpr = false;
         CombinationType restrict{CombinationType::Gr};
@@ -344,7 +361,6 @@ namespace asmbl {
             }
         }
 
-        bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
         return code;
     }
 

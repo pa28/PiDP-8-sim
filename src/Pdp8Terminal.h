@@ -24,7 +24,7 @@ namespace sim {
 
         PDP8I cpu{};
 
-        asmbl::Assembler assembler;
+        asmbl::Assembler assembler{};
 
         std::string lastCommand{};
 
