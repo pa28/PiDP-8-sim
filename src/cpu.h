@@ -177,6 +177,10 @@ namespace sim {
 
         [[nodiscard]] auto interruptEnable() const { return interrupt_enable; }
 
+        void run() { run_flag = true; }
+
+        void stop() { run_flag = false; }
+
         /**
          * @brief Load the address register
          */

@@ -32,9 +32,8 @@ namespace sim {
             }
 
             if (cpu.runFlag()) {
-
-            } else {
-
+                cpu.instruction_step();
+                printPanel();
             }
         }
 
@@ -104,6 +103,7 @@ namespace sim {
         if (command.empty())
             command = lastCommand;
 
+        lastCommand.clear();
         if (!command.empty()) {
             if (command == "quit") {
                 runConsole = false;
@@ -140,6 +140,14 @@ namespace sim {
                     cpu.instruction_step();
                     printPanel();
                     lastCommand = command;
+                    break;
+                case 'C':
+                    cpu.run();
+                    printPanel();
+                    break;
+                case 'S':
+                    cpu.stop();
+                    printPanel();
                     break;
                 default:
                     break;
