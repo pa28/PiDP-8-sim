@@ -267,8 +267,9 @@ namespace sim {
         unsigned int termHeight{};                  ///< The height of the terminal.
         unsigned int termWidth{};                   ///< The width of the terminal.
 
-        [[maybe_unused]] bool echoMode{false};
-        [[maybe_unused]] bool naws{false};
+        bool echoMode{false};
+        bool naws{false};
+        bool suppressGoAhead{false};
 
     public:
         TelnetTerminal() = default;
