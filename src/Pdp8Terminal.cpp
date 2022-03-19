@@ -6,6 +6,7 @@
  */
 
 #include <chrono>
+#include <thread>
 #include "Pdp8Terminal.h"
 #include "assembler/Assembler.h"
 #include "assembler/TestPrograms.h"
@@ -19,14 +20,21 @@ namespace sim {
         setCharacterMode();
         negotiateAboutWindowSize();
 
-        bool runConsole = true;
         std::chrono::microseconds selectTimeout(10000);
-        inputBufferChanged();
+        std::this_thread::sleep_for(selectTimeout);
+        parseInput();
+
         while (runConsole) {
             setCursorPosition();
             auto[read, write, timeout] = select(true, false, selectTimeout.count());
             if (read == SelectStatus::Data) {
                 parseInput();
+            }
+
+            if (cpu.runFlag()) {
+
+            } else {
+
             }
         }
 
@@ -51,7 +59,7 @@ namespace sim {
 //            in().get();
 //
 //        TestCPU::printPanelSilk(terminal);
-//        terminal.displayInputBuffer();
+//        displayInputBuffer();
 //        cpu.setRunFlag(true);
 //        while (!cpu.getHaltFlag()) {
 //            queryTerminalSize();
@@ -82,6 +90,124 @@ namespace sim {
 //        cpu.setRunFlag(false);
 //        cpu.printPanel(terminal);
 //
+    }
+
+    void Pdp8Terminal::inputBufferChanged() {
+        TelnetTerminal::inputBufferChanged();
+    }
+
+    void Pdp8Terminal::inputBufferReady() {
+        auto command = inputLineBuffer;
+        inputLineBuffer.clear();
+        inputBufferChanged();
+
+        if (command.empty())
+            command = lastCommand;
+
+        if (!command.empty()) {
+            if (command == "quit") {
+                runConsole = false;
+                return;
+            }
+
+            switch (command.front()) {
+                case 'l':
+                case 'L': {
+                    auto address = std::strtol(command.substr(1).c_str(), nullptr, 8);
+                    cpu.loadAddress(address);
+                    printPanel();
+                }
+                    break;
+                case 'd':
+                case 'D': {
+                    auto word = std::strtol(command.substr(1).c_str(), nullptr, 8);
+                    cpu.deposit(word);
+                    printPanel();
+                }
+                    break;
+                case 'e':
+                case 'E':
+                    cpu.examine();
+                    printPanel();
+                    lastCommand = command;
+                    break;
+                case 'c':
+                    cpu.instruction_cycle();
+                    printPanel();
+                    lastCommand = command;
+                default:
+                    break;
+            }
+        }
+    }
+
+    void Pdp8Terminal::printPanel() {
+        using namespace TerminalConsts;
+        print("{}", color(Regular, Yellow));
+
+        size_t margin = 1;
+        size_t line = 3, column = 2;
+        std::tie(line, column) = printPanelField(line, column, cpu.fieldRegister()[cpu.data_field]);
+        std::tie(line, column) = printPanelField(line, column, cpu.fieldRegister()[cpu.instruction_field]);
+        std::tie(line, column) = printPanelField(line, column, cpu.PC()[cpu.wordIndex]);
+        std::tie(line, column) = printPanelField(line + 3u, 14u, cpu.MA()[cpu.wordIndex]);
+        std::tie(line, column) = printPanelField(line + 3u, 14u, cpu.MB()[cpu.wordIndex]);
+        std::tie(line, column) = printPanelField(line + 3u, 12u, cpu.LAC()[cpu.arithmetic]);
+
+        printPanelFlag(2u, 44u, cpu.InstReg() == PDP8I::Instruction::AND);
+        printPanelFlag(4u, 44u, cpu.InstReg() == PDP8I::Instruction::TAD);
+        printPanelFlag(6u, 44u, cpu.InstReg() == PDP8I::Instruction::ISZ);
+        printPanelFlag(8u, 44u, cpu.InstReg() == PDP8I::Instruction::DCA);
+        printPanelFlag(10u, 44u, cpu.InstReg() == PDP8I::Instruction::JMS);
+        printPanelFlag(12u, 44u, cpu.InstReg() == PDP8I::Instruction::JMP);
+        printPanelFlag(14u, 44u, cpu.InstReg() == PDP8I::Instruction::IOT);
+        printPanelFlag(16u, 44u, cpu.InstReg() == PDP8I::Instruction::OPR);
+
+        printPanelFlag(2u, 56u, cpu.cycleState() == PDP8I::CycleState::Fetch || cpu.cycleState() == PDP8I::CycleState::Interrupt);
+        printPanelFlag(4u, 56u, cpu.cycleState() == PDP8I::CycleState::Execute);
+        printPanelFlag(6u, 56u, cpu.cycleState() == PDP8I::CycleState::Defer);
+
+        printPanelFlag(2u, 66u, cpu.interruptEnable());
+        printPanelFlag(4u, 66u, false);
+        printPanelFlag(6u, 66u, cpu.runFlag());
+
+        print("{}", color(Regular));
+        setCursorPosition();
+
+        out().flush();
+    }
+
+    void Pdp8Terminal::printPanelSilk() {
+        using namespace TerminalConsts;
+        print("\033[{};{}H{:^6}{:^6}{:^24}", 2u, 2u, "Data", "Inst", "Program Counter");
+        print("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
+        print("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
+        print("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
+
+        print("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
+        print("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
+        print("\033[{};{}H{:<8}{:<12}{:<6}", 6u, 40u, "Isz", "Defer", "Run");
+        print("\033[{};{}H{:<8}{:<12}", 8u, 40u, "Dca", "Wrd Cnt");
+        print("\033[{};{}H{:<8}{:<12}", 10u, 40u, "Jms", "Cur Adr");
+        print("\033[{};{}H{:<8}{:<12}", 12u, 40u, "Jmp", "Break");
+        print("\033[{};{}H{:<8}", 14u, 40u, "Iot");
+        print("\033[{};{}H{:<8}", 16u, 40u, "Opr");
+
+        print(color(Regular, Yellow));
+        print("\033[{};{}H{}", 4u, 2u, Bar);
+        print("\033[{};{}H{}", 4u, 14u, Bar);
+        print("\033[{};{}H{}", 7u, 14u, Bar);
+        print("\033[{};{}H{}", 10u, 14u, Bar);
+        print("\033[{};{}H{}", 13u, 14u, Bar);
+        print("\033[{};{}H{}", 4u, 26u, Bar);
+        print("\033[{};{}H{}", 7u, 26u, Bar);
+        print("\033[{};{}H{}", 10u, 26u, Bar);
+        print("\033[{};{}H{}", 13u, 26u, Bar);
+
+        print("{}", color(Regular));
+
+        setCursorPosition();
+        out().flush();
     }
 
 }

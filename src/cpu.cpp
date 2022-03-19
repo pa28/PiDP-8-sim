@@ -266,7 +266,7 @@ namespace sim {
                     break;
                 case 7: // CAF
                     program_counter[wordIndex] = 0u;
-                    cycleState = CycleState::Interrupt;
+                    cycle_state = CycleState::Interrupt;
                     break;
                 default:
                     throw std::logic_error("IOT 00 error."); // LCOV_EXCL_LINE
@@ -375,88 +375,13 @@ namespace sim {
         interrupt_deferred = false;
         interrupt_request = false;
         error_flag = false;
-        cycleState = CycleState::Interrupt;
+        cycle_state = CycleState::Interrupt;
         halt_flag = false;
     }
 
 //    void PDP8I::printPanel(Terminal &terminal) {
-//        using namespace TerminalConsts;
-//        terminal.print("{}", color(Regular, Yellow));
-//
-//        size_t margin = 1;
-//        size_t line = 3, column = 2;
-//        std::tie(line, column) = printPanelField(terminal, line, column, field_register[data_field]);
-//        std::tie(line, column) = printPanelField(terminal, line, column, field_register[instruction_field]);
-//        std::tie(line, column) = printPanelField(terminal, line, column, program_counter[wordIndex]);
-//        std::tie(line, column) = printPanelField(terminal, line + 3u, 14u, cpma[wordIndex]);
-//        std::tie(line, column) = printPanelField(terminal, line + 3u, 14u, memory_buffer[wordIndex]);
-//        std::tie(line, column) = printPanelField(terminal, line + 3u, 12u, link_accumulator[arithmetic]);
-//
-//        printPanelFlag(terminal, 2u, 44u, instruction_register == Instruction::AND);
-//        printPanelFlag(terminal, 4u, 44u, instruction_register == Instruction::TAD);
-//        printPanelFlag(terminal, 6u, 44u, instruction_register == Instruction::ISZ);
-//        printPanelFlag(terminal, 8u, 44u, instruction_register == Instruction::DCA);
-//        printPanelFlag(terminal, 10u, 44u, instruction_register == Instruction::JMS);
-//        printPanelFlag(terminal, 12u, 44u, instruction_register == Instruction::JMP);
-//        printPanelFlag(terminal, 14u, 44u, instruction_register == Instruction::IOT);
-//        printPanelFlag(terminal, 16u, 44u, instruction_register == Instruction::OPR);
-//
-//        printPanelFlag(terminal, 2u, 56u, cycleState == CycleState::Fetch || cycleState == CycleState::Interrupt);
-//        printPanelFlag(terminal, 4u, 56u, cycleState == CycleState::Execute);
-//        printPanelFlag(terminal, 6u, 56u, cycleState == CycleState::Defer);
-//
-//        printPanelFlag(terminal, 2u, 66u, interrupt_enable);
-//        printPanelFlag(terminal, 4u, 66u, false);
-//        printPanelFlag(terminal, 6u, 66u, run_flag);
-//
-//        terminal.setCursorPosition();
-//        terminal.print("{}", color(Regular));
-//
-//        terminal.flush();
 //    }
 //
 //    void PDP8I::printPanelSilk(Terminal &terminal) {
-//        using namespace TerminalConsts;
-//        terminal.setCursorPosition(2u,2u);
-//        terminal.print("{:^6}{:^6}{:^24}", "Data", "Inst", "Program Counter");
-//        terminal.setCursorPosition(5u, 14u);
-//        terminal.print("{:^24}", "Memory Address");
-//        terminal.setCursorPosition(8u, 14u);
-//        terminal.print("{:^24}", "Memory Buffer");
-//        terminal.setCursorPosition(11u, 14u);
-//        terminal.print("{:^24}", "Link Accumulator");
-//        terminal.setCursorPosition(14u, 1u);
-//
-//        terminal.setCursorPosition(2u, 40u);
-//        terminal.print("{:<8}{:<12}{:<6}", "And", "Fetch", "Ion");
-//        terminal.setCursorPosition(4u, 40u);
-//        terminal.print("{:<8}{:<12}{:<6}", "Tad", "Execute", "Pause");
-//        terminal.setCursorPosition(6u, 40u);
-//        terminal.print("{:<8}{:<12}{:<6}", "Isz", "Defer", "Run");
-//        terminal.setCursorPosition(8u, 40u);
-//        terminal.print("{:<8}{:<12}", "Dca", "Wrd Cnt");
-//        terminal.setCursorPosition(10u, 40u);
-//        terminal.print("{:<8}{:<12}", "Jms", "Cur Adr");
-//        terminal.setCursorPosition(12u, 40u);
-//        terminal.print("{:<8}{:<12}", "Jmp", "Break");
-//        terminal.setCursorPosition(14u, 40u);
-//        terminal.print("{:<8}", "Iot");
-//        terminal.setCursorPosition(16u, 40u);
-//        terminal.print("{:<8}", "Opr");
-//
-//        terminal.print("{}", color(Regular, Yellow));
-//        terminal.setCursorPosition(4u, 2u); terminal.print(Bar);
-//        terminal.setCursorPosition(4u, 14u); terminal.print(Bar);
-//        terminal.setCursorPosition(7u, 14u); terminal.print(Bar);
-//        terminal.setCursorPosition(10u, 14u); terminal.print(Bar);
-//        terminal.setCursorPosition(13u, 14u); terminal.print(Bar);
-//        terminal.setCursorPosition(4u, 26u); terminal.print(Bar);
-//        terminal.setCursorPosition(7u, 26u); terminal.print(Bar);
-//        terminal.setCursorPosition(10u, 26u); terminal.print(Bar);
-//        terminal.setCursorPosition(13u, 26u); terminal.print(Bar);
-//
-//        terminal.print("{}", color(Regular));
-//
-//        terminal.setCursorPosition();
 //    }
 }

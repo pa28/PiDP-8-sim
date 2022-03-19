@@ -180,6 +180,8 @@ namespace sim {
          */
         Terminal() : ostrm(&nullStreamBuffer), istrm(&nullStreamBuffer) {}
 
+        ~Terminal() = default;
+
         /**
          * @brief Construct an outbound only connection using a provided stream buffer.
          * @param outbuff The output stream buffer.
@@ -256,8 +258,8 @@ namespace sim {
         std::string inputLineBuffer{};              ///< Buffer to read input from the user
         unsigned int inputLine{1u};                 ///< The line the input buffer is on
         unsigned int inputColumn{1u};               ///< The Column the input cursor is at.
-        unsigned int termWidth{};                   ///< The width of the terminal.
         unsigned int termHeight{};                  ///< The height of the terminal.
+        unsigned int termWidth{};                   ///< The width of the terminal.
         bool termWindowSizeChange{};                ///< True when the terminal size has changed.
 
         bool echoMode{false};
@@ -271,6 +273,7 @@ namespace sim {
 
         explicit TelnetTerminal(TerminalConnection &connection) : Terminal(connection) {}
 
+    protected:
         void setCharacterMode();
 
         void negotiateAboutWindowSize();
@@ -299,7 +302,6 @@ namespace sim {
         virtual void windowSizeChanged() {}
 
         virtual void inputBufferReady() {
-            std::cout << fmt::format("Input: {}\n", inputLineBuffer);
             inputLineBuffer.clear();
             inputBufferChanged();
         }

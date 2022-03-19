@@ -45,17 +45,6 @@ namespace sim {
             Interrupt, Fetch, Defer, Execute, Pause
         };
 
-    protected:
-
-        CycleState cycleState{CycleState::Fetch};
-
-        register_value link_accumulator{};          ///< Store the link and accumulator values
-        register_value program_counter{};           ///< Store the program counter
-        register_value memory_buffer{};             ///< Memory buffer register
-        register_value cpma{};                      ///< Central Processor Memory Address
-        register_value field_register{};
-        register_value instruction_buffer{};        ///< Holds a new instruction field until next jump.
-        register_value switch_register{};           ///< Holds the value read from the switch register
         register_index<13, 0> arithmetic{};         ///< Access for arithmetic
         register_index<1, 12> linkIndex{};          ///< Access the link value
         register_index<1, 0> leastSignificant{};    ///< access the least significant bit
@@ -73,15 +62,26 @@ namespace sim {
         register_index<7,0> addr_index{};           ///< Address in page access
         register_index<9,0> opr_bits{};
 
-        register_value interrupt_buffer{};
-        register_value field_buffer{};
         register_index<3,0> data_field{};           ///< Access the memory field from the field register
         register_index<3,3> instruction_field{};    ///< Access the instruction field from the field register;
-
-        Instruction instruction_register{};         ///< The instruction register
         register_index<3,9> instruction_index{};    ///< Access the
 
+    protected:
+
+        CycleState cycle_state{CycleState::Fetch};
+
+        register_value link_accumulator{};          ///< Store the link and accumulator values
+        register_value program_counter{};           ///< Store the program counter
+        register_value memory_buffer{};             ///< Memory buffer register
+        register_value cpma{};                      ///< Central Processor Memory Address
+        register_value field_register{};
+        register_value instruction_buffer{};        ///< Holds a new instruction field until next jump.
+        register_value switch_register{};           ///< Holds the value read from the switch register
+        register_value interrupt_buffer{};
+        register_value field_buffer{};
         register_value multiplier_quotient{};
+
+        Instruction instruction_register{};         ///< The instruction register
 
         bool interrupt_enable{false};
         bool interrupt_deferred{false};             // deferred until a JMP or JSR
@@ -158,6 +158,24 @@ namespace sim {
          void instruction_step();
 
         void reset();
+
+        [[nodiscard]] auto fieldRegister() { return field_register; }
+
+        [[nodiscard]] auto PC() { return program_counter; }
+
+        [[nodiscard]] auto MA() { return cpma; }
+
+        [[nodiscard]] auto MB() { return memory_buffer; }
+
+        [[nodiscard]] auto LAC() { return link_accumulator; }
+
+        [[nodiscard]] auto InstReg() { return instruction_register; }
+
+        [[nodiscard]] bool runFlag() const { return run_flag; }
+
+        [[nodiscard]] auto cycleState() const { return cycle_state; }
+
+        [[nodiscard]] auto interruptEnable() const { return interrupt_enable; }
 
         /**
          * @brief Load the address register
