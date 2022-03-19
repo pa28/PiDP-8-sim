@@ -412,4 +412,18 @@ namespace asmbl {
             }
         }
     }
+
+    std::optional<Assembler::word_t> Assembler::find_symbol(const std::string &symbol) {
+        if (auto entry = symbolTable.find(symbol); entry != symbolTable.end()) {
+            return entry->second.value;
+        }
+        return std::nullopt;
+    }
+
+    std::optional<Assembler::word_t> Assembler::parse_command(const std::string &command) {
+        std::stringstream strm(command);
+        auto tokens = parse_tokens(strm);
+        classify_tokens(tokens);
+        return generate_code(tokens.begin(), tokens.end());
+    }
 }

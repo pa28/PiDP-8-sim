@@ -200,6 +200,9 @@ namespace asmbl {
         void listing(std::ostream &list, const TokenList &tokens, sim::register_type pc, sim::register_type code);
 
         void dump_symbols(std::ostream &strm);
+        std::optional<Assembler::word_t> find_symbol(const std::string& symbol);
+
+        std::optional<Assembler::word_t> parse_command(const std::string& command);
     };
 }
 

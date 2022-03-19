@@ -120,17 +120,19 @@ namespace sim {
             switch (command.front()) {
                 case 'l':
                 case 'L': {
-                    auto address = std::strtol(command.substr(1).c_str(), nullptr, 8);
-                    commandHistory.push_back(fmt::format("Load Address {:04o}", address));
-                    cpu.loadAddress(address);
+                    if (auto address = parseArgument(command.substr(1)); address) {
+                        commandHistory.push_back(command);
+                        cpu.loadAddress(address.value());
+                    }
                     printPanel();
                 }
                     break;
                 case 'd':
                 case 'D': {
-                    auto word = std::strtol(command.substr(1).c_str(), nullptr, 8);
-                    commandHistory.push_back(fmt::format("Deposit {:04o} @ {:04o}", word, cpu.PC()[cpu.wordIndex]()));
-                    cpu.deposit(word);
+                    if (auto address = parseArgument(command.substr(1)); address) {
+                        commandHistory.push_back(command);
+                        cpu.deposit(address.value());
+                    }
                     printPanel();
                 }
                     break;
@@ -242,6 +244,7 @@ namespace sim {
     }
 
     void Pdp8Terminal::loadPingPong() {
+        assembler.clear();
         std::stringstream sourceCode(std::string{asmbl::PingPong});
         assembler.pass1(sourceCode);
         sourceCode.clear();
@@ -281,6 +284,31 @@ namespace sim {
         for (auto help : CommandLineHelp) {
             commandHistory.emplace_back(help);
         }
+    }
+
+    std::optional<register_type> Pdp8Terminal::parseArgument(const std::string &argument) {
+        try {
+            return std::stoul(argument, nullptr, 8);
+
+        } catch (const std::invalid_argument &ia) {
+            try {
+                std::string arg(argument.substr(argument.find_first_not_of(' ')));
+                assembler.setOctalNumbersOnly(true);
+                if (auto value = assembler.find_symbol(arg); value) {
+                    return value.value();
+                } else if (auto value = assembler.parse_command(arg)) {
+                    return value.value();
+                }
+                assembler.setOctalNumbersOnly(false);
+                commandHistory.push_back(fmt::format("Error: argument not octal number, no symbol found: {}", arg));
+            } catch (const asmbl::AssemblerException& ae) {
+                commandHistory.push_back(ae.what());
+            }
+        } catch (const std::out_of_range &oor) {
+            commandHistory.push_back(fmt::format("Error: argument out of range: {}", argument));
+            return std::nullopt;
+        }
+        return std::nullopt;
     }
 
 }

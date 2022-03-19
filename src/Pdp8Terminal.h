@@ -49,6 +49,8 @@ namespace sim {
 
         void commandHelp();
 
+        std::optional<register_type> parseArgument(const std::string& argument);
+
         static constexpr std::array<std::string_view, 6> CommandLineHelp =
                 {{
                     "l <octal> -- Load Address.            d <octal> -- Deposit at address.",
