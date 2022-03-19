@@ -86,7 +86,7 @@ namespace sim {
         bool interrupt_enable{false};
         bool interrupt_deferred{false};             // deferred until a JMP or JSR
         int interrupt_delayed{0u};                  // delayed until after next instruction
-        bool greater_than_flag;
+        bool greater_than_flag{false};
         bool short_jmp_flag{false};                 // set to true if idling on a short jump
 
         std::atomic_bool interrupt_request;         // An interrupt has been raised.
@@ -192,13 +192,6 @@ namespace sim {
         }
 
         /**
-         * @brief Get the address register
-         */
-        register_type getAddress() {
-            return program_counter[wordIndex]();
-        }
-
-        /**
          * @brief Deposit value in memory
          */
         void deposit(register_type value);
@@ -213,10 +206,18 @@ namespace sim {
          */
         register_value readCore(register_type field, register_type address);
 
+        /**
+         * @brief Read a word from the core memory field specified as the current instruction field.
+         * @return
+         */
         register_value readInstructionCore() {
             return readCore(field_register[instruction_field](), cpma[wordIndex]());
         }
 
+        /**
+         * @brief Read a word from the core memory field specified as the current data field.
+         * @return
+         */
         register_value readDataCore() {
             return readCore(field_register[data_field](), cpma[wordIndex]());
         }
@@ -226,60 +227,53 @@ namespace sim {
          */
         void writeCore(register_type field, register_type address, register_type data);
 
+        /**
+         * @brief Write a word to the core memory field specified as the current instruction field.
+         * @return
+         */
         void writeInstructionCore(register_type data) {
             writeCore(field_register[instruction_field](), cpma[wordIndex](), data);
         }
 
+        /**
+         * @brief Write a word to the core memory field specified as the current data field.
+         * @return
+         */
         void writeDataCore(register_type data) {
             writeCore(field_register[data_field](), cpma[wordIndex](), data);
         }
 
         /**
-         * @brief Read Binary Format file into memory field.
+         * @brief Read Binary Format (BIN) file into memory field.
          * @details The memory field is set in the field_register[instruction_field]
          * @param istrm The input stream with BIN (Binary Format) data.
          * @return true if the file had at least one address and one word in it.
          */
-        bool readBinaryFormat(std::istream& istrm);
+        [[maybe_unused]] bool readBinaryFormat(std::istream& istrm);
 
-        bool writeBinaryFormat(std::ostream& ostrm, register_type first, register_type last);
+        /**
+         * @brief Write Binary Format (BIN) file from memory field.
+         * @param ostrm The stream to write the BIN file on.
+         * @param first
+         * @param last
+         * @return
+         */
+        [[maybe_unused]] bool writeBinaryFormat(std::ostream& ostrm, register_type first, register_type last);
 
-        void rimLoader();
+        /**
+         * @brief Push the RIM loader into high memory in the current instruction field.
+         */
+        [[maybe_unused]] void rimLoader();
 
+        /**
+         * @brief Execute OPR instructions.
+         */
         void execute_opr();
 
+        /**
+         * @brief Execute IOT instructions.
+         */
         void execute_iot();
-
-#if 0
-        template<size_t width, size_t offset, typename U1, typename U2>
-        requires std::unsigned_integral<U2> && std::unsigned_integral<U2>
-        std::tuple<size_t,size_t> printPanelField(Terminal& terminal, U1 line, U2 col, slice_value<width,offset> slice) {
-            using namespace TerminalConsts;
-            for (auto idx = slice.WIDTH; idx > 0; --idx) {
-                terminal.template setCursorPosition(line, col);
-                auto lightIdx = slice() & (1<<(idx-1)) ? 1 : 0;
-                terminal.print("{} ", Light[lightIdx]);
-                col += 2;
-            }
-            return {line, col};
-        }
-
-        template<typename U1, typename U2>
-        requires std::unsigned_integral<U1> && std::unsigned_integral<U2>
-        void printPanelFlag(Terminal& terminal, U1 line, U2 col, bool flag) {
-            using namespace TerminalConsts;
-            terminal.template setCursorPosition(line,col);
-            terminal.template print("{}", Light[flag ? 1 : 0]);
-        }
-
-        static void printPanelSilk(Terminal &terminal);
-
-        void printPanel(Terminal &terminal);
-
-        [[nodiscard]] CycleState getCycleStat() const noexcept {
-            return cycleState;
-        }
-#endif
     };
 
     class TestCPU;
@@ -308,12 +302,17 @@ namespace sim {
 
     class TestCPU : public PDP8I {
     public:
+        /**
+         * @brief Load a test program (in binary form) into core memory
+         * @tparam length The length of the program.
+         * @param start The starting address of the program.
+         * @param code The code.
+         */
         template<size_t length>
-        void loadTestProgram(uint16_t start, std::array<uint16_t, length> code);
+        [[maybe_unused]] void loadTestProgram(uint16_t start, std::array<uint16_t, length> code);
 
         template<typename Title, size_t length>
         requires std::is_convertible_v<Title, std::string_view>
-
         std::pair<int, int> singleInstructionTests(Title title, std::array<SingleInstructionTest, length> tests);
 
         std::pair<int, int> testTadInstructions_1();
@@ -326,15 +325,11 @@ namespace sim {
 
         std::pair<int, int> testIszInstructions();
 
-        void setAccumulator(uint16_t value) {
+        [[maybe_unused]] void setAccumulator(uint16_t value) {
             link_accumulator[wordIndex] = value;
         }
 
-        void setRunFlag(bool run) {
-            run_flag = run;
-        }
-
-        bool getHaltFlag() const {
+        [[maybe_unused]] [[nodiscard]] bool getHaltFlag() const {
             return halt_flag;
         }
     };

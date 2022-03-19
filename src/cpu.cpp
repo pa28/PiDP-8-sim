@@ -5,7 +5,7 @@
  * @date 2022-03-11
  */
 
-#include "cpu.h"
+#include "src/cpu.h"
 
 namespace sim {
 

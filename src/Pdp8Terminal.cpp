@@ -296,13 +296,13 @@ namespace sim {
                 assembler.setOctalNumbersOnly(true);
                 if (auto value = assembler.find_symbol(arg); value) {
                     return value.value();
-                } else if (auto value = assembler.parse_command(arg)) {
-                    return value.value();
+                } else if (auto cmd = assembler.parse_command(arg)) {
+                    return cmd.value();
                 }
                 assembler.setOctalNumbersOnly(false);
                 commandHistory.push_back(fmt::format("Error: argument not octal number, no symbol found: {}", arg));
             } catch (const asmbl::AssemblerException& ae) {
-                commandHistory.push_back(ae.what());
+                commandHistory.emplace_back(ae.what());
             }
         } catch (const std::out_of_range &oor) {
             commandHistory.push_back(fmt::format("Error: argument out of range: {}", argument));

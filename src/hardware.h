@@ -24,7 +24,7 @@ namespace sim {
         static constexpr register_type mask = base_mask << offset;
         static constexpr register_type clear = ~mask;
         static constexpr size_t WIDTH = width;
-        static constexpr size_t OFFSET = offset;
+        [[maybe_unused]] static constexpr size_t OFFSET = offset;
 
         register_value& registerRef;
 

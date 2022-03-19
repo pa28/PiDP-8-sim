@@ -114,7 +114,7 @@ namespace sim {
      * @brief Use /dev/ptmx to set up a connection to a virtual terminal that supports adopting an open
      * /dev/ptmx file descriptor. XTerm supports this.
      */
-    class TerminalPipe : public TerminalConnection {
+    class [[maybe_unused]] TerminalPipe : public TerminalConnection {
     protected:
         std::string ptsName{};
 
@@ -181,7 +181,7 @@ namespace sim {
         };
 
     protected:
-        static NullStreamBuffer nullStreamBuffer;   ///< Null buffer for unused streams
+        NullStreamBuffer nullStreamBuffer{};   ///< Null buffer for unused streams
         std::ostream ostrm;                         ///< Output stream
         std::istream istrm;                         ///< Input stream
 
@@ -237,13 +237,6 @@ namespace sim {
             return ostrm << fmt::format(std::forward<Args>(args)...);
         }
 
-        /**
-         * @brief Flush the output stream.
-         */
-        void flush() {
-            ostrm.flush();
-        }
-
         std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
         select(bool selRead, bool selWrite, unsigned int timeoutUs);
     };
@@ -264,10 +257,6 @@ namespace sim {
         // Client sends: IAC SB NAWS <16 bit value nbo><16 bit value nbo> SE
         static constexpr int NAWS = 037; // 31
 
-        // Enter character mode
-        // Server sends: IAC WONT LINEMONDE
-        // Server sends: IAC WILL ECHO
-        static constexpr int LINEMODE = 34;
         static constexpr int ECHO = 1;
         static constexpr int SUPPRESS_GO_AHEAD = 3;
 
@@ -277,11 +266,9 @@ namespace sim {
         unsigned int inputColumn{1u};               ///< The Column the input cursor is at.
         unsigned int termHeight{};                  ///< The height of the terminal.
         unsigned int termWidth{};                   ///< The width of the terminal.
-        bool termWindowSizeChange{};                ///< True when the terminal size has changed.
 
-        bool echoMode{false};
-        bool suppressGoAhead{false};
-        bool naws{false};
+        [[maybe_unused]] bool echoMode{false};
+        [[maybe_unused]] bool naws{false};
 
     public:
         TelnetTerminal() = default;

@@ -9,11 +9,10 @@
 #include <bits/socket.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
-#include <sys/ioctl.h>
 #include "Terminal.h"
 
 namespace sim {
-    NullStreamBuffer Terminal::nullStreamBuffer;
+//    NullStreamBuffer Terminal::nullStreamBuffer;
 
 
     void TerminalPipe::open(const std::string& title) {
@@ -159,12 +158,12 @@ namespace sim {
     }
 
     void TelnetTerminal::setCharacterMode() {
-        out().put(IAC).put(WILL).put(ECHO).flush();
-        out().put(IAC).put(WILL).put(SUPPRESS_GO_AHEAD).flush();
+        out().put(static_cast<char>(IAC)).put(static_cast<char>(WILL)).put(static_cast<char>(ECHO)).flush();
+        out().put(static_cast<char>(IAC)).put(static_cast<char>(WILL)).put(static_cast<char>(SUPPRESS_GO_AHEAD)).flush();
     }
 
     void TelnetTerminal::negotiateAboutWindowSize() {
-        out().put(IAC).put(DO).put(NAWS).flush();
+        out().put(static_cast<char>(IAC)).put(static_cast<char>(DO)).put(NAWS).flush();
     }
 
     void TelnetTerminal::parseInput() {
@@ -228,7 +227,7 @@ namespace sim {
                         break;
                 }
             } else if (std::isprint(c)) {
-                inputLineBuffer.push_back(c);
+                inputLineBuffer.push_back(static_cast<char>(c));
                 inputBufferChanged();
             } else {
                 if (c == '\r') {
