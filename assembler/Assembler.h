@@ -147,6 +147,7 @@ namespace asmbl {
     protected:
         std::map<std::string_view, Instruction> instructionMap{};
         std::map<std::string, Symbol> symbolTable{};
+        bool octalNumbersOnly{false};
 
         enum class TokenClass {
             UNKNOWN, PC_TOKEN, WORD_ALLOCATION, ASSIGNMENT, OP_CODE, NUMBER, LITERAL, ADD, SUB, LABEL_CREATE, COMMENT
@@ -197,9 +198,12 @@ namespace asmbl {
 
         void pass2(std::istream &src, std::ostream &bin, std::ostream &list);
 
-        void listing(std::ostream &list, const TokenList &tokens, sim::register_type pc, sim::register_type code);
+        static void listing(std::ostream &list, const TokenList &tokens, sim::register_type pc, sim::register_type code);
 
         void dump_symbols(std::ostream &strm);
+
+        void setOctalNumbersOnly(bool value) { octalNumbersOnly = value; }
+
         std::optional<Assembler::word_t> find_symbol(const std::string& symbol);
 
         std::optional<Assembler::word_t> parse_command(const std::string& command);
