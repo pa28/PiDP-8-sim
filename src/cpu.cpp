@@ -307,7 +307,7 @@ namespace sim {
         return memory_buffer[wordIndex]();
     }
 
-    bool PDP8I::readBinaryFormat(std::istream &istrm) {
+    [[maybe_unused]] bool PDP8I::readBinaryFormat(std::istream &istrm) {
         bool addressSet = false;
         register_type word;
 
@@ -334,7 +334,7 @@ namespace sim {
         return addressSet;
     }
 
-    bool PDP8I::writeBinaryFormat(std::ostream &ostrm, register_type first, register_type last) {
+    [[maybe_unused]] bool PDP8I::writeBinaryFormat(std::ostream &ostrm, register_type first, register_type last) {
         bool address_set = false;
         bool word_written = false;
 
@@ -360,7 +360,7 @@ namespace sim {
         return word_written;
     }
 
-    void PDP8I::rimLoader() {
+    [[maybe_unused]] void PDP8I::rimLoader() {
         program_counter[wordIndex] = RIM_LOADER_START;
         for (auto &word: RIM_LOADER) {
             register_type instruction(word);
