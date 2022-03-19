@@ -40,52 +40,57 @@ namespace sim {
 
     void PDP8I::instruction_step() {
         auto cycleToInterruptState = [this]() {
-            while (cycleState != CycleState::Interrupt)
+            while (cycle_state != CycleState::Interrupt)
                 instruction_cycle();
         };
 
-        if (cycleState != CycleState::Interrupt)
+        if (cycle_state != CycleState::Interrupt)
             cycleToInterruptState();
         instruction_cycle();
         cycleToInterruptState();
     }
 
     void PDP8I::instruction_cycle() {
-        switch (cycleState) {
-            case CycleState::Fetch:
-                fetch();
-                // sim_time(16us);
-                cycleState = instruction_register < Instruction::IOT && memory_buffer[indirectIndex]() ?
-                             CycleState::Defer : CycleState::Execute;
-                break;
-            case CycleState::Defer:
-                defer();
-                // sim_time(16us);
-                cycleState = CycleState::Execute;
-                break;
-            case CycleState::Execute:
-                execute();
-                cycleState = CycleState::Interrupt;
-                break;
-            case CycleState::Interrupt:
-                if ((!interrupt_deferred) && interrupt_enable && interrupt_request) {
-                    interrupt_buffer = field_register;
-                    field_register[instruction_field] = 0u;
-                    field_register[data_field] = 0u;
-                    interrupt_enable = false;
-                    cpma[wordIndex] = 0u;
-                    writeInstructionCore(program_counter[wordIndex]());
-                    program_counter[wordIndex] = 1u;
-                }
+        for (bool nextState = true; nextState;)
+            switch (cycle_state) {
+                case CycleState::Fetch:
+                    fetch();
+                    // sim_time(16us);
+                    cycle_state = instruction_register < Instruction::IOT && memory_buffer[indirectIndex]() ?
+                                  CycleState::Defer : CycleState::Execute;
+                    nextState = false;
+                    break;
+                case CycleState::Defer:
+                    defer();
+                    // sim_time(16us);
+                    cycle_state = CycleState::Execute;
+                    nextState = false;
+                    break;
+                case CycleState::Execute:
+                    execute();
+                    cycle_state = CycleState::Interrupt;
+                    nextState = false;
+                    break;
+                case CycleState::Interrupt:
+                    if ((!interrupt_deferred) && interrupt_enable && interrupt_request) {
+                        interrupt_buffer = field_register;
+                        field_register[instruction_field] = 0u;
+                        field_register[data_field] = 0u;
+                        interrupt_enable = false;
+                        cpma[wordIndex] = 0u;
+                        writeInstructionCore(program_counter[wordIndex]());
+                        program_counter[wordIndex] = 1u;
+                    }
 
-                if (interrupt_delayed)
-                    interrupt_enable = (--interrupt_delayed) == 0;
+                    if (interrupt_delayed)
+                        interrupt_enable = (--interrupt_delayed) == 0;
 
-                cycleState = CycleState::Fetch;
-                break;
-            case CycleState::Pause: // LCOV_EXCL_LINE
-                break; // LCOV_EXCL_LINE
-        }
+                    cycle_state = CycleState::Fetch;
+                    break;
+                case CycleState::Pause: // LCOV_EXCL_LINE
+                    nextState = false; // LCOV_EXCL_LINE
+                    break; // LCOV_EXCL_LINE
+            }
     }
 
     void PDP8I::execute() {
