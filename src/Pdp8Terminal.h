@@ -40,6 +40,22 @@ namespace sim {
             inputBufferChanged();
         }
 
+        std::vector<std::string> commandHistory{};
+
+        void printCommandHistory();
+
+        void commandHelp();
+
+        static constexpr std::array<std::string_view, 6> CommandLineHelp =
+                {{
+                    "l <octal> -- Load Address.            d <octal> -- Deposit at address.",
+                    "e -- Examine at address, repeats.     c -- CPU single cycle, repeats.",
+                    "s -- CPU single instruction, repeats. ?|h -- Print this help.",
+                    "C -- Continue from current address.   S -- Stop execution.",
+                    "PING PONG -- Assemble and load built in program.",
+                    "quit -- Exit the program."
+                }};
+
         template<size_t width, size_t offset, typename U1, typename U2>
         requires std::unsigned_integral<U2> && std::unsigned_integral<U2>
         std::tuple<size_t,size_t> printPanelField(U1 line, U2 col, slice_value<width,offset> slice) {

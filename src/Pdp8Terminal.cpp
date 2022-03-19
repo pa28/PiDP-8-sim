@@ -8,7 +8,6 @@
 #include <chrono>
 #include <thread>
 #include "Pdp8Terminal.h"
-#include "assembler/Assembler.h"
 #include "assembler/TestPrograms.h"
 #include "src/cpu.h"
 
@@ -23,12 +22,15 @@ namespace sim {
         std::chrono::microseconds selectTimeout(10000);
         std::this_thread::sleep_for(selectTimeout);
         parseInput();
+        commandHelp();
+        inputBufferChanged();
 
         while (runConsole) {
             setCursorPosition();
             auto[read, write, timeout] = select(true, false, selectTimeout.count());
             if (read == SelectStatus::Data) {
                 parseInput();
+                inputBufferChanged();
             }
 
             if (cpu.runFlag()) {
@@ -93,6 +95,7 @@ namespace sim {
 
     void Pdp8Terminal::inputBufferChanged() {
         TelnetTerminal::inputBufferChanged();
+        printCommandHistory();
     }
 
     void Pdp8Terminal::inputBufferReady() {
@@ -108,12 +111,17 @@ namespace sim {
             if (command == "quit") {
                 runConsole = false;
                 return;
+            } else if (command == "PING PONG") {
+                loadPingPong();
+                commandHistory.emplace_back("Load PING PONG");
+                return;
             }
 
             switch (command.front()) {
                 case 'l':
                 case 'L': {
                     auto address = std::strtol(command.substr(1).c_str(), nullptr, 8);
+                    commandHistory.push_back(fmt::format("Load Address {:04o}", address));
                     cpu.loadAddress(address);
                     printPanel();
                 }
@@ -121,22 +129,26 @@ namespace sim {
                 case 'd':
                 case 'D': {
                     auto word = std::strtol(command.substr(1).c_str(), nullptr, 8);
+                    commandHistory.push_back(fmt::format("Deposit {:04o} @ {:04o}", word, cpu.PC()[cpu.wordIndex]()));
                     cpu.deposit(word);
                     printPanel();
                 }
                     break;
                 case 'e':
                 case 'E':
-                    cpu.examine();
+                    commandHistory.push_back(fmt::format("Examine {:04o} -> {:04o}", cpu.PC()[cpu.wordIndex](),
+                                                         cpu.examine()));
                     printPanel();
                     lastCommand = command;
                     break;
                 case 'c':
+                    commandHistory.push_back(fmt::format("1 Cycle @ {:04o}", cpu.PC()[cpu.wordIndex]()));
                     cpu.instruction_cycle();
                     printPanel();
                     lastCommand = command;
                     break;
                 case 's':
+                    commandHistory.push_back(fmt::format("1 Instruction @ {:04o}", cpu.PC()[cpu.wordIndex]()));
                     cpu.instruction_step();
                     printPanel();
                     lastCommand = command;
@@ -148,6 +160,11 @@ namespace sim {
                 case 'S':
                     cpu.stop();
                     printPanel();
+                    break;
+                case '?':
+                case 'h':
+                case 'H':
+                    commandHelp();
                     break;
                 default:
                     break;
