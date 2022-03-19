@@ -135,6 +135,12 @@ namespace sim {
                     cpu.instruction_cycle();
                     printPanel();
                     lastCommand = command;
+                    break;
+                case 's':
+                    cpu.instruction_step();
+                    printPanel();
+                    lastCommand = command;
+                    break;
                 default:
                     break;
             }
