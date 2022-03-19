@@ -26,6 +26,9 @@
 
 namespace sim {
 
+    // https://datatracker.ietf.org/doc/html/rfc1073
+    // https://datatracker.ietf.org/doc/html/rfc1184
+
     using stdio_filebuf = __gnu_cxx::stdio_filebuf<char>;
 
     class NullStreamBuffer : public std::streambuf {
@@ -57,7 +60,8 @@ namespace sim {
     class TerminalPipeException : public std::runtime_error {
     public:
         explicit TerminalPipeException(const char *what_arg) : std::runtime_error(what_arg) {}
-        explicit TerminalPipeException(const std::string& what_arg) : std::runtime_error(what_arg) {}
+
+        explicit TerminalPipeException(const std::string &what_arg) : std::runtime_error(what_arg) {}
     };
 
     /**
@@ -65,6 +69,7 @@ namespace sim {
      */
     class TerminalConnection {
         friend class Terminal;
+
     protected:
         pid_t childPid{-1};         ///< The terminal process pid.
         int terminalFd{-1};         ///< The terminal file descriptor. Closed on destruction if open.
@@ -85,7 +90,7 @@ namespace sim {
          * @param buf
          * @return
          */
-        size_t write(const char* buf) const {
+        size_t write(const char *buf) const {
             return ::write(terminalFd, buf, strlen(buf));
         }
     };
@@ -114,7 +119,7 @@ namespace sim {
          * @param process The file system path location
          * @throws TerminalPipeException
          */
-        void open(const std::string& title);
+        void open(const std::string &title);
     };
 
     /**
@@ -154,11 +159,17 @@ namespace sim {
      */
     class Terminal {
     public:
+        enum SelectStatus {
+            Timeout, Data
+        };
 
     private:
         static NullStreamBuffer nullStreamBuffer;   ///< Null buffer for unused streams
         std::ostream ostrm;                         ///< Output stream
-        std::istream istrm;                         ///< Input stram
+        std::istream istrm;                         ///< Input stream
+
+        int ofd{-1};                                ///< File descriptor of the output stream
+        int ifd{-1};                                ///< File descriptor of the input stream
 
     public:
 
@@ -187,7 +198,10 @@ namespace sim {
          * @param terminalConnection The terminal connection
          */
         explicit Terminal(TerminalConnection &terminalConnection)
-        : Terminal(terminalConnection.iBuffer.get(), terminalConnection.oBuffer.get()) {}
+                : Terminal(terminalConnection.iBuffer.get(), terminalConnection.oBuffer.get()) {
+            ifd = terminalConnection.terminalFd;
+            ofd = terminalConnection.terminalFd;
+        }
 
         std::ostream &out() { return ostrm; }   ///< Get the out stream
 
@@ -205,6 +219,63 @@ namespace sim {
         }
 
         /**
+         * @brief Flush the output stream.
+         */
+        void flush() {
+            ostrm.flush();
+        }
+
+        std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
+        select(bool selRead, bool selWrite, unsigned int timeoutUs);
+    };
+
+    class TelnetTerminal : public Terminal {
+    public:
+        static constexpr int IAC = 255;
+        static constexpr int DO = 253;
+        static constexpr int WILL = 251;
+        static constexpr int WONT = 252;
+        static constexpr int SB = 250;
+        static constexpr int SE = 240;
+
+        // Negotiate About Window Size
+        // Server suggests:
+        // Server sends: IAC DO NAWS
+        // Client replies: IAC WILL NAWS
+        // Client sends: IAC SB NAWS <16 bit value nbo><16 bit value nbo> SE
+        static constexpr int NAWS = 037; // 31
+
+        // Enter character mode
+        // Server sends: IAC WONT LINEMONDE
+        // Server sends: IAC WILL ECHO
+        static constexpr int LINEMODE = 34;
+        static constexpr int ECHO = 1;
+        static constexpr int SUPPRESS_GO_AHEAD = 3;
+
+    protected:
+        std::string inputLineBuffer{};              ///< Buffer to read input from the user
+        unsigned int inputLine{1u};                 ///< The line the input buffer is on
+        unsigned int inputColumn{1u};               ///< The Column the input cursor is at.
+        unsigned int termWidth{};                   ///< The width of the terminal.
+        unsigned int termHeight{};                  ///< The height of the terminal.
+        bool termWindowSizeChange{};                ///< True when the terminal size has changed.
+
+        bool echoMode{false};
+        bool suppressGoAhead{false};
+        bool naws{false};
+
+    public:
+        TelnetTerminal() = default;
+
+        virtual ~TelnetTerminal() = default;
+
+        explicit TelnetTerminal(TerminalConnection &connection) : Terminal(connection) {}
+
+        void setCharacterMode();
+
+        void negotiateAboutWindowSize();
+
+        /**
          * @brief Set the cursor position.
          * @tparam U1 The type of line parameter.
          * @tparam U2 The type of column parameter.
@@ -217,13 +288,29 @@ namespace sim {
             print("\033[{};{}H", line, column);
         }
 
-        /**
-         * @brief Flush the output stream.
-         */
-        void flush() {
-            ostrm.flush();
+        void setCursorPosition() {
+            print("\033[{};{}H", inputLine, inputColumn);
+        }
+
+        void parseInput();
+
+        void parseIacBuffer(const std::vector<int>& buffer);
+
+        virtual void windowSizeChanged() {}
+
+        virtual void inputBufferReady() {
+            std::cout << fmt::format("Input: {}\n", inputLineBuffer);
+            inputLineBuffer.clear();
+            inputBufferChanged();
+        }
+
+        virtual void inputBufferChanged() {
+            setCursorPosition(inputLine, 1u);
+            print("\033[0K> {}", inputLineBuffer);
+            inputColumn = inputLineBuffer.size() + 3;
+            setCursorPosition();
+            out().flush();
         }
     };
-
 }
 

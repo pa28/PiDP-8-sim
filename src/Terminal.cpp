@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <bits/socket.h>
 #include <arpa/inet.h>
+#include <sys/select.h>
+#include <sys/ioctl.h>
 #include "Terminal.h"
 
 namespace sim {
@@ -121,5 +123,141 @@ namespace sim {
         close(socket);
         int waitStatus;
         auto c = wait(&waitStatus);
+    }
+
+    std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
+    Terminal::select(bool selRead, bool selWrite, unsigned int timeoutUs) {
+        SelectStatus readSelect = Timeout, writeSelect = Timeout;
+
+        fd_set readFds, writeFds, exceptFds;
+        FD_ZERO(&readFds);
+        FD_ZERO(&writeFds);
+        FD_ZERO(&exceptFds);
+        struct timeval timeout{};
+
+        timeout.tv_sec = 0;
+        timeout.tv_usec = timeoutUs;
+
+        if (selRead)
+            FD_SET(ifd, &readFds);
+        if (selWrite)
+            FD_SET(ofd, &writeFds);
+
+        auto nfds = std::max(ifd,ofd) + 1;
+
+        if (auto stat = ::select(nfds, &readFds, &writeFds, &exceptFds, &timeout); stat == -1) {
+            throw TerminalPipeException("Call to select failed.");
+        } else if (stat > 0) {
+            if (FD_ISSET(ifd, &readFds))
+                readSelect = Data;
+
+            if (FD_ISSET(ofd, &writeFds))
+                writeSelect = Data;
+        }
+
+        return {readSelect, writeSelect, timeout.tv_usec};
+    }
+
+    void TelnetTerminal::setCharacterMode() {
+        out().put(IAC).put(WILL).put(ECHO).flush();
+        out().put(IAC).put(WILL).put(SUPPRESS_GO_AHEAD).flush();
+    }
+
+    void TelnetTerminal::negotiateAboutWindowSize() {
+        out().put(IAC).put(DO).put(NAWS).flush();
+    }
+
+    void TelnetTerminal::parseInput() {
+        enum ActionState { NONE, OFF, ON, BUFFER };
+        // 0377 0375 0001 0377 0375 0003 0377 0373 0037 0377 0372 0037 0000 0120 0000 0030 0377 0360
+        ActionState actionState = NONE;
+        while (in().rdbuf()->in_avail() && in()) {
+            // Process IAC communications
+            auto c = in().get();
+            if (c == IAC) {
+                bool skip = false;
+                c = in().get();
+                switch (c) {
+                    case SB: {
+                        skip = true;
+                        actionState = BUFFER;
+                        std::vector<int> buffer{};
+                        bool noSE = true;
+                        while (in().rdbuf()->in_avail() && in() && noSE) {
+                            c = in().get();
+                            switch (c) {
+                                case SE:
+                                    parseIacBuffer(buffer);
+                                    noSE = false;
+                                    break;
+                                case IAC:
+                                    break;
+                                default:
+                                    buffer.push_back(c);
+                            }
+                        }
+                    }
+                        break;
+                    case DO:
+                    case WILL:
+                        actionState = ON;
+                        break;
+                    case WONT:
+                        actionState = OFF;
+                        break;
+                    default:
+                        std::cout << fmt::format("Unhandled code 1 {}\n", c);
+                }
+
+                if (skip)
+                    continue;
+
+                c = in().get();
+                switch (c) {
+                    case NAWS:
+                        naws = actionState == ON;
+                        break;
+                    case ECHO:
+                        echoMode = actionState == ON;
+                        break;
+                    case SUPPRESS_GO_AHEAD:
+                        suppressGoAhead = actionState == ON;
+                        break;
+                    default:
+                        std::cout << fmt::format("Unhandled code 2 {}\n", c);
+                        break;
+                }
+            } else if (std::isprint(c)) {
+                inputLineBuffer.push_back(c);
+                inputBufferChanged();
+            } else {
+                if (c == '\r') {
+                    inputBufferReady();
+                } else if (c == 127 && !inputLineBuffer.empty()) {
+                    inputLineBuffer.pop_back();
+                    inputBufferChanged();
+                }
+            }
+        }
+    }
+
+    void TelnetTerminal::parseIacBuffer(const std::vector<int>& buffer) {
+        auto itr = buffer.begin();
+        switch (*itr) {
+            case NAWS:
+                ++itr;
+                termWidth = *itr;
+                ++itr;
+                termWidth = (termWidth << 8) | *itr;
+                ++itr;
+                termHeight = *itr;
+                ++itr;
+                termHeight = (termHeight << 8) | *itr;
+                termWindowSizeChange = true;
+                break;
+            default:
+                std::cout << fmt::format("Unhandled code IAC {}\n", *itr);
+                break;
+        }
     }
 }

@@ -228,6 +228,7 @@ namespace sim {
 
         void execute_iot();
 
+#if 0
         template<size_t width, size_t offset, typename U1, typename U2>
         requires std::unsigned_integral<U2> && std::unsigned_integral<U2>
         std::tuple<size_t,size_t> printPanelField(Terminal& terminal, U1 line, U2 col, slice_value<width,offset> slice) {
@@ -256,6 +257,7 @@ namespace sim {
         [[nodiscard]] CycleState getCycleStat() const noexcept {
             return cycleState;
         }
+#endif
     };
 
     class TestCPU;

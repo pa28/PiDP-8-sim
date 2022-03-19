@@ -3,7 +3,7 @@
 #include <thread>
 #include <fmt/format.h>
 #include "src/cpu.h"
-#include "src/Terminal.h"
+#include "src/Pdp8Terminal.h"
 #include "assembler/Assembler.h"
 #include "assembler/TestPrograms.h"
 
@@ -59,37 +59,9 @@ int main() {
 #else
     TerminalSocket terminalSocket;
     terminalSocket.open();
-    terminalSocket.write("\033[1;1H");
-    terminalSocket.write("\033[2J");
-    terminalSocket.write("\033]0;PiDP-8/I Console\007");
+    Pdp8Terminal terminal(terminalSocket);
+    terminal.console();
 
-    asmbl::Assembler assembler;
-    std::stringstream sourceCode(std::string{asmbl::PingPong});
-    assembler.pass1(sourceCode);
-    sourceCode.clear();
-    sourceCode.str(std::string{asmbl::PingPong});
-    std::stringstream binary;
-    assembler.pass2(sourceCode, binary, std::cout);
-
-    TestCPU cpu{};
-    auto startAddress = cpu.readBinaryFormat(binary);
-
-    std::chrono::milliseconds timespan(100);
-    Terminal terminal(terminalSocket);
-    TestCPU::printPanelSilk(terminal);
-    cpu.setRunFlag(true);
-    while (!cpu.getHaltFlag()) {
-        cpu.instruction_cycle();
-        cpu.printPanel(terminal);
-        if (cpu.getCycleStat() == sim::PDP8I::CycleState::Interrupt) {
-            terminalSocket.write("\033[1;1H");
-            terminalSocket.write("\033[2J");
-            cpu.printPanelSilk(terminal);
-        } else
-            std::this_thread::sleep_for(timespan);
-    }
-    cpu.setRunFlag(false);
-    cpu.printPanel(terminal);
 
 #endif
 #endif
