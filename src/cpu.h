@@ -148,7 +148,7 @@ namespace sim {
         /**
          * @brief Step CPU through one instruction cycle.
          */
-        void instruction_cycle();
+        void instruction_cycle(bool skipInterrupt = true);
 
         /**
          * @brief Step CPU through one instruction.

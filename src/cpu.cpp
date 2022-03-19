@@ -39,18 +39,13 @@ namespace sim {
     }
 
     void PDP8I::instruction_step() {
-        auto cycleToInterruptState = [this]() {
-            while (cycle_state != CycleState::Interrupt)
-                instruction_cycle();
-        };
-
-        if (cycle_state != CycleState::Interrupt)
-            cycleToInterruptState();
-        instruction_cycle();
-        cycleToInterruptState();
+        if (cycle_state == CycleState::Fetch)
+            instruction_cycle(false);
+        while (cycle_state != CycleState::Fetch)
+            instruction_cycle(false);
     }
 
-    void PDP8I::instruction_cycle() {
+    void PDP8I::instruction_cycle(bool skipInterrupt) {
         for (bool nextState = true; nextState;)
             switch (cycle_state) {
                 case CycleState::Fetch:
@@ -86,6 +81,7 @@ namespace sim {
                         interrupt_enable = (--interrupt_delayed) == 0;
 
                     cycle_state = CycleState::Fetch;
+                    nextState = skipInterrupt;
                     break;
                 case CycleState::Pause: // LCOV_EXCL_LINE
                     nextState = false; // LCOV_EXCL_LINE
