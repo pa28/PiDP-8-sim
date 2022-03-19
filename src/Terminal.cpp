@@ -253,7 +253,7 @@ namespace sim {
                 termHeight = *itr;
                 ++itr;
                 termHeight = (termHeight << 8) | *itr;
-                termWindowSizeChange = true;
+                windowSizeChanged();
                 break;
             default:
                 std::cout << fmt::format("Unhandled code IAC {}\n", *itr);
