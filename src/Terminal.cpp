@@ -117,11 +117,6 @@ namespace sim {
             iBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::in);
             oBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::out);
         }
-
-        // mate-terminal seems to fork to detach from its parent so we must reap the process.
-//        close(socket);
-//        int waitStatus;
-//        auto c = wait(&waitStatus);
     }
 
     std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
