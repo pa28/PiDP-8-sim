@@ -190,17 +190,30 @@ namespace sim {
         out().flush();
     }
 
+    void Pdp8Terminal::loadSourceStream(std::istream &sourceCode, const std::string &title) {
+        assembler.pass1(sourceCode);
+        sourceCode.clear();
+        sourceCode.seekg(0);
+//        sourceCode.str(std::string{asmbl::PingPong});
+        std::stringstream binary;
+        std::ostream nullStrm(&nullStreamBuffer);
+
+        managedTerminals.emplace_back();
+
+        managedTerminals.back().terminal->print("\033[1;1H\033[3J");
+        managedTerminals.back().terminal->print("\033]0;PiDP-8/I Source Listing {}\007", title);
+//        managedTerminals.back().terminal->print("\377\253\037\377\372\037\000\204\000\120\377\360").flush();
+
+        assembler.pass2(sourceCode, binary, managedTerminals.back().terminal->out());
+        managedTerminals.back().terminal->out().flush();
+        auto startAddress = cpu.readBinaryFormat(binary);
+        printPanel();
+    }
+
     void Pdp8Terminal::loadPingPong() {
         assembler.clear();
         std::stringstream sourceCode(std::string{asmbl::PingPong});
-        assembler.pass1(sourceCode);
-        sourceCode.clear();
-        sourceCode.str(std::string{asmbl::PingPong});
-        std::stringstream binary;
-        std::ostream nullStrm(&nullStreamBuffer);
-        assembler.pass2(sourceCode, binary, nullStrm);
-        auto startAddress = cpu.readBinaryFormat(binary);
-        printPanel();
+        loadSourceStream(sourceCode, "Ping Pong");
     }
 
     void Pdp8Terminal::printCommandHistory() {

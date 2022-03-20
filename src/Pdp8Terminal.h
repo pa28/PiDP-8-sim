@@ -90,6 +90,7 @@ namespace sim {
 
         void loadPingPong();
 
+        void loadSourceStream(std::istream &sourceCode, const std::string &title);
 
     public:
         Pdp8Terminal() = default;
