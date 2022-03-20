@@ -50,6 +50,7 @@ namespace asmbl {
 
         enum SymbolStatus {
             Undefined,  ///< An undefined symbol
+            ReDefined,  ///< Symbol has been redefined, redefinition location stored in value.
             Defined,    ///< A defined symbol
         };
 
@@ -160,7 +161,18 @@ namespace asmbl {
         bool octalNumbersOnly{false};
 
         enum class TokenClass {
-            UNKNOWN, PC_TOKEN, WORD_ALLOCATION, ASSIGNMENT, OP_CODE, NUMBER, LITERAL, ADD, SUB, LABEL_CREATE, COMMENT
+            UNKNOWN,
+            LOCATION,
+            PC_TOKEN,
+            ASSIGNMENT,
+            OP_CODE,
+            NUMBER,
+            LITERAL,
+            ADD,
+            SUB,
+            LABEL_CREATE,
+            COMMENT,
+            DIAGNOSTIC
         };
 
         struct AssemblerToken {
@@ -191,6 +203,9 @@ namespace asmbl {
         [[nodiscard]] sim::register_type
         generate_code(TokenList::iterator first, TokenList::iterator last);
 
+        [[nodiscard]] sim::register_type
+        evaluate_expression(TokenList::iterator first, TokenList::iterator last);
+
     public:
 
         Assembler();
@@ -205,15 +220,16 @@ namespace asmbl {
 
         void pass2(std::istream &src, std::ostream &bin, std::ostream &list);
 
-        static void listing(std::ostream &list, const TokenList &tokens, sim::register_type pc, sim::register_type code);
+        static void
+        listing(std::ostream &list, const TokenList &tokens, sim::register_type pc, sim::register_type code);
 
         void dump_symbols(std::ostream &strm);
 
         void setOctalNumbersOnly(bool value) { octalNumbersOnly = value; }
 
-        std::optional<Assembler::word_t> find_symbol(const std::string& symbol);
+        std::optional<Assembler::word_t> find_symbol(const std::string &symbol);
 
-        std::optional<Assembler::word_t> parse_command(const std::string& command);
+        std::optional<Assembler::word_t> parse_command(const std::string &command);
     };
 }
 

@@ -22,36 +22,36 @@ namespace asmbl {
         for (auto tokens = parse_tokens(src); !tokens.empty(); tokens = parse_tokens(src)) {
             try {
                 classify_tokens(tokens);
-                switch (tokens.front().tokenClass) {
-                    case TokenClass::PC_TOKEN:
-                        if (tokens.size() >= 3 && tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
-                            if (tokens[2].tokenClass == TokenClass::NUMBER ||
-                                tokens[2].tokenClass == TokenClass::LITERAL) {
-                                if (auto value = get_token_value(tokens[2]); value)
-                                    pc = value.value();
-                                else
-                                    throw AssemblerException("PC assignment needs defined value.");
-                            }
-                        }
+                auto first = tokens.begin();
+                auto last = tokens.end();
+                switch (first->tokenClass) {
+                    case TokenClass::LOCATION:
+                        pc = generate_code(first + 1, last);
                         break;
                     case TokenClass::LITERAL:
-                        if (tokens.size() >= 3 && tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
-                            switch (tokens[2].tokenClass) {
-                                case TokenClass::WORD_ALLOCATION:
-                                case TokenClass::OP_CODE:
-                                case TokenClass::LITERAL:
-                                case TokenClass::NUMBER:
-                                    if (auto symbol = symbolTable.find(tokens[0].literal); symbol !=
-                                                                                           symbolTable.end()) {
-                                        symbol->second.value = pc;
+                        if (tokens.size() >= 2) {
+                            if (tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
+                                if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
+                                    if (symbol->second.status == Undefined) {
                                         symbol->second.status = Defined;
+                                        symbol->second.value = pc;
                                     } else {
-                                        symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Defined));
+                                        symbol->second.status = ReDefined;
+                                        symbol->second.value = pc;
                                     }
-                                    ++pc;
-                                    break;
-                                default:
-                                    break;
+                                } else {
+                                    symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Defined));
+                                }
+                                ++pc;
+                            } else if (tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
+                                if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
+                                    if (symbol->second.status != Undefined) {
+                                        symbol->second.status = ReDefined;
+                                        symbol->second.value = pc;
+                                    }
+                                } else {
+                                    symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Undefined));
+                                }
                             }
                         }
                         break;
@@ -69,15 +69,9 @@ namespace asmbl {
                 for (auto &token: tokens) {
                     strm << fmt::format(" {}", token.literal);
                 }
+                strm << fmt::format(" at {:04o}", pc);
                 throw AssemblerException(strm.str());
             }
-        }
-
-        if (auto undef = std::find_if(symbolTable.begin(), symbolTable.end(),
-                                      [](const std::pair<std::string, Symbol> &pair) {
-                                          return pair.second.status == Undefined;
-                                      }); undef != symbolTable.end()) {
-            throw AssemblerException("Undefined symbol: " + undef->second.symbol);
         }
     }
 
@@ -86,26 +80,42 @@ namespace asmbl {
         for (auto tokens = parse_tokens(src); !tokens.empty(); tokens = parse_tokens(src)) {
             try {
                 classify_tokens(tokens);
-                switch (tokens.front().tokenClass) {
-                    case TokenClass::PC_TOKEN:
-                        if (tokens.size() >= 3 && tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
-                            if (tokens[2].tokenClass == TokenClass::NUMBER ||
-                                tokens[2].tokenClass == TokenClass::LITERAL) {
-                                if (auto value = get_token_value(tokens[2]); value) {
-                                    pc = value.value();
-                                    bin << static_cast<char>(0100 | ((pc & 07700) >> 6)) << static_cast<char>(pc & 077);
-                                    listing(list, tokens, pc, code);
-                                } else
-                                    throw AssemblerException("PC assignment needs defined value.");
-                            }
-                        }
+                auto first = tokens.begin();
+                auto last = tokens.end();
+                switch ((first++)->tokenClass) {
+                    case TokenClass::LOCATION:
+                        pc = generate_code(first, last);
                         break;
                     case TokenClass::LITERAL:
-                        if (tokens.size() >= 3 && tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
-                            code = generate_code(tokens.begin() + 2, tokens.end());
-                            bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
-                            listing(list, tokens, pc, code);
-                            ++pc;
+                        if (tokens.size() >= 2) {
+                            if (tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
+                                if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
+                                    if (symbol->second.status == Undefined) {
+                                        symbol->second.status = Defined;
+                                        symbol->second.value = pc;
+                                    }
+                                } else {
+                                    symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Defined));
+                                }
+
+                                if (tokens.size() >= 3 && first->tokenClass == TokenClass::LABEL_CREATE) {
+                                    code = generate_code(++first, tokens.end());
+                                    bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
+                                    listing(list, tokens, pc, code);
+                                    ++pc;
+                                }
+                            } else if (tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
+                                ++first;
+                                if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
+                                    if (symbol->second.status != ReDefined) {
+                                        symbol->second.status = Defined;
+                                        symbol->second.value = generate_code(first, last);
+                                    }
+                                } else {
+                                    auto value = generate_code(first, last);
+                                    symbolTable.emplace(tokens[0].literal, Symbol(value, tokens[0].literal, Defined));
+                                }
+                            }
                         }
                         break;
                     case TokenClass::OP_CODE:
@@ -166,7 +176,7 @@ namespace asmbl {
                     }
                     if (!tok.empty())
                         return tok;
-                } else if (c == '=' || c == '.' || c == '+' || c == '-' || c == '@' || c == ':') {
+                } else if (c == '=' || c == '.' || c == '+' || c == '-' || c == '@' || c == ':' || c == '*') {
                     if (!buffer.empty()) {
                         tok.emplace_back(TokenClass::UNKNOWN, buffer);
                         buffer.clear();
@@ -185,11 +195,11 @@ namespace asmbl {
                         case '-':
                             tok.emplace_back(TokenClass::SUB, buffer);
                             break;
-                        case '@':
-                            tok.emplace_back(TokenClass::WORD_ALLOCATION, buffer);
-                            break;
                         case ',':
                             tok.emplace_back(TokenClass::LABEL_CREATE, buffer);
+                            break;
+                        case '*':
+                            tok.emplace_back(TokenClass::LOCATION, buffer);
                             break;
                         default:
                             break;
@@ -262,8 +272,6 @@ namespace asmbl {
                     token.tokenClass = TokenClass::ASSIGNMENT;
                 else if (token.literal == ".")
                     token.tokenClass = TokenClass::PC_TOKEN;
-                else if (token.literal == "@")
-                    token.tokenClass = TokenClass::WORD_ALLOCATION;
                 else if (token.literal == "+")
                     token.tokenClass = TokenClass::ADD;
                 else if (token.literal == "-")
@@ -427,5 +435,10 @@ namespace asmbl {
         auto tokens = parse_tokens(strm);
         classify_tokens(tokens);
         return generate_code(tokens.begin(), tokens.end());
+    }
+
+    sim::register_type Assembler::evaluate_expression(std::vector<Assembler::AssemblerToken>::iterator first,
+                                                      std::vector<Assembler::AssemblerToken>::iterator last) {
+        return 0;
     }
 }
