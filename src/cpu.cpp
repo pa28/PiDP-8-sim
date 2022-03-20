@@ -317,7 +317,7 @@ namespace sim {
             if (s.eof() || s.fail())
                 return false;
 
-            word = (buffer[0] & 0177) << 6 | (buffer[1] & 077);
+            word = (((buffer[0] & 0177) << 6) | (buffer[1] & 077)) & 017777;
             return true;
         };
 
@@ -326,7 +326,8 @@ namespace sim {
                 program_counter[wordIndex] = word;
                 addressSet = true;
             } else if (addressSet) {
-                writeCore(field_register[instruction_field](), program_counter[wordIndex](), word);
+                cpma[wordIndex] = program_counter[wordIndex]();
+                writeInstructionCore(word);
                 ++program_counter[wordIndex];
             }
         }
@@ -379,10 +380,4 @@ namespace sim {
         cycle_state = CycleState::Interrupt;
         halt_flag = false;
     }
-
-//    void PDP8I::printPanel(Terminal &terminal) {
-//    }
-//
-//    void PDP8I::printPanelSilk(Terminal &terminal) {
-//    }
 }

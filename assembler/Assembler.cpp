@@ -83,8 +83,11 @@ namespace asmbl {
                 auto first = tokens.begin();
                 auto last = tokens.end();
                 switch ((first++)->tokenClass) {
-                    case TokenClass::LOCATION:
+                    case TokenClass::LOCATION: {
                         pc = generate_code(first, last);
+                        bin << static_cast<char>(((pc & 07700) >> 6) | 0100) << static_cast<char>(pc & 077);
+                        listing(list, tokens, pc, code);
+                    }
                         break;
                     case TokenClass::LITERAL:
                         if (tokens.size() >= 2) {
@@ -376,6 +379,7 @@ namespace asmbl {
     }
 
     void Assembler::dump_symbols(std::ostream &strm) {
+        strm << fmt::format("\n{:^22}\n", "Symbol Table");
         for (auto &symbol: symbolTable) {
             if (symbol.second.status == Defined)
                 strm << fmt::format("{:04o}  {:<21}\n", symbol.second.value, symbol.second.symbol);
@@ -390,11 +394,16 @@ namespace asmbl {
             list << fmt::format("{:>14}{:<72}\n", "/", tokens.begin()->literal);
         } else {
             auto itr = tokens.begin();
-            list << fmt::format("{:04o}  {:04o}   ", pc, code);
+            if (itr->tokenClass == TokenClass::LOCATION)
+                list << fmt::format("{:04o}         ", pc);
+            else
+                list << fmt::format("{:04o}  {:04o}   ", pc, code);
             while (itr != tokens.end()) {
                 if (itr->tokenClass == TokenClass::LITERAL) {
                     list << fmt::format(" {:>16}, ", itr->literal);
                     ++itr;
+                } else if (itr->tokenClass == TokenClass::LOCATION) {
+                    list << fmt::format(" {:>16}* ", "");
                 } else {
                     list << fmt::format(" {:>16}  ", "");
                 }

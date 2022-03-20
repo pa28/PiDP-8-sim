@@ -18,7 +18,7 @@ Accumulator,    00017                   / Initial value and temp store for the A
 SemiCycle,      07770                   / 0 - Semi cycle intiial count
 Counter,        07770                   / Semi cycle counter
 *0200
-Initialize,     CLA                     / Clear ACC
+Initialize,     CLA CLL                 / Clear ACC
 OuterLoop,      TAD SemiCycle           / Init semi cycle count
                 DCA Counter
                 TAD Accumulator         / Accumulator display

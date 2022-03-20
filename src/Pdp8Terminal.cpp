@@ -14,7 +14,8 @@
 namespace sim {
 
     void Pdp8Terminal::console() {
-        print("\033[1;1H\033[3J");
+        print("\033c").flush();
+        print("\033[1;1H").flush();
         print("\033]0;PiDP-8/I Console\007");
         setCharacterMode();
         negotiateAboutWindowSize();
@@ -194,17 +195,17 @@ namespace sim {
         assembler.pass1(sourceCode);
         sourceCode.clear();
         sourceCode.seekg(0);
-//        sourceCode.str(std::string{asmbl::PingPong});
         std::stringstream binary;
         std::ostream nullStrm(&nullStreamBuffer);
 
         managedTerminals.emplace_back();
 
-        managedTerminals.back().terminal->print("\033[1;1H\033[3J");
-        managedTerminals.back().terminal->print("\033]0;PiDP-8/I Source Listing {}\007", title);
-//        managedTerminals.back().terminal->print("\377\253\037\377\372\037\000\204\000\120\377\360").flush();
+        managedTerminals.back().terminal->print("\033c");
+        managedTerminals.back().terminal->print("\033[1;1H");
+        managedTerminals.back().terminal->print("\033]0;PiDP-8/I Source Listing {}\007", title).flush();
 
         assembler.pass2(sourceCode, binary, managedTerminals.back().terminal->out());
+        assembler.dump_symbols(managedTerminals.back().terminal->out());
         managedTerminals.back().terminal->out().flush();
         auto startAddress = cpu.readBinaryFormat(binary);
         printPanel();
