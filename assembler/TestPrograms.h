@@ -15,7 +15,7 @@ namespace asmbl {
 *0174
 CycleCount,     07776                   / 0 - Number of times to cycle before halting
 Accumulator,    00017                   / Initial value and temp store for the ACC
-SemiCycle,      07770                   / 0 - Semi cycle intiial count
+SemiCycle,      07770                   / 0 - Semi cycle initial count
 Counter,        07770                   / Semi cycle counter
 *0200
 Initialize,     CLA CLL                 / Clear ACC
