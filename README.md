@@ -20,3 +20,8 @@ the code to employ modern techniques.
   * This is also working though not with complete coverage of all PDP-8 instructions or as a command.
   * It can be used to assemble code for use in deposit commands for example.
 
+### Running a built in program
+![Console Running](https://github.com/pa28/PiDP-8-sim/blob/main/images/Screenshot%20at%202022-03-20%2017-29-13.png)
+
+### Deposit OP Code
+![Deposit Op Code](https://github.com/pa28/PiDP-8-sim/blob/main/images/Screenshot%20at%202022-03-20%2017-47-32.png)
