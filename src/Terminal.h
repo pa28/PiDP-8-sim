@@ -28,6 +28,7 @@ namespace sim {
 
     // https://datatracker.ietf.org/doc/html/rfc1073
     // https://datatracker.ietf.org/doc/html/rfc1184
+    // http://pcmicro.com/netfoss/telnet.html
 
     using stdio_filebuf = __gnu_cxx::stdio_filebuf<char>;   ///< Used to create NullStreamBuffer.
 
