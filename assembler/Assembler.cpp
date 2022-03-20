@@ -284,6 +284,8 @@ namespace asmbl {
                         if (instructionMap.find(uppercase) != instructionMap.end()) {
                             token.literal = uppercase;
                             token.tokenClass = TokenClass::OP_CODE;
+                        } else {
+                            token.tokenClass = TokenClass::LITERAL;
                         }
                     }
                 }
