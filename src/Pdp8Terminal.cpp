@@ -14,7 +14,7 @@
 namespace sim {
 
     void Pdp8Terminal::console() {
-        print("\033[1;1H\033[2J");
+        print("\033[1;1H\033[3J");
         print("\033]0;PiDP-8/I Console\007");
         setCharacterMode();
         negotiateAboutWindowSize();
