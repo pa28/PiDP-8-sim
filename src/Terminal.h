@@ -164,10 +164,11 @@ namespace sim {
         }
 
         /**
-         * @brief Open the connection.
+         * @brief Open the connection, fork mate-terminal and run telnet to connect back to the listening port.
          */
         void open();
 
+        void openServer(int listenPort);
     };
 
     /**
@@ -249,12 +250,12 @@ namespace sim {
 
     class TelnetTerminal : public Terminal {
     public:
-        static constexpr int IAC = 255;
-        static constexpr int DO = 253;
-        static constexpr int WILL = 251;
-        static constexpr int WONT = 252;
-        static constexpr int SB = 250;
-        static constexpr int SE = 240;
+        static constexpr int IAC = 255;     // 377
+        static constexpr int DO = 253;      // 375
+        static constexpr int WILL = 251;    // 373
+        static constexpr int WONT = 252;    // 374
+        static constexpr int SB = 250;      // 372
+        static constexpr int SE = 240;      // 360
 
         // Negotiate About Window Size
         // Server suggests:
