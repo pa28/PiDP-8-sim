@@ -45,6 +45,8 @@ namespace sim {
 
         std::vector<std::string> commandHistory{};
 
+        std::vector<TelnetTerminalSet> managedTerminals{};
+
         void printCommandHistory();
 
         void commandHelp();

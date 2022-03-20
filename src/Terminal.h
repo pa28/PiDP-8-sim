@@ -222,6 +222,12 @@ namespace sim {
             ofd = terminalConnection.terminalFd;
         }
 
+        explicit Terminal(TerminalConnection* terminalConnection)
+                : Terminal(terminalConnection->iBuffer.get(), terminalConnection->oBuffer.get()) {
+            ifd = terminalConnection->terminalFd;
+            ofd = terminalConnection->terminalFd;
+        }
+
         std::ostream &out() { return ostrm; }   ///< Get the out stream
 
         std::istream &in() { return istrm; }    ///< Get the in stream
@@ -278,6 +284,8 @@ namespace sim {
 
         explicit TelnetTerminal(TerminalConnection &connection) : Terminal(connection) {}
 
+        explicit TelnetTerminal(TerminalConnection *connection) : Terminal(connection) {}
+
     protected:
         void setCharacterMode();
 
@@ -318,6 +326,26 @@ namespace sim {
             setCursorPosition();
             out().flush();
         }
+    };
+
+    class TelnetTerminalSet {
+    public:
+        std::unique_ptr<TerminalSocket> socket{};
+        std::unique_ptr<TelnetTerminal> terminal{};
+
+        TelnetTerminalSet() {
+            socket = std::make_unique<TerminalSocket>();
+            socket->open();
+            terminal = std::make_unique<TelnetTerminal>(socket.get());
+        }
+
+        TelnetTerminalSet(const TelnetTerminalSet&) = delete;
+        TelnetTerminalSet(TelnetTerminalSet&&) = default;
+
+        TelnetTerminalSet& operator=(const TelnetTerminalSet&) = delete;
+        TelnetTerminalSet& operator=(TelnetTerminalSet&&) = default;
+
+        ~TelnetTerminalSet() = default;
     };
 }
 

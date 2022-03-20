@@ -119,6 +119,38 @@ namespace sim {
         }
     }
 
+    void TerminalSocket::openServer(int listenPort) {
+        if ((socket = ::socket(AF_INET, SOCK_STREAM, 0)) == -1)
+            throw TerminalConnectionException("socket failed.");
+
+        int options = 1;
+        if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &options, sizeof(options)))
+            throw TerminalConnectionException("setsockopt failed.");
+
+        sock_address.sin_family = AF_INET;
+        sock_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+        sock_address.sin_port = htons(listenPort);
+
+        if (bind(socket, (struct sockaddr *) &sock_address, sizeof(sock_address)) == -1) {
+            perror("bind");
+            throw TerminalConnectionException("bind failed.");
+        }
+
+        if (listen(socket, 1) == -1)
+            throw TerminalConnectionException("listen failed.");
+
+        socklen_t len = sizeof(sock_address);
+        getsockname(socket, (struct sockaddr *) &sock_address, &len);
+        auto port = ntohs(sock_address.sin_port);
+
+        if ((terminalFd = accept(socket, (struct sockaddr *) &client_address, (socklen_t *) &client_addr_len)) ==
+            -1)
+            throw TerminalConnectionException("accept failed.");
+
+        iBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::in);
+        oBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::out);
+    }
+
     std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
     Terminal::select(bool selRead, bool selWrite, unsigned int timeoutUs) {
         SelectStatus readSelect = Timeout, writeSelect = Timeout;

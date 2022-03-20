@@ -257,5 +257,4 @@ namespace sim {
         }
         return std::nullopt;
     }
-
 }
