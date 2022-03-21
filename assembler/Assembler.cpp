@@ -181,7 +181,7 @@ namespace asmbl {
                     }
                     if (!tok.empty())
                         return tok;
-                } else if (c == '=' || c == '.' || c == '+' || c == '-' || c == '@' || c == ':' || c == '*') {
+                } else if (c == '=' || c == '.' || c == '+' || c == '-' || c == ',' || c == ':' || c == '*') {
                     if (!buffer.empty()) {
                         tok.emplace_back(TokenClass::UNKNOWN, buffer);
                         buffer.clear();
