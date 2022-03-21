@@ -517,7 +517,8 @@ namespace asmbl {
                     itr = listLabelCreate();
                     break;
                 case TokenClass::OP_CODE:
-                    list << fmt::format("{:04o}  {:04o}   {:18}{} ", pc, code, "", itr->literal);
+                    list << fmt::format("{:04o}  {:04o}   {:18}", pc, code, "");
+                    strm << fmt::format("{} ", itr->literal);
                     break;
                 case TokenClass::COMMENT:
                     list << fmt::format("/{}", itr->literal);
