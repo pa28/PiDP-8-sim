@@ -19,16 +19,22 @@
 
 namespace sim {
 
-    static constexpr uint16_t RIM_LOADER_START = 07756;
-    static constexpr std::array<uint16_t,18> RIM_LOADER =
+    [[maybe_unused]] static constexpr uint16_t HELP_LOADER_START = 0027;
+    [[maybe_unused]] static constexpr std::array<uint16_t, 10> HELP_LOADER =
+            {
+                    06031, 05027, 06036, 07450, 05027, 07012, 07010, 03007, 02036, 05027
+            };
+
+    [[maybe_unused]] static constexpr uint16_t RIM_LOADER_START = 07756;
+    [[maybe_unused]] static constexpr std::array<uint16_t, 18> RIM_LOADER =
             {
                     06014, 06011, 05357, 06016, 07106, 07006,
                     07510, 05357, 07006, 06011, 05367, 06016,
-                    07420, 03776, 03376, 05357, 0,     0
+                    07420, 03776, 03376, 05357, 0, 0
             };
 
-    static constexpr register_type OP_KSF =         06031;                        /* for idle */
-    static constexpr register_type OP_CLSC =        06053;                        /* for idle */
+    [[maybe_unused]] static constexpr register_type OP_KSF = 06031;       /* for idle */
+    [[maybe_unused]] static constexpr register_type OP_CLSC = 06053;      /* for idle */
 
     /**
      * @class cpu
@@ -50,21 +56,22 @@ namespace sim {
         register_index<1, 0> leastSignificant{};    ///< access the least significant bit
         register_index<1, 11> mostSignificant{};    ///< access the most significant bit
         register_index<12, 0> wordIndex{};          ///< Access a 12 bit word.
-        register_index<6,6> upperNibble{};
-        register_index<6,0> lowerNibble{};
-        register_index<1,15> memorySet{};
+        register_index<6, 6> upperNibble{};
+        register_index<6, 0> lowerNibble{};
+        register_index<1, 15> memorySet{};
         register_index<1, 8> indirectIndex{};       ///< Access the indirect flag.
         register_index<1, 7> memPageIndex{};        ///< Access the memory page flag.
         register_index<6, 3> deviceSelect{};        ///< IOT device selection bits.
         register_index<3, 0> deviceOpr{};           ///< IOT device operation.
 
-        register_index<5,7> page_index{};           ///< Page address access
-        register_index<7,0> addr_index{};           ///< Address in page access
-        register_index<9,0> opr_bits{};
+        register_index<5, 7> page_index{};           ///< Page address access
+        register_index<7, 0> addr_index{};           ///< Address in page access
+        register_index<9, 0> opr_bits{};             ///< The argument flags to OPR instruction
 
-        register_index<3,0> data_field{};           ///< Access the memory field from the field register
-        register_index<3,3> instruction_field{};    ///< Access the instruction field from the field register;
-        register_index<3,9> instruction_index{};    ///< Access the
+        register_index<3, 0> data_field{};           ///< Access the memory field from the field register
+        register_index<3, 3> instruction_field{};    ///< Access the instruction field from the field register
+        register_index<3, 9> instruction_index{};    ///< Access the memory instruction address.
+        register_index<5, 0> step_counter_index{};   ///< Access the value of the step counter.
 
     protected:
 
@@ -74,12 +81,13 @@ namespace sim {
         register_value program_counter{};           ///< Store the program counter
         register_value memory_buffer{};             ///< Memory buffer register
         register_value cpma{};                      ///< Central Processor Memory Address
-        register_value field_register{};
+        register_value field_register{};            ///< Storage for instruction and data fields
         register_value instruction_buffer{};        ///< Holds a new instruction field until next jump.
         register_value switch_register{};           ///< Holds the value read from the switch register
         register_value interrupt_buffer{};
         register_value field_buffer{};
-        register_value multiplier_quotient{};
+        register_value multiplier_quotient{};       ///< The multiplier quotient in the EAE
+        register_value step_counter{};              ///< The step counter in the EAE
 
         Instruction instruction_register{};         ///< The instruction register
 
@@ -97,8 +105,8 @@ namespace sim {
         std::atomic_bool step_flag;                 // Allow the CPU to run one step if the halt_flag is set
         std::atomic_bool single_step_flag;          // The CPU will progress through a single time slice
 
-        register_index<1,11> bit0;
-        register_index<1,10> bit1;
+        register_index<1, 11> bit0;
+        register_index<1, 10> bit1;
         register_index<1, 9> bit2;
         register_index<1, 8> bit3;
         register_index<1, 7> bit4;
@@ -155,21 +163,25 @@ namespace sim {
          * @details If Cycle State is not Interrupt, cycles to Interrupt, if Cycle State is Interrupt, cycles to next
          * Interrupt state.
          */
-         void instruction_step();
+        void instruction_step();
 
         void reset();
 
-        [[nodiscard]] auto fieldRegister() { return field_register; }
+        [[nodiscard]] auto fieldRegister() const { return field_register; }
 
-        [[nodiscard]] auto PC() { return program_counter; }
+        [[nodiscard]] auto PC() const { return program_counter; }
 
-        [[nodiscard]] auto MA() { return cpma; }
+        [[nodiscard]] auto MA() const { return cpma; }
 
-        [[nodiscard]] auto MB() { return memory_buffer; }
+        [[nodiscard]] auto MB() const { return memory_buffer; }
 
-        [[nodiscard]] auto LAC() { return link_accumulator; }
+        [[nodiscard]] auto LAC() const { return link_accumulator; }
 
-        [[nodiscard]] auto InstReg() { return instruction_register; }
+        [[nodiscard]] auto MQ() const { return multiplier_quotient; }
+
+        [[nodiscard]] auto SC() const { return step_counter; }
+
+        [[nodiscard]] auto InstReg() const { return instruction_register; }
 
         [[nodiscard]] bool runFlag() const { return run_flag; }
 
@@ -249,7 +261,7 @@ namespace sim {
          * @param istrm The input stream with BIN (Binary Format) data.
          * @return true if the file had at least one address and one word in it.
          */
-        [[maybe_unused]] bool readBinaryFormat(std::istream& istrm);
+        [[maybe_unused]] bool readBinaryFormat(std::istream &istrm);
 
         /**
          * @brief Write Binary Format (BIN) file from memory field.
@@ -258,7 +270,7 @@ namespace sim {
          * @param last
          * @return
          */
-        [[maybe_unused]] bool writeBinaryFormat(std::ostream& ostrm, register_type first, register_type last);
+        [[maybe_unused]] bool writeBinaryFormat(std::ostream &ostrm, register_type first, register_type last);
 
         /**
          * @brief Push the RIM loader into high memory in the current instruction field.
@@ -284,7 +296,7 @@ namespace sim {
         Less, LessEq, Equal, GreaterEq, Greater, NotEqual
     };
 
-    static constexpr std::array<std::string_view,6> CompareCriteriaText =
+    static constexpr std::array<std::string_view, 6> CompareCriteriaText =
             {{
                      "<", "<=", "==", ">=", ">", "!="
              }};

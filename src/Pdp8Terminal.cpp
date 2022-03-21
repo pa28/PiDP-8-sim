@@ -140,6 +140,8 @@ namespace sim {
         std::tie(line, column) = printPanelField(line + 3u, 14u, cpu.MA()[cpu.wordIndex]);
         std::tie(line, column) = printPanelField(line + 3u, 14u, cpu.MB()[cpu.wordIndex]);
         std::tie(line, column) = printPanelField(line + 3u, 12u, cpu.LAC()[cpu.arithmetic]);
+        std::tie(line, column) = printPanelField(line + 3u, 2u, cpu.SC()[cpu.step_counter_index]);
+        std::tie(line, column) = printPanelField(line, 14u, cpu.MQ()[cpu.wordIndex]);
 
         printPanelFlag(2u, 44u, cpu.InstReg() == PDP8I::Instruction::AND);
         printPanelFlag(4u, 44u, cpu.InstReg() == PDP8I::Instruction::TAD);
@@ -170,6 +172,8 @@ namespace sim {
         print("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
         print("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
         print("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
+        print("\033[{};{}H{:^10}", 14u, 2u, "Step Cnt");
+        print("\033[{};{}H{:^24}", 14u, 14u, "Multiplier Quotient");
 
         print("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
         print("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
@@ -183,13 +187,16 @@ namespace sim {
         print(color(Regular, Yellow));
         print("\033[{};{}H{}", 4u, 2u, Bar);
         print("\033[{};{}H{}", 4u, 14u, Bar);
-        print("\033[{};{}H{}", 7u, 14u, Bar);
-        print("\033[{};{}H{}", 10u, 14u, Bar);
-        print("\033[{};{}H{}", 13u, 14u, Bar);
         print("\033[{};{}H{}", 4u, 26u, Bar);
+        print("\033[{};{}H{}", 7u, 14u, Bar);
         print("\033[{};{}H{}", 7u, 26u, Bar);
+        print("\033[{};{}H{}", 10u, 14u, Bar);
         print("\033[{};{}H{}", 10u, 26u, Bar);
+        print("\033[{};{}H{}", 13u, 14u, Bar);
         print("\033[{};{}H{}", 13u, 26u, Bar);
+        print("\033[{};{}H{}", 16u, 6u, Bar);
+        print("\033[{};{}H{}", 16u, 14u, Bar);
+        print("\033[{};{}H{}", 16u, 26u, Bar);
 
         print("{}", color(Regular));
 
