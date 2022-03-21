@@ -168,11 +168,10 @@ namespace asmbl {
                         ++pc;
                         break;
                     case TokenClass::COMMENT:
-                        listing(list, tokens, pc, code);
-                        break;
                     case TokenClass::OCTAL:
                     case TokenClass::DECIMAL:
                     case TokenClass::AUTOMATIC:
+                        listing(list, tokens, pc, code);
                         break;
                     default:
                         throw AssemblerException("Malformed instruction: ");
@@ -522,6 +521,12 @@ namespace asmbl {
                     break;
                 case TokenClass::COMMENT:
                     list << fmt::format("/{}", itr->literal);
+                    break;
+                case TokenClass::OCTAL:
+                case TokenClass::DECIMAL:
+                case TokenClass::AUTOMATIC:
+                    list << fmt::format("{:31}", "");
+                    strm << fmt::format("{} ", itr->literal);
                     break;
                 default:
                     finished = false;
