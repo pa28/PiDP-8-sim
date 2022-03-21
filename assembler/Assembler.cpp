@@ -26,7 +26,7 @@ namespace asmbl {
                 auto last = tokens.end();
                 switch (first->tokenClass) {
                     case TokenClass::LOCATION:
-                        pc = generate_code(first + 1, last);
+                        pc = generate_code(first + 1, last, pc);
                         break;
                     case TokenClass::LITERAL:
                         if (tokens.size() >= 2) {
@@ -84,7 +84,7 @@ namespace asmbl {
                 auto last = tokens.end();
                 switch ((first++)->tokenClass) {
                     case TokenClass::LOCATION: {
-                        pc = generate_code(first, last);
+                        pc = generate_code(first, last, pc);
                         bin << static_cast<char>(((pc & 07700) >> 6) | 0100) << static_cast<char>(pc & 077);
                         listing(list, tokens, pc, code);
                     }
@@ -102,7 +102,7 @@ namespace asmbl {
                                 }
 
                                 if (tokens.size() >= 3 && first->tokenClass == TokenClass::LABEL_CREATE) {
-                                    code = generate_code(++first, tokens.end());
+                                    code = generate_code(++first, tokens.end(), pc);
                                     bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
                                     listing(list, tokens, pc, code);
                                     ++pc;
@@ -112,17 +112,17 @@ namespace asmbl {
                                 if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
                                     if (symbol->second.status != ReDefined) {
                                         symbol->second.status = Defined;
-                                        symbol->second.value = generate_code(first, last);
+                                        symbol->second.value = generate_code(first, last, pc);
                                     }
                                 } else {
-                                    auto value = generate_code(first, last);
+                                    auto value = generate_code(first, last, pc);
                                     symbolTable.emplace(tokens[0].literal, Symbol(value, tokens[0].literal, Defined));
                                 }
                             }
                         }
                         break;
                     case TokenClass::OP_CODE:
-                        code = generate_code(tokens.begin(), tokens.end());
+                        code = generate_code(tokens.begin(), tokens.end(), pc);
                         bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
                         listing(list, tokens, pc, code);
                         ++pc;

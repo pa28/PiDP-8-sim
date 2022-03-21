@@ -194,17 +194,17 @@ namespace asmbl {
             AssemblerToken &operator=(AssemblerToken &&) = default;
         };
 
-        std::optional<sim::register_type> get_token_value(const AssemblerToken &token);
+        std::optional<sim::register_type> get_token_value(const AssemblerToken &token, sim::register_type pc);
 
         using TokenList = std::vector<AssemblerToken>;
 
         void classify_tokens(TokenList &tokens);
 
         [[nodiscard]] sim::register_type
-        generate_code(TokenList::iterator first, TokenList::iterator last);
+        generate_code(TokenList::iterator first, TokenList::iterator last, sim::register_type pc);
 
-        [[nodiscard]] sim::register_type
-        evaluate_expression(TokenList::iterator first, TokenList::iterator last);
+        [[nodiscard]] std::tuple<TokenList::iterator, sim::register_type>
+        evaluate_expression(TokenList::iterator first, TokenList::iterator last, sim::register_type pc);
 
     public:
 
@@ -229,7 +229,7 @@ namespace asmbl {
 
         std::optional<Assembler::word_t> find_symbol(const std::string &symbol);
 
-        std::optional<Assembler::word_t> parse_command(const std::string &command);
+        std::optional<Assembler::word_t> parse_command(const std::string &command, sim::register_type pc);
     };
 }
 
