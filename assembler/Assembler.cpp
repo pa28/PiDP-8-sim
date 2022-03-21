@@ -157,8 +157,7 @@ namespace asmbl {
                     buffer.clear();
                 }
 
-                while (!src.eof()) {
-                    c = src.get();
+                while ((c = src.get()) != -1) {
                     if (c == '\n')
                         break;
                     buffer.push_back(static_cast<char>(c));
