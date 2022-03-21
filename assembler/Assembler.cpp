@@ -106,6 +106,8 @@ namespace asmbl {
                                     bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
                                     listing(list, tokens, pc, code);
                                     ++pc;
+                                } else {
+                                    listing(list, tokens, pc, code);
                                 }
                             } else if (tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
                                 ++first;
@@ -118,6 +120,7 @@ namespace asmbl {
                                     auto value = generate_code(first, last, pc);
                                     symbolTable.emplace(tokens[0].literal, Symbol(value, tokens[0].literal, Defined));
                                 }
+                                listing(list, tokens, pc, code);
                             }
                         }
                         break;
@@ -305,21 +308,25 @@ namespace asmbl {
     }
 
     sim::register_type
-    Assembler::generate_code(TokenList::iterator first, TokenList::iterator last) {
+    Assembler::generate_code(TokenList::iterator first, TokenList::iterator last, sim::register_type pc) {
         word_t code = 0u;
+        word_t arg = 0u;
+        bool opCode = false;
         bool memoryOpr = false;
+        bool finished = false;
         CombinationType restrict{CombinationType::Gr};
 
-        for (auto itr = first; itr != last; ++itr) {
+        for (auto itr = first; itr != last && !finished; ++itr) {
             switch (itr->tokenClass) {
                 case TokenClass::NUMBER:
-                    if (auto value = get_token_value(*itr); value)
-                        code |= value.value();
-                    else
-                        throw AssemblerException("Invalid number " + itr->literal);
+                case TokenClass::LITERAL:
+                case TokenClass::PC_TOKEN:
+                    std::tie(itr, arg) = evaluate_expression(itr, last, pc);
+                    finished = itr == last;
                     break;
                 case TokenClass::OP_CODE:
-                    if (auto op = instructionMap.find(itr->literal); op != instructionMap.end())
+                    if (auto op = instructionMap.find(itr->literal); op != instructionMap.end()) {
+                        opCode = true;
                         switch (op->second.orCombination) {
                             case CombinationType::Memory:
                                 code = op->second.opCode;
@@ -354,20 +361,6 @@ namespace asmbl {
                                     throw AssemblerException("Invalid microcode combination:");
                                 break;
                         }
-                    break;
-                case TokenClass::LITERAL:
-                    if (auto symbol = symbolTable.find(itr->literal); symbol != symbolTable.end()) {
-                        if (symbol->second.status == Defined) {
-                            if (memoryOpr) {
-                                code |= symbol->second.value & 0177;
-                                if (symbol->second.value > 0177)
-                                    code |= 0200;
-                            }
-                            code |= memoryOpr ? (symbol->second.value & 0177) : symbol->second.value;
-                        } else
-                            throw AssemblerException("Undefined symbol " + itr->literal);
-                    } else {
-                        throw AssemblerException("Symbol not found " + itr->literal);
                     }
                     break;
                 default:
@@ -375,6 +368,12 @@ namespace asmbl {
             }
         }
 
+        if (opCode) {
+            if (memoryOpr)
+                code |= arg & 0377;
+        } else {
+            code = arg;
+        }
         return code;
     }
 
@@ -390,46 +389,107 @@ namespace asmbl {
 
     void
     Assembler::listing(std::ostream &list, const TokenList &tokens, sim::register_type pc, sim::register_type code) {
-        if (tokens.begin()->tokenClass == TokenClass::COMMENT) {
-            list << fmt::format("{:>14}{:<72}\n", "/", tokens.begin()->literal);
-        } else {
-            auto itr = tokens.begin();
-            if (itr->tokenClass == TokenClass::LOCATION)
-                list << fmt::format("{:04o}         ", pc);
-            else
-                list << fmt::format("{:04o}  {:04o}   ", pc, code);
-            while (itr != tokens.end()) {
-                if (itr->tokenClass == TokenClass::LITERAL) {
-                    list << fmt::format(" {:>16}, ", itr->literal);
-                    ++itr;
-                } else if (itr->tokenClass == TokenClass::LOCATION) {
-                    list << fmt::format(" {:>16}* ", "");
-                } else {
-                    list << fmt::format(" {:>16}  ", "");
-                }
-                std::stringstream instruction;
-                while (itr != tokens.end() && itr->tokenClass != TokenClass::COMMENT) {
-                    switch (itr->tokenClass) {
-                        case TokenClass::OP_CODE:
-                        case TokenClass::NUMBER:
-                        case TokenClass::LITERAL:
-                        case TokenClass::PC_TOKEN:
-                        case TokenClass::ASSIGNMENT:
-                            instruction << fmt::format("{} ", itr->literal);
-                            break;
-                        default:
-                            break;
+
+        /**
+         * Listing for set location commands:
+         *              *0200
+         *    Start,    *0200
+         */
+        auto listLocation =
+                [&list, &tokens, pc]() {
+                    list << fmt::format("{:04o}{:9}", pc, "");
+                    auto itr = tokens.begin();
+                    if (itr->tokenClass == TokenClass::LITERAL) {
+                        if ((itr + 1)->tokenClass == TokenClass::LABEL_CREATE)
+                            list << fmt::format("{:>16}{} ", (itr)->literal, (itr + 1)->literal);
+                        ++itr;
+                    } else {
+                        list << fmt::format("{:>18}{}", "", itr->literal);
                     }
-                    ++itr;
-                }
-                list << fmt::format("{:<32}", instruction.str());
-                if (itr != tokens.end() && itr->tokenClass == TokenClass::COMMENT) {
-                    list << fmt::format("/ {}", itr->literal);
-                    ++itr;
-                }
-                list << '\n';
+                    return itr;
+                };
+
+        /**
+         * Listing for label assignment:
+         *   Label = .
+         *   Label = 0222;
+         */
+        auto listAssignment = [&list, &tokens]() {
+            list << fmt::format("{:13}", "");
+            auto itr = tokens.begin();
+            if (itr->tokenClass == TokenClass::LITERAL) {
+                if ((itr + 1)->tokenClass == TokenClass::ASSIGNMENT)
+                    list << fmt::format("{:>16}{} ", (itr)->literal, (itr + 1)->literal);
+                ++itr;
+            } else {
+                list << fmt::format("{:>18}{}", "", itr->literal);
+            }
+            return itr;
+        };
+
+        /**
+         * Listing for label create:
+         *   Start, CLA CLL
+         *   Value, 0-010
+         */
+        auto listLabelCreate = [&list, &tokens, pc, code]() {
+            list << fmt::format("{:04o}  {:04o}   ", pc, code);
+            auto itr = tokens.begin();
+            if (itr->tokenClass == TokenClass::LITERAL) {
+                if ((itr + 1)->tokenClass == TokenClass::LABEL_CREATE)
+                    list << fmt::format("{:>16}{} ", (itr)->literal, (itr + 1)->literal);
+                ++itr;
+            } else {
+                list << fmt::format("{:>18}{}", "", itr->literal);
+            }
+            return itr;
+        };
+
+        /**
+         * Step through the token list looking for the defining token, then process it.
+         */
+        auto itr = tokens.begin();
+        bool finished = false;
+        std::stringstream strm;
+        for (; itr != tokens.end() && !finished; ++itr) {
+            finished = true;
+            switch (itr->tokenClass) {
+                case TokenClass::LOCATION:
+                    itr = listLocation();
+                    break;
+                case TokenClass::ASSIGNMENT:
+                    itr = listAssignment();
+                    break;
+                case TokenClass::LABEL_CREATE:
+                    itr = listLabelCreate();
+                    break;
+                case TokenClass::OP_CODE:
+                    list << fmt::format("{:04o}  {:04o}   {:18}{} ", pc, code, "", itr->literal);
+                    break;
+                case TokenClass::COMMENT:
+                    list << fmt::format("/{}", itr->literal);
+                    break;
+                default:
+                    finished = false;
+                    break;
             }
         }
+
+        /**
+         * List any remaining tokens in the operation section of the instruction.
+         */
+        while (itr != tokens.end() && itr->tokenClass != TokenClass::COMMENT) {
+            strm << fmt::format("{} ", itr->literal);
+            ++itr;
+        }
+
+        /**
+         * Complete the listing by printing a comment, if one exists, and the end of line.
+         */
+        list << fmt::format("{:<32}", strm.str());
+        if (itr != tokens.end() && itr->tokenClass == TokenClass::COMMENT)
+            list << fmt::format("/{}", itr->literal);
+        list << '\n';
     }
 
     std::optional<Assembler::word_t> Assembler::find_symbol(const std::string &symbol) {
