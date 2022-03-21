@@ -237,8 +237,10 @@ namespace asmbl {
         return tok;
     }
 
-    std::optional<sim::register_type> Assembler::get_token_value(const AssemblerToken &token) {
+    std::optional<sim::register_type> Assembler::get_token_value(const AssemblerToken &token, sim::register_type pc) {
         switch (token.tokenClass) {
+            case TokenClass::PC_TOKEN:
+                return pc;
             case TokenClass::NUMBER:
                 try {
                     if (octalNumbersOnly)
@@ -498,15 +500,57 @@ namespace asmbl {
         return std::nullopt;
     }
 
-    std::optional<Assembler::word_t> Assembler::parse_command(const std::string &command) {
+    std::optional<Assembler::word_t> Assembler::parse_command(const std::string &command, sim::register_type pc) {
         std::stringstream strm(command);
         auto tokens = parse_tokens(strm);
         classify_tokens(tokens);
-        return generate_code(tokens.begin(), tokens.end());
+        return generate_code(tokens.begin(), tokens.end(), pc);
     }
 
-    sim::register_type Assembler::evaluate_expression(std::vector<Assembler::AssemblerToken>::iterator first,
-                                                      std::vector<Assembler::AssemblerToken>::iterator last) {
-        return 0;
+    std::tuple<std::vector<Assembler::AssemblerToken>::iterator, sim::register_type>
+    Assembler::evaluate_expression(TokenList::iterator first, TokenList::iterator last, sim::register_type pc) {
+        std::optional<int> left;
+        std::optional<int> right;
+
+        TokenClass op = TokenClass::UNKNOWN;
+        auto itr = first;
+        for (; itr != last; ++itr) {
+            switch (itr->tokenClass) {
+                case TokenClass::LITERAL:
+                case TokenClass::NUMBER:
+                case TokenClass::PC_TOKEN:
+                    if (auto value = get_token_value(*itr, pc); value) {
+                        if (left)
+                            right = value;
+                        else
+                            left = value;
+                    }
+
+                    if (left && right && op != TokenClass::UNKNOWN) {
+                        if (op == TokenClass::ADD)
+                            left = left.value() + right.value();
+                        else
+                            left = left.value() - right.value();
+                        op = TokenClass::UNKNOWN;
+                        right = std::nullopt;
+                    }
+                    break;
+                case TokenClass::ADD:
+                case TokenClass::SUB:
+                    op = itr->tokenClass;
+                    break;
+                case TokenClass::COMMENT:
+                    break;
+                default:
+                    throw AssemblerException(fmt::format("Token not allowed in expression: {}", itr->literal));
+            }
+        }
+        if (left && right)
+            throw AssemblerException(fmt::format("Incomplete expression."));
+
+        if (left.value() < 0)
+            return {itr, ((010000 + left.value()) & 07777)};
+        else
+            return {itr, (left.value() & 07777)};
     }
 }
