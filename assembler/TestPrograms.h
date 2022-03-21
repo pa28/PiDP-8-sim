@@ -35,7 +35,7 @@ Loop2,          RAR
                 ISZ Counter             / Increment count
                 JMP Loop2               / Second semi cycle loop ends
                 DCA Accumulator         / Save Acc
-/               ISZ CycleCount          / Uncomment to cycle for a bin and end.
+/               ISZ CycleCount          / Uncomment to cycle for a bit and end.
                 JMP OuterLoop           / Outer loop ends.
                 HLT
 BufferSize      = 10
