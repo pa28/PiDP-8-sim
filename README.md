@@ -24,4 +24,4 @@ the code to employ modern techniques.
 ![Console Running](https://github.com/pa28/PiDP-8-sim/blob/main/images/Screenshot%20at%202022-03-20%2017-29-13.png)
 
 ### Deposit OP Code
-![Deposit Op Code](https://github.com/pa28/PiDP-8-sim/blob/main/images/Screenshot%20at%202022-03-20%2017-47-32.png)
+![Deposit Op Code](https://github.com/pa28/PiDP-8-sim/blob/main/images/Screenshot%20at%202022-03-20%2020-04-09.png)

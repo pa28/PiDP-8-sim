@@ -77,17 +77,19 @@ namespace sim {
                     break;
                 case 'd':
                 case 'D': {
-                    if (auto address = parseArgument(command.substr(1)); address) {
+                    if (auto code = parseArgument(command.substr(1)); code) {
                         commandHistory.push_back(command);
-                        cpu.deposit(address.value());
+                        cpu.deposit(code.value());
                     }
                     printPanel();
                 }
                     break;
                 case 'e':
-                case 'E':
-                    commandHistory.push_back(fmt::format("Examine {:04o} -> {:04o}", cpu.PC()[cpu.wordIndex](),
-                                                         cpu.examine()));
+                case 'E': {
+                    auto pc = cpu.PC()[cpu.wordIndex]();
+                    auto code = cpu.examine();
+                    commandHistory.push_back(fmt::format("Examine {:04o} -> {:04o}", pc, code));
+                }
                     printPanel();
                     lastCommand = command;
                     break;
