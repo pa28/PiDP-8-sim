@@ -259,7 +259,7 @@ namespace sim {
                 assembler.setOctalNumbersOnly(true);
                 if (auto value = assembler.find_symbol(arg); value) {
                     return value.value();
-                } else if (auto cmd = assembler.parse_command(arg)) {
+                } else if (auto cmd = assembler.parse_command(arg, cpu.PC()[cpu.wordIndex]())) {
                     return cmd.value();
                 }
                 assembler.setOctalNumbersOnly(false);
