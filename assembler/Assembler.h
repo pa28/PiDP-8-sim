@@ -198,8 +198,6 @@ namespace asmbl {
 
         using TokenList = std::vector<AssemblerToken>;
 
-        void classify_tokens(TokenList &tokens);
-
         [[nodiscard]] sim::register_type
         generate_code(TokenList::iterator first, TokenList::iterator last, sim::register_type pc);
 
@@ -215,6 +213,8 @@ namespace asmbl {
         }
 
         static TokenList parse_tokens(std::istream &src);
+
+        void classify_tokens(TokenList &tokens);
 
         void pass1(std::istream &src);
 
