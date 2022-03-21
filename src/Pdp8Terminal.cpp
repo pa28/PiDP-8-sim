@@ -256,13 +256,13 @@ namespace sim {
         } catch (const std::invalid_argument &ia) {
             try {
                 std::string arg(argument.substr(argument.find_first_not_of(' ')));
-                assembler.setOctalNumbersOnly(true);
+                assembler.setNumberRadix(asmbl::Assembler::Radix::OCTAL);
                 if (auto value = assembler.find_symbol(arg); value) {
                     return value.value();
                 } else if (auto cmd = assembler.parse_command(arg, cpu.PC()[cpu.wordIndex]())) {
                     return cmd.value();
                 }
-                assembler.setOctalNumbersOnly(false);
+                assembler.setNumberRadix(asmbl::Assembler::Radix::AUTOMATIC);
                 commandHistory.push_back(fmt::format("Error: argument not octal number, no symbol found: {}", arg));
             } catch (const asmbl::AssemblerException& ae) {
                 commandHistory.emplace_back(ae.what());

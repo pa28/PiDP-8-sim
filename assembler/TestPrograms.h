@@ -12,13 +12,14 @@
 namespace asmbl {
 
     static constexpr std::string_view PingPong = R"(/ Simple Ping-Pong Assembler
+                OCTAL
 *0174
 First           = .
 CycleCount,     0-2                     / 0 - Number of times to cycle before halting
-Accumulator,    00017                   / Initial value and temp store for the ACC
-SemiCycle,      0-010                   / 0 - Semi cycle initial count
+Accumulator,    17                      / Initial value and temp store for the ACC
+SemiCycle,      0-10                    / 0 - Semi cycle initial count
 Counter,        0                       / Semi cycle counter
-Start,          *0200
+*0200
 Initialize,     CLA CLL                 / Clear ACC
 OuterLoop,      TAD SemiCycle           / Init semi cycle count
                 DCA Counter
@@ -37,8 +38,9 @@ Loop2,          RAR
 /               ISZ CycleCount          / Uncomment to cycle for a bin and end.
                 JMP OuterLoop           / Outer loop ends.
                 HLT
+BufferSize      = 10
 Buffer          = .
-                *.+7
+                *.+BufferSize
 BufferEnd       = .
 *Initialize
 )";

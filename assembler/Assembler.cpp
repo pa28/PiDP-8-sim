@@ -22,6 +22,23 @@ namespace asmbl {
         for (auto tokens = parse_tokens(src); !tokens.empty(); tokens = parse_tokens(src)) {
             try {
                 classify_tokens(tokens);
+                /**
+                 * Process pseudo commands.
+                 */
+                for (auto &token: tokens)
+                    switch (token.tokenClass) {
+                        case TokenClass::OCTAL:
+                            setNumberRadix(Radix::OCTAL);
+                            break;
+                        case TokenClass::DECIMAL:
+                            setNumberRadix(Radix::DECIMAL);
+                            break;
+                        case TokenClass::AUTOMATIC:
+                            setNumberRadix(Radix::AUTOMATIC);
+                            break;
+                        default:
+                            break;
+                    }
                 auto first = tokens.begin();
                 auto last = tokens.end();
                 switch (first->tokenClass) {
@@ -59,6 +76,9 @@ namespace asmbl {
                         ++pc;
                         break;
                     case TokenClass::COMMENT:
+                    case TokenClass::OCTAL:
+                    case TokenClass::DECIMAL:
+                    case TokenClass::AUTOMATIC:
                         break;
                     default:
                         throw AssemblerException("Malformed instruction: ");
@@ -80,6 +100,23 @@ namespace asmbl {
         for (auto tokens = parse_tokens(src); !tokens.empty(); tokens = parse_tokens(src)) {
             try {
                 classify_tokens(tokens);
+                /**
+                 * Process pseudo commands.
+                 */
+                for (auto &token: tokens)
+                    switch (token.tokenClass) {
+                        case TokenClass::OCTAL:
+                            setNumberRadix(Radix::OCTAL);
+                            break;
+                        case TokenClass::DECIMAL:
+                            setNumberRadix(Radix::DECIMAL);
+                            break;
+                        case TokenClass::AUTOMATIC:
+                            setNumberRadix(Radix::AUTOMATIC);
+                            break;
+                        default:
+                            break;
+                    }
                 auto first = tokens.begin();
                 auto last = tokens.end();
                 switch ((first++)->tokenClass) {
@@ -132,6 +169,10 @@ namespace asmbl {
                         break;
                     case TokenClass::COMMENT:
                         listing(list, tokens, pc, code);
+                        break;
+                    case TokenClass::OCTAL:
+                    case TokenClass::DECIMAL:
+                    case TokenClass::AUTOMATIC:
                         break;
                     default:
                         throw AssemblerException("Malformed instruction: ");
@@ -243,10 +284,15 @@ namespace asmbl {
                 return pc;
             case TokenClass::NUMBER:
                 try {
-                    if (octalNumbersOnly)
-                        return stoul(token.literal, nullptr, 8);
-                    else
-                        return stoul(token.literal, nullptr, 0);
+                    switch (numberRadix) {
+                        case Radix::OCTAL:
+                            return stoul(token.literal, nullptr, 8);
+                        case Radix::DECIMAL:
+                            return stoul(token.literal, nullptr, 10);
+                        case Radix::AUTOMATIC:
+                        default:
+                            return stoul(token.literal, nullptr, 0);
+                    }
                 } catch (const std::invalid_argument &ia) {
                     throw AssemblerException("Invalid numeric argument: ");
                 } catch (const std::out_of_range &range) {
@@ -275,7 +321,13 @@ namespace asmbl {
 
         for (auto &token: tokens) {
             if (token.tokenClass == TokenClass::UNKNOWN) {
-                if (token.literal == "=")
+                if (token.literal == "OCTAL")
+                    token.tokenClass = TokenClass::OCTAL;
+                else if (token.literal == "DECIMAL")
+                    token.tokenClass = TokenClass::DECIMAL;
+                else if (token.literal == "AUTOMATIC")
+                    token.tokenClass = TokenClass::AUTOMATIC;
+                else if (token.literal == "=")
                     token.tokenClass = TokenClass::ASSIGNMENT;
                 else if (token.literal == ".")
                     token.tokenClass = TokenClass::PC_TOKEN;

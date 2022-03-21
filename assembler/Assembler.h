@@ -155,10 +155,12 @@ namespace asmbl {
                          {06026, "PLS", Memory},
                  }};
 
+        enum class Radix { OCTAL, DECIMAL, AUTOMATIC };
+
     protected:
         std::map<std::string_view, Instruction> instructionMap{};
         std::map<std::string, Symbol> symbolTable{};
-        bool octalNumbersOnly{false};
+        Radix numberRadix{Radix::AUTOMATIC};
 
         enum class TokenClass {
             UNKNOWN,
@@ -172,7 +174,9 @@ namespace asmbl {
             SUB,
             LABEL_CREATE,
             COMMENT,
-            DIAGNOSTIC
+            OCTAL,
+            DECIMAL,
+            AUTOMATIC,
         };
 
         struct AssemblerToken {
@@ -225,7 +229,7 @@ namespace asmbl {
 
         void dump_symbols(std::ostream &strm);
 
-        void setOctalNumbersOnly(bool value) { octalNumbersOnly = value; }
+        void setNumberRadix(Radix value) { numberRadix = value; }
 
         std::optional<Assembler::word_t> find_symbol(const std::string &symbol);
 
