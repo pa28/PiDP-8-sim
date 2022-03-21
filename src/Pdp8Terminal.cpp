@@ -63,6 +63,10 @@ namespace sim {
                 loadPingPong();
                 commandHistory.emplace_back("Load PING PONG");
                 return;
+            } else if (command == "RIM") {
+                cpu.rimLoader();
+                printPanel();
+                return;
             }
 
             switch (command.front()) {
