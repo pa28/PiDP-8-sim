@@ -184,11 +184,11 @@ namespace sim {
 
     protected:
         NullStreamBuffer nullStreamBuffer{};   ///< Null buffer for unused streams
-        std::ostream ostrm;                         ///< Output stream
-        std::istream istrm;                         ///< Input stream
+        std::ostream ostrm;                    ///< Output stream
+        std::istream istrm;                    ///< Input stream
 
-        int ofd{-1};                                ///< File descriptor of the output stream
-        int ifd{-1};                                ///< File descriptor of the input stream
+        int ofd{-1};                           ///< File descriptor of the output stream
+        int ifd{-1};                           ///< File descriptor of the input stream
 
     public:
 
@@ -200,6 +200,11 @@ namespace sim {
         Terminal() : ostrm(&nullStreamBuffer), istrm(&nullStreamBuffer) {}
 
         ~Terminal() = default;
+
+        [[nodiscard]] auto getReadFd() const { return ifd; }
+        [[nodiscard]] auto getWriteFd() const { return ofd; }
+
+        virtual int selected(bool selectedRead, bool selectedWrite);
 
         /**
          * @brief Construct an outbound only connection using a provided stream buffer.
@@ -324,7 +329,7 @@ namespace sim {
         virtual void inputBufferChanged() {
             setCursorPosition(inputLine, 1u);
             print("\033[0K> {}", inputLineBuffer);
-            inputColumn = inputLineBuffer.size() + 3;
+            inputColumn = static_cast<unsigned int>(inputLineBuffer.size() + 3u);
             setCursorPosition();
             out().flush();
         }
@@ -332,6 +337,7 @@ namespace sim {
 
     class TelnetTerminalSet {
     public:
+        bool disconnected{false};
         std::unique_ptr<TerminalSocket> socket{};
         std::unique_ptr<TelnetTerminal> terminal{};
 

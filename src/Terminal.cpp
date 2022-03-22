@@ -184,6 +184,13 @@ namespace sim {
         return {readSelect, writeSelect, timeout.tv_usec};
     }
 
+    int Terminal::selected(bool selectedRead, bool selectedWrite) {
+        if (selectedRead) {
+            return istrm.get();
+        }
+        return 0;
+    }
+
     void TelnetTerminal::setCharacterMode() {
         out().put(static_cast<char>(IAC)).put(static_cast<char>(WILL)).put(static_cast<char>(ECHO)).flush();
         out().put(static_cast<char>(IAC)).put(static_cast<char>(WILL)).put(static_cast<char>(SUPPRESS_GO_AHEAD)).flush();

@@ -28,17 +28,52 @@ namespace sim {
 
         while (runConsole) {
             setCursorPosition();
-            auto[read, write, timeout] = select(true, false, selectTimeout.count());
-            if (read == SelectStatus::Data) {
-                parseInput();
-                inputBufferChanged();
+            auto [timeoutRemainder, selectResults] = selectOnAll(selectTimeout);
+            for (auto const &selectResult: selectResults) {
+                if (selectResult.listIndex < 0) {
+                    if (selectResult.selectRead || selectResult.selectWrite) {
+                        selected(selectResult.selectRead, selectResult.selectWrite);
+                    }
+                } else {
+                    if (selectResult.selectRead) {
+                        if (selectResult.selectRead || selectResult.selectWrite) {
+                            auto c = managedTerminals[selectResult.listIndex].terminal->
+                                selected(selectResult.selectRead, selectResult.selectWrite);
+                            if (c == EOF) {
+                                managedTerminals[selectResult.listIndex].disconnected = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            auto removeCount = std::count_if(managedTerminals.begin(), managedTerminals.end(), [](const TelnetTerminalSet &t){
+                return t.disconnected;
+            });
+
+            if (removeCount) {
+                managedTerminals.erase(std::remove_if(managedTerminals.begin(), managedTerminals.end(),
+                                                      [](const TelnetTerminalSet &t) {
+                                                          return t.disconnected;
+                                                      }), managedTerminals.end());
             }
 
             if (cpu.runFlag()) {
                 cpu.instruction_step();
                 printPanel();
             }
+
+            std::this_thread::sleep_for(timeoutRemainder);
         }
+    }
+
+    int Pdp8Terminal::selected(bool selectedRead, bool selectedWrite) {
+        if (selectedRead) {
+            parseInput();
+            inputBufferChanged();
+        }
+
+        return 0;
     }
 
     void Pdp8Terminal::inputBufferChanged() {
@@ -151,6 +186,7 @@ namespace sim {
         printPanelFlag(12u, 44u, cpu.InstReg() == PDP8I::Instruction::JMP);
         printPanelFlag(14u, 44u, cpu.InstReg() == PDP8I::Instruction::IOT);
         printPanelFlag(16u, 44u, cpu.InstReg() == PDP8I::Instruction::OPR);
+        print("  Managed terms: {:02}", managedTerminals.size());
 
         printPanelFlag(2u, 56u, cpu.cycleState() == PDP8I::CycleState::Fetch || cpu.cycleState() == PDP8I::CycleState::Interrupt);
         printPanelFlag(4u, 56u, cpu.cycleState() == PDP8I::CycleState::Execute);
@@ -221,6 +257,8 @@ namespace sim {
         assembler.dump_symbols(managedTerminals.back().terminal->out());
         managedTerminals.back().terminal->out().flush();
         auto startAddress = cpu.readBinaryFormat(binary);
+        int waitStatus;
+        wait(&waitStatus);
         printPanel();
     }
 
@@ -283,5 +321,53 @@ namespace sim {
             return std::nullopt;
         }
         return std::nullopt;
+    }
+
+    std::tuple<std::chrono::microseconds, std::vector<Pdp8Terminal::SelectAllResult>>
+    Pdp8Terminal::selectOnAll(std::chrono::microseconds timeoutUs) {
+
+        fd_set readFds, writeFds, exceptFds;
+        FD_ZERO(&readFds);
+        FD_ZERO(&writeFds);
+        FD_ZERO(&exceptFds);
+        struct timeval timeout{};
+
+        timeout.tv_sec = 0;
+        timeout.tv_usec = timeoutUs.count();
+
+        std::vector<SelectAllResult> selectResults{};
+
+        selectResults.emplace_back(-1, ifd, ofd, false, false);
+
+        for (int i = 0; i < managedTerminals.size(); ++i) {
+            auto tifd = managedTerminals[i].terminal->getReadFd();
+            auto tofd = managedTerminals[i].terminal->getWriteFd();
+            selectResults.emplace_back( i, tifd, tofd, false, false);
+        }
+
+        for (auto const& selectResult : selectResults) {
+            if (selectResult.readFd >= 0) {
+                FD_SET(selectResult.readFd, &readFds);
+            }
+
+            if (selectResult.writeFd >= 0) {
+                FD_SET(selectResult.writeFd, &writeFds);
+            }
+        }
+
+        if (auto stat = ::select(FD_SETSIZE, &readFds, &writeFds, &exceptFds, &timeout); stat == -1) {
+            throw TerminalConnectionException("Call to select failed.");
+        } else if (stat > 0) {
+            for (auto& selectResult : selectResults) {
+                if (FD_ISSET(selectResult.readFd, &readFds))
+                    selectResult.selectRead = true;
+                if (FD_ISSET(selectResult.writeFd, &writeFds))
+                    selectResult.selectWrite = true;
+            }
+        }
+
+        std::chrono::microseconds timeoutRemainder{timeout.tv_usec};
+
+        return {timeoutRemainder, selectResults};
     }
 }
