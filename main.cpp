@@ -1,5 +1,5 @@
-#include <stdio.h>
-#include <signal.h>
+#include <cstdio>
+#include <csignal>
 #include <sys/wait.h>
 #include <sys/resource.h>
 #include <chrono>
