@@ -1,11 +1,12 @@
-#include <iostream>
+#include <stdio.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <sys/resource.h>
 #include <chrono>
 #include <thread>
 #include <fmt/format.h>
 #include "src/cpu.h"
 #include "src/Pdp8Terminal.h"
-#include "assembler/Assembler.h"
-#include "assembler/TestPrograms.h"
 
 
 using namespace sim;
@@ -16,7 +17,10 @@ static constexpr std::array<uint16_t, 3> TEST_PROGRAM =
                 01202, 05200, 04000
         };
 
+
 int main() {
+
+    signal(SIGCHLD, SIG_IGN);
 
 #if 0
     TerminalSocket terminalSocket;
