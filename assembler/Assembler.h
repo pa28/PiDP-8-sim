@@ -160,7 +160,7 @@ namespace asmbl {
     protected:
         std::map<std::string_view, Instruction> instructionMap{};
         std::map<std::string, Symbol> symbolTable{};
-        Radix numberRadix{Radix::AUTOMATIC};
+        Radix numberRadix{Radix::OCTAL};
 
         enum class TokenClass {
             UNKNOWN,
