@@ -20,6 +20,51 @@ the code to employ modern techniques.
   * This is also working though not with complete coverage of all PDP-8 instructions or as a command.
   * It can be used to assemble code for use in deposit commands for example.
 
+### Console Commands
+
+#### Load Address ```l[ ]<d><i><number>```
+Places ```<d><i><number>``` in the Data Field, Instruction Field and Program Counter.
+White space between the ```l``` and the ```<d><i><number>``` is optional.  The address will be displayed in the
+Program Counter and Data and Instruction fields. If fewer than 5 or 6 octal digits are provided the data / instruction
+fields will be set to zero.
+
+#### Deposit Value ```d[ ]<number>```
+Places ```<number>``` in the address specified in the Instruction Field - Program Counter. The Memory Address and
+Memory Buffer registers are updated with the field address and deposited value. The Program Counter is incremented.
+
+#### Examine Value ```e```
+Retrieves the content of the address specified in the instruction Field - Program Counter. The Memory Address and
+Memory Buffer registers are updated with the field address and retrieved value. The value is also displayed in
+octal in the console buffer area.
+
+#### Instruction Cycle ```c```
+The CPU will execute one (the next) machine cycle (Fetch, Execute or Defer) at the address specified in the
+Program Counter and update the panel. 
+
+#### Instruction Step ```s```
+The CPU will complete the current instruction, if the Instruction Cycle command has left an instruction partially
+executed, or step through a full instruction.
+
+#### Continue ```C```
+Places the CPU in run mode, the RUN flag is set to true. The CPU will run until a Halt instruction (HLT) is executed
+or the Stop command is used. The panel updates at the end of each instruction. The CPU is run at a speed determined
+by the console input timeout which is 10 milliseconds.
+
+#### Stop ```S```
+Places the CPU in halt mode, the RUN flag is set to false. The CPU will complete the current instruction, update the
+panel and stop.
+
+#### Sample Program - Ping Pong ```PING PONG```
+Assembles and loads the sample program coded into the software in ```TestPrograms.h``` into core memory.
+
+#### Read In Memory - RIM Loader ```RIM```
+Pokes the binary values that make up the RIM loader into high memory 7756 - 7777 in the field indicated by the
+instruction field register.
+
+#### Repeatable Instructions
+Three of the commands are repeatable by pressing the Enter key: Examine, Cycle and Step. If the Enter key is held
+down the command will be repeated at the key repeat rate.
+
 ### Running a built-in program
 ![Console Running](https://github.com/pa28/PiDP-8-sim/blob/main/images/Screenshot%20at%202022-03-20%2017-29-13.png)
 
