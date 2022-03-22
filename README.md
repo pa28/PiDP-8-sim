@@ -22,6 +22,9 @@ the code to employ modern techniques.
 
 ### Console Commands
 
+#### Number Radix
+All numbers entered into the console are decoded and encoded in octal.
+
 #### Load Address ```l[ ]<d><i><number>```
 Places ```<d><i><number>``` in the Data Field, Instruction Field and Program Counter.
 White space between the ```l``` and the ```<d><i><number>``` is optional.  The address will be displayed in the
@@ -31,6 +34,17 @@ fields will be set to zero.
 #### Deposit Value ```d[ ]<number>```
 Places ```<number>``` in the address specified in the Instruction Field - Program Counter. The Memory Address and
 Memory Buffer registers are updated with the field address and deposited value. The Program Counter is incremented.
+
+#### Deposit Assembler ```d[ ]<assember code>```
+*This Feature is not fully operational yet*
+
+The Deposit command may also use assembler instruction semantics:
+* ```d cla cll```
+* ```d jmp 200```
+
+If the assembler has a symbol table loaded, by using the ```PING PONG``` command for example, the Deposit command
+may take advantage of those symbols:
+* ```d jmp Initialize```
 
 #### Examine Value ```e```
 Retrieves the content of the address specified in the instruction Field - Program Counter. The Memory Address and
