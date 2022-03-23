@@ -366,6 +366,7 @@ namespace asmbl {
         bool opCode = false;
         bool memoryOpr = false;
         bool finished = false;
+        bool zeroFlag = false;
         CombinationType restrict{CombinationType::Gr};
 
         for (auto itr = first; itr != last && !finished; ++itr) {
@@ -389,7 +390,10 @@ namespace asmbl {
                                 code |= op->second.opCode;
                                 break;
                             case CombinationType::Mask:
-                                code &= op->second.opCode;
+                                if (memoryOpr && op->second.opCode == 07577)
+                                    zeroFlag = true;
+                                else
+                                    code &= op->second.opCode;
                                 break;
                             case CombinationType::Gr1:
                                 if (restrict == CombinationType::Gr || restrict == CombinationType::Gr1) {
@@ -421,8 +425,13 @@ namespace asmbl {
         }
 
         if (opCode) {
-            if (memoryOpr)
-                code |= arg & 0377;
+            if (memoryOpr) {
+                code |= arg & 0177;
+                if (arg > 0177)
+                    code |= 0200;       // Current page flag;
+                if (zeroFlag)
+                    code &= 07577;      // Zero flag forced by 'Z' token in source.
+            }
         } else {
             code = arg;
         }
