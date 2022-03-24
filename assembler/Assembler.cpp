@@ -259,8 +259,8 @@ namespace asmbl {
                     }
                     buffer.clear();
                 } else if (!buffer.empty()) {
-                    if (std::isalpha(buffer.at(0))) {
-                        if (std::isalnum(c)) {
+                    if (std::isalpha(buffer.at(0)) || buffer.at(0) == '_') {
+                        if (std::isalnum(c) || c == '_') {
                             buffer.push_back(static_cast<char>(c));
                         } else {
                             tok.emplace_back(TokenClass::UNKNOWN, buffer);
