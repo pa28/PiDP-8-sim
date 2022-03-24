@@ -287,6 +287,11 @@ namespace asmbl {
 
         void clear() {
             symbolTable.clear();
+
+            for (auto &symbol: PRE_DEFINED_SYMBOLS) {
+                symbolTable[std::string(symbol.symbol)] = Symbol{symbol.value, std::string(symbol.symbol), Defined};
+            }
+
         }
 
         static TokenList parse_tokens(std::istream &src);

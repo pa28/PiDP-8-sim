@@ -12,12 +12,9 @@
 namespace asmbl {
 
     Assembler::Assembler() {
+        clear();
         for (auto &instruction: InstructionSet) {
             instructionMap.emplace(instruction.mnemonic, instruction);
-        }
-
-        for (auto &symbol: PRE_DEFINED_SYMBOLS) {
-            symbolTable[std::string(symbol.symbol)] = Symbol{symbol.value, std::string(symbol.symbol), Defined};
         }
     }
 
