@@ -27,6 +27,62 @@ namespace asmbl {
         AssemblerException(const AssemblerException &other) noexcept = default;
     };
 
+    class AssemblerSymbolNotFound : public AssemblerException {
+    public:
+        AssemblerSymbolNotFound() = delete;
+
+        explicit AssemblerSymbolNotFound(const std::string &what_arg) : AssemblerException(what_arg) {}
+
+        explicit AssemblerSymbolNotFound(const char *what_arg) : AssemblerException(what_arg) {}
+
+        AssemblerSymbolNotFound(const AssemblerSymbolNotFound &other) noexcept = default;
+    };
+
+    class AssemblerSymbolNotDefined : public AssemblerException {
+    public:
+        AssemblerSymbolNotDefined() = delete;
+
+        explicit AssemblerSymbolNotDefined(const std::string &what_arg) : AssemblerException(what_arg) {}
+
+        explicit AssemblerSymbolNotDefined(const char *what_arg) : AssemblerException(what_arg) {}
+
+        AssemblerSymbolNotDefined(const AssemblerSymbolNotDefined &other) noexcept = default;
+    };
+
+    class AssemblerNumberInvalidArg : public AssemblerException {
+    public:
+        AssemblerNumberInvalidArg() = delete;
+
+        explicit AssemblerNumberInvalidArg(const std::string &what_arg) : AssemblerException(what_arg) {}
+
+        explicit AssemblerNumberInvalidArg(const char *what_arg) : AssemblerException(what_arg) {}
+
+        AssemblerNumberInvalidArg(const AssemblerNumberInvalidArg &other) noexcept = default;
+    };
+
+    class AssemblerNumberRangeError : public AssemblerException {
+    public:
+        AssemblerNumberRangeError() = delete;
+
+        explicit AssemblerNumberRangeError(const std::string &what_arg) : AssemblerException(what_arg) {}
+
+        explicit AssemblerNumberRangeError(const char *what_arg) : AssemblerException(what_arg) {}
+
+        AssemblerNumberRangeError(const AssemblerNumberRangeError &other) noexcept = default;
+    };
+
+    class AssemblerAbort : public std::runtime_error {
+    public:
+        AssemblerAbort() = delete;
+
+        explicit AssemblerAbort(const std::string &what_arg) : std::runtime_error(what_arg) {}
+
+        explicit AssemblerAbort(const char *what_arg) : std::runtime_error(what_arg) {}
+
+        AssemblerAbort(const AssemblerAbort &other) noexcept = default;
+    };
+
+
     /**
      * @class Assembler
      * @brief A simple PDP-8 assembler. Reads source code from an istream and outputs BIN format to ostream.
@@ -89,6 +145,11 @@ namespace asmbl {
             Symbol &operator=(const Symbol &) = default;
 
             Symbol &operator=(Symbol &&) = default;
+        };
+
+        struct PreDefinedSymbol {
+            word_t value{};
+            std::string_view symbol{};
         };
 
         static constexpr std::array<Instruction, 48> InstructionSet =
@@ -154,6 +215,18 @@ namespace asmbl {
                          {06024, "PPC", Memory},
                          {06026, "PLS", Memory},
                  }};
+
+        static constexpr std::array<PreDefinedSymbol,8> PRE_DEFINED_SYMBOLS =
+                {{
+                         { 0010, "_AutoIndex0" },
+                         { 0011, "_AutoIndex1" },
+                         { 0012, "_AutoIndex2" },
+                         { 0013, "_AutoIndex3" },
+                         { 0014, "_AutoIndex4" },
+                         { 0015, "_AutoIndex5" },
+                         { 0016, "_AutoIndex6" },
+                         { 0017, "_AutoIndex7" },
+                }};
 
         enum class Radix { OCTAL, DECIMAL, AUTOMATIC };
 

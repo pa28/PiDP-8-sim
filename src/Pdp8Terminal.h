@@ -104,6 +104,8 @@ namespace sim {
 
         void loadPingPong();
 
+        void loadForth();
+
         void loadSourceStream(std::istream &sourceCode, const std::string &title);
 
     public:

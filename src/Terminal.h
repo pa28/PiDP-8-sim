@@ -161,7 +161,6 @@ namespace sim {
             if (terminalFd >= 0)
                 close(terminalFd);
             terminalFd = -1;
-            wait(&waitStatus);
         }
 
         /**

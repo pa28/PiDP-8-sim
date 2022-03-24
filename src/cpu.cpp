@@ -221,8 +221,10 @@ namespace sim {
 
             if (bits & 0200) link_accumulator[wordIndex] = 0u; // CLA
             if (bits & 0004) link_accumulator[wordIndex] = link_accumulator[wordIndex]() | switch_register[wordIndex]();
-            if (bits & 0002)
+            if (bits & 0002) {
                 halt_flag = true; // HLT
+                run_flag = false;
+            }
         } else { // Group 3
 
         }

@@ -15,82 +15,76 @@ namespace asmbl {
         for (auto &instruction: InstructionSet) {
             instructionMap.emplace(instruction.mnemonic, instruction);
         }
+
+        for (auto &symbol: PRE_DEFINED_SYMBOLS) {
+            symbolTable[std::string(symbol.symbol)] = Symbol{symbol.value, std::string(symbol.symbol), Defined};
+        }
     }
 
     void Assembler::pass1(std::istream &src) {
         sim::register_type pc = 0u;
         for (auto tokens = parse_tokens(src); !tokens.empty(); tokens = parse_tokens(src)) {
-            try {
-                classify_tokens(tokens);
-                /**
-                 * Process pseudo commands.
-                 */
-                for (auto &token: tokens)
-                    switch (token.tokenClass) {
-                        case TokenClass::OCTAL:
-                            setNumberRadix(Radix::OCTAL);
-                            break;
-                        case TokenClass::DECIMAL:
-                            setNumberRadix(Radix::DECIMAL);
-                            break;
-                        case TokenClass::AUTOMATIC:
-                            setNumberRadix(Radix::AUTOMATIC);
-                            break;
-                        default:
-                            break;
-                    }
-                auto first = tokens.begin();
-                auto last = tokens.end();
-                switch (first->tokenClass) {
-                    case TokenClass::LOCATION:
-                        pc = generate_code(first + 1, last, pc);
-                        break;
-                    case TokenClass::LITERAL:
-                        if (tokens.size() >= 2) {
-                            if (tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
-                                if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
-                                    if (symbol->second.status == Undefined) {
-                                        symbol->second.status = Defined;
-                                        symbol->second.value = pc;
-                                    } else {
-                                        symbol->second.status = ReDefined;
-                                        symbol->second.value = pc;
-                                    }
-                                } else {
-                                    symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Defined));
-                                }
-                                ++pc;
-                            } else if (tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
-                                if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
-                                    if (symbol->second.status != Undefined) {
-                                        symbol->second.status = ReDefined;
-                                        symbol->second.value = pc;
-                                    }
-                                } else {
-                                    symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Undefined));
-                                }
-                            }
-                        }
-                        break;
-                    case TokenClass::OP_CODE:
-                        ++pc;
-                        break;
-                    case TokenClass::COMMENT:
+            classify_tokens(tokens);
+            /**
+             * Process pseudo commands.
+             */
+            for (auto &token: tokens)
+                switch (token.tokenClass) {
                     case TokenClass::OCTAL:
+                        setNumberRadix(Radix::OCTAL);
+                        break;
                     case TokenClass::DECIMAL:
+                        setNumberRadix(Radix::DECIMAL);
+                        break;
                     case TokenClass::AUTOMATIC:
+                        setNumberRadix(Radix::AUTOMATIC);
                         break;
                     default:
-                        throw AssemblerException("Malformed instruction: ");
+                        break;
                 }
-            } catch (const AssemblerException &ae) {
-                std::stringstream strm{};
-                strm << ae.what();
-                for (auto &token: tokens) {
-                    strm << fmt::format(" {}", token.literal);
-                }
-                strm << fmt::format(" at {:04o}", pc);
-                throw AssemblerException(strm.str());
+            auto first = tokens.begin();
+            auto last = tokens.end();
+            switch (first->tokenClass) {
+                case TokenClass::LOCATION:
+                    pc = generate_code(first + 1, last, pc);
+                    break;
+                case TokenClass::LITERAL:
+                    if (tokens.size() >= 2) {
+                        if (tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
+                            if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
+                                if (symbol->second.status == Undefined) {
+                                    symbol->second.status = Defined;
+                                    symbol->second.value = pc;
+                                } else {
+                                    symbol->second.status = ReDefined;
+                                    symbol->second.value = pc;
+                                }
+                            } else {
+                                symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Defined));
+                            }
+                            ++pc;
+                        } else if (tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
+                            if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
+                                if (symbol->second.status != Undefined) {
+                                    symbol->second.status = ReDefined;
+                                    symbol->second.value = pc;
+                                }
+                            } else {
+                                symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Undefined));
+                            }
+                        }
+                    }
+                    break;
+                case TokenClass::OP_CODE:
+                    ++pc;
+                    break;
+                case TokenClass::COMMENT:
+                case TokenClass::OCTAL:
+                case TokenClass::DECIMAL:
+                case TokenClass::AUTOMATIC:
+                    break;
+                default:
+                    throw AssemblerException("Malformed instruction: ");
             }
         }
     }
@@ -98,90 +92,92 @@ namespace asmbl {
     void Assembler::pass2(std::istream &src, std::ostream &bin, std::ostream &list) {
         sim::register_type pc = 0u, code = 0u;
         for (auto tokens = parse_tokens(src); !tokens.empty(); tokens = parse_tokens(src)) {
-            try {
-                classify_tokens(tokens);
-                /**
-                 * Process pseudo commands.
-                 */
-                for (auto &token: tokens)
-                    switch (token.tokenClass) {
-                        case TokenClass::OCTAL:
-                            setNumberRadix(Radix::OCTAL);
-                            break;
-                        case TokenClass::DECIMAL:
-                            setNumberRadix(Radix::DECIMAL);
-                            break;
-                        case TokenClass::AUTOMATIC:
-                            setNumberRadix(Radix::AUTOMATIC);
-                            break;
-                        default:
-                            break;
-                    }
-                auto first = tokens.begin();
-                auto last = tokens.end();
-                switch ((first++)->tokenClass) {
-                    case TokenClass::LOCATION: {
-                        pc = generate_code(first, last, pc);
-                        bin << static_cast<char>(((pc & 07700) >> 6) | 0100) << static_cast<char>(pc & 077);
-                        listing(list, tokens, pc, code);
-                    }
+            classify_tokens(tokens);
+            /**
+             * Process pseudo commands.
+             */
+            for (auto &token: tokens)
+                switch (token.tokenClass) {
+                    case TokenClass::OCTAL:
+                        setNumberRadix(Radix::OCTAL);
                         break;
-                    case TokenClass::LITERAL:
-                        if (tokens.size() >= 2) {
-                            if (tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
-                                if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
-                                    if (symbol->second.status == Undefined) {
-                                        symbol->second.status = Defined;
-                                        symbol->second.value = pc;
-                                    }
-                                } else {
-                                    symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Defined));
+                    case TokenClass::DECIMAL:
+                        setNumberRadix(Radix::DECIMAL);
+                        break;
+                    case TokenClass::AUTOMATIC:
+                        setNumberRadix(Radix::AUTOMATIC);
+                        break;
+                    default:
+                        break;
+                }
+            auto first = tokens.begin();
+            auto last = tokens.end();
+            switch ((first++)->tokenClass) {
+                case TokenClass::LOCATION: {
+                    pc = generate_code(first, last, pc);
+                    bin << static_cast<char>(((pc & 07700) >> 6) | 0100) << static_cast<char>(pc & 077);
+                    listing(list, tokens, pc, code);
+                }
+                    break;
+                case TokenClass::LITERAL:
+                    if (tokens.size() >= 2) {
+                        if (tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
+                            if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
+                                if (symbol->second.status == Undefined) {
+                                    symbol->second.status = Defined;
+                                    symbol->second.value = pc;
                                 }
+                            } else {
+                                symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Defined));
+                            }
 
-                                if (tokens.size() >= 3 && first->tokenClass == TokenClass::LABEL_CREATE) {
+                            if (tokens.size() >= 3 && first->tokenClass == TokenClass::LABEL_CREATE) {
+                                try {
                                     code = generate_code(++first, tokens.end(), pc);
                                     bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
                                     listing(list, tokens, pc, code);
-                                    ++pc;
-                                } else {
+                                } catch (const AssemblerSymbolNotFound& symbolNotFound) {
                                     listing(list, tokens, pc, code);
+                                    list << fmt::format("{:>12}Symbol not found: {}\n", "***", symbolNotFound.what());
                                 }
-                            } else if (tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
-                                ++first;
-                                if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
-                                    if (symbol->second.status != ReDefined) {
-                                        symbol->second.status = Defined;
-                                        symbol->second.value = generate_code(first, last, pc);
-                                    }
-                                } else {
-                                    auto value = generate_code(first, last, pc);
-                                    symbolTable.emplace(tokens[0].literal, Symbol(value, tokens[0].literal, Defined));
-                                }
+                                ++pc;
+                            } else {
                                 listing(list, tokens, pc, code);
                             }
+                        } else if (tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
+                            ++first;
+                            if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
+                                if (symbol->second.status != ReDefined) {
+                                    symbol->second.status = Defined;
+                                    symbol->second.value = generate_code(first, last, pc);
+                                }
+                            } else {
+                                auto value = generate_code(first, last, pc);
+                                symbolTable.emplace(tokens[0].literal, Symbol(value, tokens[0].literal, Defined));
+                            }
+                            listing(list, tokens, pc, code);
                         }
-                        break;
-                    case TokenClass::OP_CODE:
+                    }
+                    break;
+                case TokenClass::OP_CODE:
+                    try {
                         code = generate_code(tokens.begin(), tokens.end(), pc);
                         bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
                         listing(list, tokens, pc, code);
-                        ++pc;
-                        break;
-                    case TokenClass::COMMENT:
-                    case TokenClass::OCTAL:
-                    case TokenClass::DECIMAL:
-                    case TokenClass::AUTOMATIC:
+                    } catch (const AssemblerSymbolNotFound& symbolNotFound) {
                         listing(list, tokens, pc, code);
-                        break;
-                    default:
-                        throw AssemblerException("Malformed instruction: ");
-                }
-            } catch (const AssemblerException &ae) {
-                std::stringstream strm{ae.what()};
-                for (auto &token: tokens) {
-                    strm << fmt::format(" {}", token.literal);
-                }
-                throw AssemblerException(strm.str());
+                        list << fmt::format("{:>12}Symbol not found: {}\n", "***", symbolNotFound.what());
+                    }
+                    ++pc;
+                    break;
+                case TokenClass::COMMENT:
+                case TokenClass::OCTAL:
+                case TokenClass::DECIMAL:
+                case TokenClass::AUTOMATIC:
+                    listing(list, tokens, pc, code);
+                    break;
+                default:
+                    throw AssemblerException("Malformed instruction: ");
             }
         }
     }
@@ -282,32 +278,27 @@ namespace asmbl {
             case TokenClass::PC_TOKEN:
                 return pc;
             case TokenClass::NUMBER:
-                try {
-                    switch (numberRadix) {
-                        case Radix::OCTAL:
-                            return stoul(token.literal, nullptr, 8);
-                        case Radix::DECIMAL:
-                            return stoul(token.literal, nullptr, 10);
-                        case Radix::AUTOMATIC:
-                        default:
-                            return stoul(token.literal, nullptr, 0);
-                    }
-                } catch (const std::invalid_argument &ia) {
-                    throw AssemblerException("Invalid numeric argument: ");
-                } catch (const std::out_of_range &range) {
-                    throw AssemblerException("Numeric argument out of range: ");
+                switch (numberRadix) {
+                    case Radix::OCTAL:
+                        return stoul(token.literal, nullptr, 8);
+                    case Radix::DECIMAL:
+                        return stoul(token.literal, nullptr, 10);
+                    case Radix::AUTOMATIC:
+                    default:
+                        return stoul(token.literal, nullptr, 0);
                 }
                 break;
             case TokenClass::LITERAL:
                 if (auto symbol = symbolTable.find(token.literal); symbol != symbolTable.end()) {
                     if (symbol->second.status == Undefined)
-                        return std::nullopt;
+                        throw AssemblerSymbolNotDefined(token.literal);
                     return symbol->second.value;
                 } else {
                     if (auto op = instructionMap.find(token.literal); op != instructionMap.end()) {
                         return op->second.opCode;
                     }
                 }
+                throw AssemblerSymbolNotFound(token.literal);
                 break;
             default:
                 return std::nullopt;

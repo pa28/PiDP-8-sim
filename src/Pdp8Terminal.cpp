@@ -98,6 +98,10 @@ namespace sim {
                 loadPingPong();
                 commandHistory.emplace_back("Load PING PONG");
                 return;
+            } else if (command == "FORTH") {
+                loadForth();
+                commandHistory.emplace_back("Load FORTH");
+                return;
             } else if (command == "RIM") {
                 cpu.rimLoader();
                 printPanel();
@@ -254,11 +258,10 @@ namespace sim {
         managedTerminals.back().terminal->print("\033]0;PiDP-8/I Source Listing {}\007", title).flush();
 
         assembler.pass2(sourceCode, binary, managedTerminals.back().terminal->out());
+
         assembler.dump_symbols(managedTerminals.back().terminal->out());
         managedTerminals.back().terminal->out().flush();
         auto startAddress = cpu.readBinaryFormat(binary);
-        int waitStatus;
-        wait(&waitStatus);
         printPanel();
     }
 
@@ -267,6 +270,17 @@ namespace sim {
         std::stringstream sourceCode(std::string{asmbl::PingPong});
         loadSourceStream(sourceCode, "Ping Pong");
     }
+
+    void Pdp8Terminal::loadForth() {
+        try {
+            assembler.clear();
+            std::stringstream sourceCode(std::string{asmbl::Forth});
+            loadSourceStream(sourceCode, "Fourth");
+        } catch (const asmbl::AssemblerAbort& aa) {
+            commandHistory.emplace_back(aa.what());
+        }
+    }
+
 
     void Pdp8Terminal::printCommandHistory() {
         if (commandHistory.empty())

@@ -44,4 +44,45 @@ Buffer          = .
 BufferEnd       = .
 *Initialize
 )";
+
+    static constexpr std::string_view Forth = R"(/ A simple Forth implementation
+*100
+Push,           0
+                JMP I PushIndirect
+Pop,            0
+                JMP I PopIndirect
+PushIndirect,   PushBody
+PopIndirect,    PopBody
+/
+*200
+                CLA
+                TAD Argument
+                JMS Push
+                JMS Pop
+                JMS Pop
+                HLT
+/
+Argument,       5
+/
+
+*300
+/
+PushBody,       DCA PushData
+                CLA CMA                 / -1
+                TAD ArgStackPtr
+                DCA ArgStackPtr
+                TAD PushData
+                DCA I ArgStackPtr
+                JMP I Push
+/
+PopBody,        CLA CLL
+                TAD I ArgStackPtr
+                ISZ ArgStackPtr
+                JMP I Pop
+                HLT
+
+ArgStackPtr,    7777
+PushData,       0
+*200
+)";
 }
