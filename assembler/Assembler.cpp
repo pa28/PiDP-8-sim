@@ -69,6 +69,8 @@ namespace asmbl {
                             } else {
                                 symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Undefined));
                             }
+                        } else if (tokens[1].tokenClass == TokenClass::SUB || tokens[1].tokenClass == TokenClass::ADD) {
+                            ++pc;
                         }
                     }
                     break;
@@ -165,6 +167,7 @@ namespace asmbl {
                                 listing(list, tokens, pc, code);
                                 list << fmt::format("{:>12}Symbol not found: {}\n", "***", symbolNotFound.what());
                             }
+                            ++pc;
                         }
                     }
                     break;
