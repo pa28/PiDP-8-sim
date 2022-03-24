@@ -182,6 +182,9 @@ namespace asmbl {
                     } catch (const AssemblerSymbolNotDefined& symbolNotDefined) {
                         listing(list, tokens, pc, code);
                         list << fmt::format("{:>12}Symbol not defined: {}\n", "***", symbolNotDefined.what());
+                    } catch (const AssemblerMemoryOutOfRange& memoryOutOfRange) {
+                        listing(list, tokens, pc, code);
+                        list << fmt::format("{:>12}Memory location out of range: {}\n", "***", memoryOutOfRange.what());
                     }
                     ++pc;
                     break;
@@ -433,8 +436,12 @@ namespace asmbl {
         if (opCode) {
             if (memoryOpr) {
                 code |= arg & 0177;
-                if (arg > 0177)
+                if (arg > 0177) {
+                    if ((arg & 07300) != (pc & 07300)) {
+                        throw AssemblerMemoryOutOfRange(fmt::format("{:04o}", arg));
+                    }
                     code |= 0200;       // Current page flag;
+                }
                 if (zeroFlag)
                     code &= 07577;      // Zero flag forced by 'Z' token in source.
             }

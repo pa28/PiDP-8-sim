@@ -27,6 +27,17 @@ namespace asmbl {
         AssemblerException(const AssemblerException &other) noexcept = default;
     };
 
+    class AssemblerMemoryOutOfRange : public std::runtime_error {
+    public:
+        AssemblerMemoryOutOfRange() = delete;
+
+        explicit AssemblerMemoryOutOfRange(const std::string &what_arg) : std::runtime_error(what_arg) {}
+
+        explicit AssemblerMemoryOutOfRange(const char *what_arg) : std::runtime_error(what_arg) {}
+
+        AssemblerMemoryOutOfRange(const AssemblerMemoryOutOfRange &other) noexcept = default;
+    };
+
     class AssemblerSymbolNotFound : public AssemblerException {
     public:
         AssemblerSymbolNotFound() = delete;
