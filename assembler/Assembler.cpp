@@ -136,6 +136,9 @@ namespace asmbl {
                                 } catch (const AssemblerSymbolNotFound& symbolNotFound) {
                                     listing(list, tokens, pc, code);
                                     list << fmt::format("{:>12}Symbol not found: {}\n", "***", symbolNotFound.what());
+                                } catch (const AssemblerSymbolNotDefined& symbolNotDefined) {
+                                    listing(list, tokens, pc, code);
+                                    list << fmt::format("{:>12}Symbol not defined: {}\n", "***", symbolNotDefined.what());
                                 }
                                 ++pc;
                             } else {
@@ -164,6 +167,9 @@ namespace asmbl {
                     } catch (const AssemblerSymbolNotFound& symbolNotFound) {
                         listing(list, tokens, pc, code);
                         list << fmt::format("{:>12}Symbol not found: {}\n", "***", symbolNotFound.what());
+                    } catch (const AssemblerSymbolNotDefined& symbolNotDefined) {
+                        listing(list, tokens, pc, code);
+                        list << fmt::format("{:>12}Symbol not defined: {}\n", "***", symbolNotDefined.what());
                     }
                     ++pc;
                     break;
