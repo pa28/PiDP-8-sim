@@ -213,6 +213,8 @@ namespace sim {
          */
         register_type examine();
 
+        register_type examineAt(register_type address);
+
         /**
          * @brief Read from core memory
          */

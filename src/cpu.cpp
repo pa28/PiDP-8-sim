@@ -309,6 +309,10 @@ namespace sim {
         return memory_buffer[wordIndex]();
     }
 
+    register_type PDP8I::examineAt(register_type address) {
+        return readCore(field_register[instruction_field](), address)[wordIndex]();
+    }
+
     [[maybe_unused]] bool PDP8I::readBinaryFormat(std::istream &istrm) {
         bool addressSet = false;
         register_type word;

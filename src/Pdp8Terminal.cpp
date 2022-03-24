@@ -127,8 +127,14 @@ namespace sim {
                     printPanel();
                 }
                     break;
-                case 'e':
                 case 'E': {
+                    if (auto pc = parseArgument(command.substr(1)); pc) {
+                        auto word = cpu.examineAt(pc.value());
+                        commandHistory.push_back(fmt::format("Examine {:04o} -> {:04o}", pc.value(), word));
+                    }
+                }
+                break;
+                case 'e': {
                     auto pc = cpu.PC()[cpu.wordIndex]();
                     auto code = cpu.examine();
                     commandHistory.push_back(fmt::format("Examine {:04o} -> {:04o}", pc, code));
