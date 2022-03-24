@@ -145,12 +145,15 @@ ForthDup,       ForthPop-1
 ForthReturn,    0
                 JMS PopPC
                 JMP I ToAssembler
+*300
+/
+_ThreadOp,      ThreadOp
 /
 ForthJmp,       0
                 JMS PopPC
 _ForthJmp,      TAD I ProgramCounter
                 DCA ProgramCounter
-                JMP ThreadOp
+                JMP I _ThreadOp
 /
 ForthIf,        0
                 JMS PopPC
@@ -158,7 +161,7 @@ ForthIf,        0
                 SNA
                 JMP _ForthJmp
                 ISZ ProgramCounter
-                JMP ThreadOp
+                JMP I _ThreadOp
 /
 ForthTrue,      0
                 CLA CMA
