@@ -156,6 +156,15 @@ namespace asmbl {
                                 symbolTable.emplace(tokens[0].literal, Symbol(value, tokens[0].literal, Defined));
                             }
                             listing(list, tokens, pc, code);
+                        } else {
+                            try {
+                                auto[itr, value] = evaluate_expression(tokens.begin(), tokens.end(), pc);
+                                bin << static_cast<char>((value & 07700) >> 6) << static_cast<char>(value & 077);
+                                listing(list, tokens, pc, value);
+                            } catch (const AssemblerSymbolNotFound& symbolNotFound) {
+                                listing(list, tokens, pc, code);
+                                list << fmt::format("{:>12}Symbol not found: {}\n", "***", symbolNotFound.what());
+                            }
                         }
                     }
                     break;
@@ -529,6 +538,12 @@ namespace asmbl {
                 case TokenClass::DECIMAL:
                 case TokenClass::AUTOMATIC:
                     list << fmt::format("{:31}", "");
+                    strm << fmt::format("{} ", itr->literal);
+                    break;
+                case TokenClass::ADD:
+                case TokenClass::SUB:
+                    list << fmt::format("{:04o}  {:04o}   {:18}", pc, code, "");
+                    itr = tokens.begin();
                     strm << fmt::format("{} ", itr->literal);
                     break;
                 default:
