@@ -64,21 +64,21 @@ CallVector,     MachineCode
 /
 PushPC,         0
                 DCA PushData            / Save the AC
-                CLA CMA
-                TAD PCStackPtr
+                CLA CMA                 / -1
+                TAD PCStackPtr          / Decrement PC StackPointer
                 DCA PCStackPtr
-                TAD ProgramCounter
+                TAD ProgramCounter      / Put the current PC on the stack
                 DCA I PCStackPtr
-                TAD PushData           / Restore the AC
+                TAD PushData            / Restore the AC
                 JMP I PushPC
 /
 PopPC,
                 DCA PushData            / Save the AC
-                TAD I PCStackPtr
-                SNA
-                JMP PopPcErr
-                DCA ProgramCounter
-                ISZ PCStackPtr
+                TAD I PCStackPtr        / Pull the pas PC off the stack
+                SNA                     / Skip if not zero
+                JMP PopPcErr            / A Zero PC is an error
+                DCA ProgramCounter      / Put the past PC in the register
+                ISZ PCStackPtr          / Adjust the stack pointer
                 TAD PushData            / Restore the AC
                 JMP I PopPC
 PopPcErr,       HLT
@@ -86,29 +86,39 @@ PopPcErr,       HLT
 /
 *200
                 CLA CLL
-                DCA ProgramCounter
+                DCA ProgramCounter      / Put a zero PC guard on the top of the stack
                 JMS PushPC
-                TAD InitialPC
+                TAD InitialPC           / Initialize the Program Counter
                 DCA ProgramCounter
 /
-ForthOpCode,    TAD I ProgramCounter
-                DCA SaveCode
-                TAD SaveCode
-                AND CodeMask
-                SNA
-                JMP Assembly
+/ Start of the Forth word processing loop.
+/
+ForthOpCode,    TAD I ProgramCounter    / Fetch the first Forth word
+                DCA SaveCode            / Save the word for future use
+                TAD SaveCode            / Get the code back
+                AND CodeMask            / Mask off low order bits to find out if it is a static code.
+                SNA                     / Skip if not a static code.
+                JMP StaticCode          / Jump to process static codes.
                 CLA CLL
-                JMS PushPC
-                TAD SaveCode
-                DCA ProgramCounter
-                JMP ForthOpCode
-Assembly,       TAD CallBase
-                TAD SaveCode
-                DCA SaveCode
-                TAD I SaveCode
-                DCA SaveCode
-                JMP I SaveCode
+                JMS PushPC              / Push the current Program Counter
+                TAD SaveCode            / Get the word back
+                DCA ProgramCounter      / Put it in the Program Counter
+                JMP ForthOpCode         / Loop
+/
+/ Handle static codes.
+/
+StaticCode,     TAD CallBase            / Get the call vector base address
+                TAD SaveCode            / Add the save code
+                DCA SaveCode            / Put this back in a storage area
+                TAD I SaveCode          / Load the process address from the vector
+                DCA SaveCode            / Save that
+                JMP I SaveCode          / Jump to the appropriate process function
+/
+/ Machine code passes control to machine instructions in the word body
+/
 MachineCode,    JMP I ProgramCounter
+/
+/ Return function at the end of a word body
 /
 Return,         JMS PopPC
                 JMP ForthOpCode
