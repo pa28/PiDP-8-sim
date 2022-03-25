@@ -75,6 +75,7 @@ namespace asmbl {
                     }
                     break;
                 case TokenClass::OP_CODE:
+                case TokenClass::NUMBER:
                     ++pc;
                     break;
                 case TokenClass::COMMENT:
@@ -169,6 +170,11 @@ namespace asmbl {
                             }
                             ++pc;
                         }
+                    } else {
+                        auto[itr, value] = evaluate_expression(tokens.begin(), tokens.end(), pc);
+                        bin << static_cast<char>((value & 07700) >> 6) << static_cast<char>(value & 077);
+                        listing(list, tokens, pc, value);
+                        ++pc;
                     }
                     break;
                 case TokenClass::OP_CODE:
@@ -187,6 +193,13 @@ namespace asmbl {
                         list << fmt::format("{:>12}Memory location out of range: {}\n", "***", memoryOutOfRange.what());
                     }
                     ++pc;
+                    break;
+                case TokenClass::NUMBER: {
+                    auto[iterator, value] = evaluate_expression(tokens.begin(), tokens.end(), pc);
+                    bin << static_cast<char>((value & 07700) >> 6) << static_cast<char>(value & 077);
+                    listing(list, tokens, pc, value);
+                    ++pc;
+                }
                     break;
                 case TokenClass::COMMENT:
                 case TokenClass::OCTAL:
@@ -552,6 +565,7 @@ namespace asmbl {
                     break;
                 case TokenClass::ADD:
                 case TokenClass::SUB:
+                case TokenClass::NUMBER:
                     list << fmt::format("{:04o}  {:04o}   {:18}", pc, code, "");
                     itr = tokens.begin();
                     strm << fmt::format("{} ", itr->literal);
@@ -560,6 +574,12 @@ namespace asmbl {
                     finished = false;
                     break;
             }
+        }
+
+        if (tokens.front().tokenClass == TokenClass::LITERAL && tokens.size() == 1) {
+            list << fmt::format("{:04o}  {:04o}   {:18}", pc, code, "");
+            list << fmt::format("{:<32}\n", tokens.front().literal);
+            return;
         }
 
         /**
