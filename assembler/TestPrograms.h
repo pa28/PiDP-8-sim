@@ -51,16 +51,28 @@ ProgramCounter  = _AutoIndex0
 PushData,       0
 PCStackPtr,     07777
 CodeMask,       07770
+StackPtr,       06777
 SaveCode,       0
 CallBase,       CallVector
 CallVector,     MachineCode
-                Return
+ReturnVector,   Return
+                LiteralNumber
+                Swap
+                Over
                 0
                 0
                 0
-                0
-                0
-                0
+/
+/ Constants for static codes to use as Forth words.
+/
+FMachineCode    = 0
+FReturn         = 1
+FLiteralNumber  = 2
+FSwap           = 3
+FOver           = 4
+/
+Scratch0,       0
+Scratch1,       0
 /
 PushPC,         0
                 DCA PushData            / Save the AC
@@ -114,23 +126,58 @@ StaticCode,     TAD CallBase            / Get the call vector base address
                 DCA SaveCode            / Save that
                 JMP I SaveCode          / Jump to the appropriate process function
 /
-/ Machine code passes control to machine instructions in the word body
+/ Machine code passes control to machine instructions in the word body. Must be followed by
+/ JMP Return for code on the same page, or JMP I ReturnVector
 /
-MachineCode,    JMP I ProgramCounter
+MachineCode,    JMP I ProgramCounter    / Jump to machine code, must be terminated by JMP Return
 /
 / Return function at the end of a word body
 /
 Return,         JMS PopPC
                 JMP ForthOpCode
 /
-fn1,            1
-fn2,            0
-                JMP Return
+/ Push the next word in the body on the argument stack.
+/
+LiteralNumber,  CLA CLL
+                TAD I ProgramCounter
+                JMS Push
+                JMP ForthOpCode
+/
+/ Compute a pointer to next on stack and store in Scratch0. Leaves AC == 0
+/
+NextOnStack,    0
+                CLA CML RAL
+                TAD StackPtr
+                DCA Scratch0
+                JMP I NextOnStack
+/
+Swap,           JMS NextOnStack
+                TAD I NextOnStack
+                DCA Scratch1
+                TAD I StackPtr
+                DCA I Scratch0
+                TAD Scratch1
+                DCA I StackPtr
+                JMP ForthOpCode
+/
+Over,           JMS NextOnStack
+                TAD I Scratch0
+                JMS Push
+                JMP ForthOpCode
+/
+/ Dup2 is a Forth word made up of static codes.
+/
+Dup2,           FOver
+                FOver
+                FReturn
 /
 InitialPC,      ForthCode-1
 /
-ForthCode,      fn2-1
-                fn2-1
+ForthCode,      2
+                1
+                2
+                2
+
 
 *200
 )";
