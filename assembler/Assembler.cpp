@@ -72,6 +72,8 @@ namespace asmbl {
                         } else if (tokens[1].tokenClass == TokenClass::SUB || tokens[1].tokenClass == TokenClass::ADD) {
                             ++pc;
                         }
+                    } else {
+                        ++pc;
                     }
                     break;
                 case TokenClass::OP_CODE:
