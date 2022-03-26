@@ -48,11 +48,24 @@ BufferEnd       = .
     static constexpr std::string_view Forth = R"(/ A simple Forth implementation
 ProgramCounter  = _AutoIndex0
 *100
+/
+/ Locations in the top 0100 (64) bytes of page 0 are accessible from anywhere in the field.
+/
+/
+/ Temporary working storage
 PushData,       0
-PCStackPtr,     07777
-CodeMask,       07770
-StackPtr,       06777
+Scratch0,       0
+Scratch1,       0
 SaveCode,       0
+/
+/ Constants
+CodeMask,       07770
+/
+/ Stack pointers
+PCStackPtr,     07777
+StackPtr,       06777
+/
+/ Static Code call vector
 CallBase,       CallVector
 CallVector,     MachineCode
 ReturnVector,   Return
@@ -71,8 +84,7 @@ FLiteralNumber  = 2
 FSwap           = 3
 FOver           = 4
 /
-Scratch0,       0
-Scratch1,       0
+/ Push the program counter onto the PC stack.
 /
 PushPC,         0
                 DCA PushData            / Save the AC
@@ -84,6 +96,7 @@ PushPC,         0
                 TAD PushData            / Restore the AC
                 JMP I PushPC
 /
+/ Pop the program counter from the PC stack.
 PopPC,
                 DCA PushData            / Save the AC
                 TAD I PCStackPtr        / Pull the pas PC off the stack
@@ -94,14 +107,37 @@ PopPC,
                 TAD PushData            / Restore the AC
                 JMP I PopPC
 PopPcErr,       HLT
-
+/
+/ Push a numeric value onto the number stack.
+/
+Push,           0
+                DCA PushData
+                CLA CMA
+                TAD StackPtr
+                DCA StackPtr
+                TAD PushData
+                DCA I StackPtr
+                JMP I Push
+/
+/ Pop a numeric value from the number stack.
+/
+Pop,            0
+                CLA
+                TAD I StackPtr
+                ISZ StackPtr
+                JMP I Pop
+                HLT
+/
+/ Trampoline for Clear subroutine
+/
+Clear,          0
+                JMP I _Clear_
+_Clear_,        _Clear
+/
+/
 /
 *200
-                CLA CLL
-                DCA ProgramCounter      / Put a zero PC guard on the top of the stack
-                JMS PushPC
-                TAD InitialPC           / Initialize the Program Counter
-                DCA ProgramCounter
+                JMS Clear
 /
 / Start of the Forth word processing loop.
 /
@@ -164,14 +200,29 @@ Over,           JMS NextOnStack
                 TAD I Scratch0
                 JMS Push
                 JMP ForthOpCode
+*300
+/
+/ Clear the abstract machine
+/
+InitPCStackPtr, 07000
+InitialPC,      ForthCode-1
+/
+_Clear,         CLA CLL
+                DCA StackPtr            / Set the stack pointer to 0
+                TAD InitPCStackPtr
+                DCA PCStackPtr          / SEt the program counter stack pointer
+                DCA ProgramCounter
+                JMS PushPC              / Put a zero PC guard on the top of the stack
+                TAD InitialPC           / Set starting point for Forth
+                DCA ProgramCounter
+                JMP I Clear
 /
 / Dup2 is a Forth word made up of static codes.
+/ Forth words are use 12 bit addresses so page numbers are not important.
 /
 Dup2,           FOver
                 FOver
                 FReturn
-/
-InitialPC,      ForthCode-1
 /
 ForthCode,      2
                 1
