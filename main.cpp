@@ -1,15 +1,17 @@
 #include <cstdio>
 #include <csignal>
+#include <iostream>
 #include <sys/wait.h>
 #include <sys/resource.h>
 #include <chrono>
 #include <thread>
-#include <fmt/format.h>
-#include "src/cpu.h"
-#include "src/Pdp8Terminal.h"
+//#include <fmt/format.h>
+//#include "src/cpu.h"
+//#include "src/Pdp8Terminal.h"
+#include "assembler/Assembler.h"
+#include "assembler/TestPrograms.h"
+//#include "assembler/TestPrograms.h"
 
-
-using namespace sim;
 
 static constexpr uint16_t TEST_START = 0200u;
 static constexpr std::array<uint16_t, 3> TEST_PROGRAM =
@@ -61,12 +63,16 @@ int main() {
 
     terminal.setCursorPosition(5u,0u);
 #else
-    TerminalSocket terminalSocket;
-    terminalSocket.open();
-    Pdp8Terminal terminal(terminalSocket);
-    terminal.console();
+//    TerminalSocket terminalSocket;
+//    terminalSocket.open();
+//    Pdp8Terminal terminal(terminalSocket);
+//    terminal.console();
 
-
+    pdp8asm::Assembler  assembler{};
+    std::stringstream strm{std::string("*200 + 2 - 1\n")}; //pdp8asm::PingPong)};
+    assembler.readProgram(strm);
+    assembler.pass1();
+    return 0;
 #endif
 #endif
 }

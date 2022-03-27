@@ -6,659 +6,179 @@
  */
 
 #include <cctype>
+#include <iostream>
 #include <fmt/format.h>
 #include "Assembler.h"
 
-namespace asmbl {
+namespace pdp8asm {
+
+    std::tuple<TokenClass, std::string> TokenParser::nextToken() {
+        literalValue.clear();
+        for (auto &token: tokenList) {
+            token->clear();
+        }
+
+        int character = input.get();
+        while (input && character != EOF) {
+            int failedOnCount = 0, passingCount = 0;
+            int passingScore = 0;
+            for (auto &token: tokenList) {
+                if (token->passingCount >= passingScore)
+                    switch (token->parse(character)) {
+                        case PASSING:
+                            token->trackPassingCount();
+                            ++passingCount;
+                            break;
+                        case FAILED_ON:
+                            ++failedOnCount;
+                        default:
+                            break;
+                    }
+                else
+                    break;
+                passingScore = std::max(passingScore, token->passingCount);
+            }
+
+            std::sort(tokenList.begin(), tokenList.end(),
+                      [](std::unique_ptr<TokenType> &t0, std::unique_ptr<TokenType> &t1) -> bool {
+                          return t0->passingCount > t1->passingCount;
+                      });
+
+            if (failedOnCount == 1) {
+                input.putback(static_cast<char>(character));
+                auto foundToken = std::find_if(tokenList.begin(), tokenList.end(),
+                                               [](const std::unique_ptr<TokenType> &t) {
+                                                   return t->tokenState == FAILED_ON;
+                                               });
+                return {(*foundToken)->tokenClass, literalValue};
+            } else if (failedOnCount > 1) {
+                throw std::runtime_error("Ambiguous tokens");
+            }
+            literalValue.push_back(static_cast<char>(character));
+            character = input.get();
+        }
+        if (literalValue.empty())
+            return {TokenClass::END_OF_FILE, literalValue};
+        return {tokenList.front()->tokenClass, literalValue};
+    }
 
     Assembler::Assembler() {
         clear();
         for (auto &instruction: InstructionSet) {
-            instructionMap.emplace(instruction.mnemonic, instruction);
+            instructionTable.emplace(std::string{instruction.mnemonic}, instruction);
         }
     }
 
-    void Assembler::pass1(std::istream &src) {
-        sim::register_type pc = 0u;
-        for (auto tokens = parse_tokens(src); !tokens.empty(); tokens = parse_tokens(src)) {
-            classify_tokens(tokens);
-            /**
-             * Process pseudo commands.
-             */
-            for (auto &token: tokens)
-                switch (token.tokenClass) {
-                    case TokenClass::OCTAL:
-                        setNumberRadix(Radix::OCTAL);
-                        break;
-                    case TokenClass::DECIMAL:
-                        setNumberRadix(Radix::DECIMAL);
-                        break;
-                    case TokenClass::AUTOMATIC:
-                        setNumberRadix(Radix::AUTOMATIC);
-                        break;
-                    default:
-                        break;
-                }
-            auto first = tokens.begin();
-            auto last = tokens.end();
-            switch (first->tokenClass) {
-                case TokenClass::LOCATION:
-                    pc = generate_code(first + 1, last, pc);
-                    break;
-                case TokenClass::LITERAL:
-                    if (tokens.size() >= 2) {
-                        if (tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
-                            if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
-                                if (symbol->second.status == Undefined) {
-                                    symbol->second.status = Defined;
-                                    symbol->second.value = pc;
-                                } else {
-                                    symbol->second.status = ReDefined;
-                                    symbol->second.value = pc;
-                                }
-                            } else {
-                                symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Defined));
-                            }
-                            ++pc;
-                        } else if (tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
-                            if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
-                                if (symbol->second.status != Undefined) {
-                                    symbol->second.status = ReDefined;
-                                    symbol->second.value = pc;
-                                }
-                            } else {
-                                symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Undefined));
-                            }
-                        } else if (tokens[1].tokenClass == TokenClass::SUB || tokens[1].tokenClass == TokenClass::ADD) {
-                            ++pc;
-                        }
-                    } else {
-                        ++pc;
-                    }
-                    break;
-                case TokenClass::OP_CODE:
-                case TokenClass::NUMBER:
-                    ++pc;
-                    break;
-                case TokenClass::COMMENT:
-                case TokenClass::OCTAL:
-                case TokenClass::DECIMAL:
-                case TokenClass::AUTOMATIC:
-                    break;
-                default:
-                    throw AssemblerException("Malformed instruction: ");
-            }
+    void Assembler::clear() {
+        symbolTable.clear();
+        program.clear();
+        for (auto &symbol: PRE_DEFINED_SYMBOLS) {
+            symbolTable.emplace(std::string{symbol.symbol}, symbol);
         }
     }
 
-    void Assembler::pass2(std::istream &src, std::ostream &bin, std::ostream &list) {
-        sim::register_type pc = 0u, code = 0u;
-        for (auto tokens = parse_tokens(src); !tokens.empty(); tokens = parse_tokens(src)) {
-            classify_tokens(tokens);
-            /**
-             * Process pseudo commands.
-             */
-            for (auto &token: tokens)
-                switch (token.tokenClass) {
-                    case TokenClass::OCTAL:
-                        setNumberRadix(Radix::OCTAL);
-                        break;
-                    case TokenClass::DECIMAL:
-                        setNumberRadix(Radix::DECIMAL);
-                        break;
-                    case TokenClass::AUTOMATIC:
-                        setNumberRadix(Radix::AUTOMATIC);
-                        break;
-                    default:
-                        break;
-                }
-            auto first = tokens.begin();
-            auto last = tokens.end();
-            switch ((first++)->tokenClass) {
-                case TokenClass::LOCATION: {
-                    pc = generate_code(first, last, pc);
-                    bin << static_cast<char>(((pc & 07700) >> 6) | 0100) << static_cast<char>(pc & 077);
-                    listing(list, tokens, pc, code);
-                }
-                    break;
-                case TokenClass::LITERAL:
-                    if (tokens.size() >= 2) {
-                        if (tokens[1].tokenClass == TokenClass::LABEL_CREATE) {
-                            if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
-                                if (symbol->second.status == Undefined) {
-                                    symbol->second.status = Defined;
-                                    symbol->second.value = pc;
-                                }
-                            } else {
-                                symbolTable.emplace(tokens[0].literal, Symbol(pc, tokens[0].literal, Defined));
-                            }
-
-                            if (tokens.size() >= 3 && first->tokenClass == TokenClass::LABEL_CREATE) {
-                                try {
-                                    code = generate_code(++first, tokens.end(), pc);
-                                    bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
-                                    listing(list, tokens, pc, code);
-                                } catch (const AssemblerSymbolNotFound& symbolNotFound) {
-                                    listing(list, tokens, pc, code);
-                                    list << fmt::format("{:>12}Symbol not found: {}\n", "***", symbolNotFound.what());
-                                } catch (const AssemblerSymbolNotDefined& symbolNotDefined) {
-                                    listing(list, tokens, pc, code);
-                                    list << fmt::format("{:>12}Symbol not defined: {}\n", "***", symbolNotDefined.what());
-                                }
-                                ++pc;
-                            } else {
-                                listing(list, tokens, pc, code);
-                            }
-                        } else if (tokens[1].tokenClass == TokenClass::ASSIGNMENT) {
-                            ++first;
-                            if (auto symbol = symbolTable.find(tokens[0].literal); symbol != symbolTable.end()) {
-                                if (symbol->second.status != ReDefined) {
-                                    symbol->second.status = Defined;
-                                    symbol->second.value = generate_code(first, last, pc);
-                                }
-                            } else {
-                                auto value = generate_code(first, last, pc);
-                                symbolTable.emplace(tokens[0].literal, Symbol(value, tokens[0].literal, Defined));
-                            }
-                            listing(list, tokens, pc, code);
-                        } else {
-                            try {
-                                auto[itr, value] = evaluate_expression(tokens.begin(), tokens.end(), pc);
-                                bin << static_cast<char>((value & 07700) >> 6) << static_cast<char>(value & 077);
-                                listing(list, tokens, pc, value);
-                            } catch (const AssemblerSymbolNotFound& symbolNotFound) {
-                                listing(list, tokens, pc, code);
-                                list << fmt::format("{:>12}Symbol not found: {}\n", "***", symbolNotFound.what());
-                            }
-                            ++pc;
-                        }
-                    } else {
-                        auto[itr, value] = evaluate_expression(tokens.begin(), tokens.end(), pc);
-                        bin << static_cast<char>((value & 07700) >> 6) << static_cast<char>(value & 077);
-                        listing(list, tokens, pc, value);
-                        ++pc;
-                    }
-                    break;
-                case TokenClass::OP_CODE:
-                    try {
-                        code = generate_code(tokens.begin(), tokens.end(), pc);
-                        bin << static_cast<char>((code & 07700) >> 6) << static_cast<char>(code & 077);
-                        listing(list, tokens, pc, code);
-                    } catch (const AssemblerSymbolNotFound& symbolNotFound) {
-                        listing(list, tokens, pc, code);
-                        list << fmt::format("{:>12}Symbol not found: {}\n", "***", symbolNotFound.what());
-                    } catch (const AssemblerSymbolNotDefined& symbolNotDefined) {
-                        listing(list, tokens, pc, code);
-                        list << fmt::format("{:>12}Symbol not defined: {}\n", "***", symbolNotDefined.what());
-                    } catch (const AssemblerMemoryOutOfRange& memoryOutOfRange) {
-                        listing(list, tokens, pc, code);
-                        list << fmt::format("{:>12}Memory location out of range: {}\n", "***", memoryOutOfRange.what());
-                    }
-                    ++pc;
-                    break;
-                case TokenClass::NUMBER: {
-                    auto[iterator, value] = evaluate_expression(tokens.begin(), tokens.end(), pc);
-                    bin << static_cast<char>((value & 07700) >> 6) << static_cast<char>(value & 077);
-                    listing(list, tokens, pc, value);
-                    ++pc;
-                }
-                    break;
-                case TokenClass::COMMENT:
-                case TokenClass::OCTAL:
-                case TokenClass::DECIMAL:
-                case TokenClass::AUTOMATIC:
-                    listing(list, tokens, pc, code);
-                    break;
-                default:
-                    throw AssemblerException("Malformed instruction: ");
-            }
-        }
-    }
-
-    std::vector<Assembler::AssemblerToken> Assembler::parse_tokens(std::istream &src) {
-        TokenList tok{};
-        std::string buffer;
-        while (!src.eof()) {
-            auto c = src.get();
-            if (c == '/') {                             // Comment, ignore rest of instruction
-                if (!buffer.empty()) {
-                    tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                    buffer.clear();
-                }
-
-                while ((c = src.get()) != -1) {
-                    if (c == '\n')
-                        break;
-                    buffer.push_back(static_cast<char>(c));
-                }
-
-                tok.emplace_back(TokenClass::COMMENT, buffer);
-
-                if (!tok.empty())
-                    return tok;
-            } else {
-                if (std::isblank(c)) {
-                    if (!buffer.empty()) {   // Blanks separate tokens
-                        tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                        buffer.clear();
-                    } else
-                        continue;
-                } else if (c == '\n' || c == ';') {   // Other white space or ';' ends instruction
-                    if (!buffer.empty()) {
-                        tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                        buffer.clear();
-                    }
-                    if (!tok.empty())
-                        return tok;
-                } else if (c == '=' || c == '.' || c == '+' || c == '-' || c == ',' || c == ':' || c == '*') {
-                    if (!buffer.empty()) {
-                        tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                        buffer.clear();
-                    }
-                    buffer.push_back(static_cast<char>(c));
-                    switch (c) {
-                        case '=':
-                            tok.emplace_back(TokenClass::ASSIGNMENT, buffer);
-                            break;
-                        case '.':
-                            tok.emplace_back(TokenClass::PC_TOKEN, buffer);
-                            break;
-                        case '+':
-                            tok.emplace_back(TokenClass::ADD, buffer);
-                            break;
-                        case '-':
-                            tok.emplace_back(TokenClass::SUB, buffer);
-                            break;
-                        case ',':
-                            tok.emplace_back(TokenClass::LABEL_CREATE, buffer);
-                            break;
-                        case '*':
-                            tok.emplace_back(TokenClass::LOCATION, buffer);
-                            break;
-                        default:
-                            break;
-                    }
-                    buffer.clear();
-                } else if (!buffer.empty()) {
-                    if (std::isalpha(buffer.at(0)) || buffer.at(0) == '_') {
-                        if (std::isalnum(c) || c == '_') {
-                            buffer.push_back(static_cast<char>(c));
-                        } else {
-                            tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                            buffer.clear();
-                            buffer.push_back(static_cast<char>(c));
-                        }
-                    } else if (std::isdigit(buffer.at(0))) {
-                        if (std::isdigit(c) || std::isxdigit(c) || (buffer.length() == 1 && std::toupper(c) == 'X')) {
-                            buffer.push_back(static_cast<char>(c));
-                        } else {
-                            tok.emplace_back(TokenClass::UNKNOWN, buffer);
-                            buffer.clear();
-                            buffer.push_back(static_cast<char>(c));
-                        }
-                    }
+    void Assembler::readProgram(std::istream &istream) {
+        clear();
+        pdp8asm::TokenParser tokenParser{istream};
+        pdp8asm::TokenClass tokenClass = pdp8asm::UNKNOWN;
+        do {
+            std::string literalValue;
+            std::tie(tokenClass, literalValue) = tokenParser.nextToken();
+            if (tokenClass == LITERAL) {
+                if (auto opCode = instructionTable.find(literalValue); opCode != instructionTable.end()) {
+                    tokenClass = OP_CODE;
                 } else {
-                    buffer.push_back(static_cast<char>(c));
-                }
-            }
-        }
-
-        return tok;
-    }
-
-    std::optional<sim::register_type> Assembler::get_token_value(const AssemblerToken &token, sim::register_type pc) {
-        switch (token.tokenClass) {
-            case TokenClass::PC_TOKEN:
-                return pc;
-            case TokenClass::NUMBER:
-                switch (numberRadix) {
-                    case Radix::OCTAL:
-                        return stoul(token.literal, nullptr, 8);
-                    case Radix::DECIMAL:
-                        return stoul(token.literal, nullptr, 10);
-                    case Radix::AUTOMATIC:
-                    default:
-                        return stoul(token.literal, nullptr, 0);
-                }
-                break;
-            case TokenClass::LITERAL:
-                if (auto symbol = symbolTable.find(token.literal); symbol != symbolTable.end()) {
-                    if (symbol->second.status == Undefined)
-                        throw AssemblerSymbolNotDefined(token.literal);
-                    return symbol->second.value;
-                } else {
-                    if (auto op = instructionMap.find(token.literal); op != instructionMap.end()) {
-                        return op->second.opCode;
-                    }
-                }
-                throw AssemblerSymbolNotFound(token.literal);
-                break;
-            default:
-                return std::nullopt;
-        }
-        return std::nullopt;
-    }
-
-    void Assembler::classify_tokens(std::vector<Assembler::AssemblerToken> &tokens) {
-        std::vector<TokenClass> tokenClass{};
-
-        for (auto &token: tokens) {
-            if (token.tokenClass == TokenClass::UNKNOWN) {
-                if (token.literal == "OCTAL")
-                    token.tokenClass = TokenClass::OCTAL;
-                else if (token.literal == "DECIMAL")
-                    token.tokenClass = TokenClass::DECIMAL;
-                else if (token.literal == "AUTOMATIC")
-                    token.tokenClass = TokenClass::AUTOMATIC;
-                else if (token.literal == "=")
-                    token.tokenClass = TokenClass::ASSIGNMENT;
-                else if (token.literal == ".")
-                    token.tokenClass = TokenClass::PC_TOKEN;
-                else if (token.literal == "+")
-                    token.tokenClass = TokenClass::ADD;
-                else if (token.literal == "-")
-                    token.tokenClass = TokenClass::SUB;
-                else if (token.literal == ",")
-                    token.tokenClass = TokenClass::LABEL_CREATE;
-                else if (std::isdigit(token.literal.at(0)))
-                    token.tokenClass = TokenClass::NUMBER;
-                else if (instructionMap.find(token.literal) != instructionMap.end())
-                    token.tokenClass = TokenClass::OP_CODE;
-                else {
-                    if (symbolTable.find(token.literal) != symbolTable.end()) {
-                        token.tokenClass = TokenClass::LITERAL;
+                    std::string upperCase{};
+                    auto back = std::back_insert_iterator<std::string>(upperCase);
+                    std::transform(literalValue.begin(), literalValue.end(), back,
+                                   [](unsigned char c) { return std::toupper(c); });
+                    if (opCode = instructionTable.find(upperCase); opCode != instructionTable.end()) {
+                        tokenClass = OP_CODE;
+                    } else if (auto label = symbolTable.find(literalValue); label != symbolTable.end()) {
+                        tokenClass = LABEL;
                     } else {
-                        std::string uppercase;
-                        std::transform(token.literal.begin(), token.literal.end(),
-                                       std::back_insert_iterator<std::string>(uppercase), ::toupper);
-                        if (instructionMap.find(uppercase) != instructionMap.end()) {
-                            token.literal = uppercase;
-                            token.tokenClass = TokenClass::OP_CODE;
-                        } else {
-                            token.tokenClass = TokenClass::LITERAL;
-                        }
+                        symbolTable.emplace(literalValue, Symbol{0, literalValue, Undefined});
                     }
                 }
             }
-        }
+            if (tokenClass != WHITE_SPACE)
+                program.emplace_back(tokenClass, literalValue);
+        } while (tokenClass != pdp8asm::END_OF_FILE);
     }
 
-    sim::register_type
-    Assembler::generate_code(TokenList::iterator first, TokenList::iterator last, sim::register_type pc) {
-        word_t code = 0u;
-        word_t arg = 0u;
-        bool opCode = false;
-        bool memoryOpr = false;
-        bool finished = false;
-        bool zeroFlag = false;
-        CombinationType restrict{CombinationType::Gr};
+    bool Assembler::pass1() {
+        if (program.back().tokenClass != END_OF_FILE)
+            throw std::invalid_argument("Program does not terminate with End of File.");
+        word_t programCounter = 0;
 
-        for (auto itr = first; itr != last && !finished; ++itr) {
+        auto itr = program.begin();
+        while (itr != program.end()) {
             switch (itr->tokenClass) {
-                case TokenClass::NUMBER:
-                case TokenClass::LITERAL:
-                case TokenClass::PC_TOKEN:
-                    std::tie(itr, arg) = evaluate_expression(itr, last, pc);
-                    finished = itr == last;
-                    break;
-                case TokenClass::OP_CODE:
-                    if (auto op = instructionMap.find(itr->literal); op != instructionMap.end()) {
-                        opCode = true;
-                        switch (op->second.orCombination) {
-                            case CombinationType::Memory:
-                                code = op->second.opCode;
-                                memoryOpr = true;
-                                break;
-                            case CombinationType::Flag:
-                            case CombinationType::Gr:
-                                code |= op->second.opCode;
-                                break;
-                            case CombinationType::Mask:
-                                if (memoryOpr && op->second.opCode == 07577)
-                                    zeroFlag = true;
-                                else
-                                    code &= op->second.opCode;
-                                break;
-                            case CombinationType::Gr1:
-                                if (restrict == CombinationType::Gr || restrict == CombinationType::Gr1) {
-                                    code |= op->second.opCode;
-                                    restrict = CombinationType::Gr1;
-                                } else
-                                    throw AssemblerException("Invalid microcode combination:");
-                                break;
-                            case CombinationType::Gr2:
-                                if (restrict == CombinationType::Gr || restrict == CombinationType::Gr2) {
-                                    code |= op->second.opCode;
-                                    restrict = CombinationType::Gr2;
-                                } else
-                                    throw AssemblerException("Invalid microcode combination:");
-                                break;
-                            case CombinationType::Gr3:
-                                if (restrict == CombinationType::Gr || restrict == CombinationType::Gr3) {
-                                    code |= op->second.opCode;
-                                    restrict = CombinationType::Gr3;
-                                } else
-                                    throw AssemblerException("Invalid microcode combination:");
-                                break;
-                        }
-                    }
+                case LOCATION: {
+                    ++itr;
+                    std::tie(programCounter,itr) = evaluateExpression(itr, program.end());
+                }
                     break;
                 default:
                     break;
             }
-        }
-
-        if (opCode) {
-            if (memoryOpr) {
-                code |= arg & 0177;
-                if (arg > 0177) {
-                    if ((arg & 07300) != (pc & 07300)) {
-                        throw AssemblerMemoryOutOfRange(fmt::format("{:04o}", arg));
-                    }
-                    code |= 0200;       // Current page flag;
-                }
-                if (zeroFlag)
-                    code &= 07577;      // Zero flag forced by 'Z' token in source.
-            }
-        } else {
-            code = arg;
-        }
-        return code;
-    }
-
-    void Assembler::dump_symbols(std::ostream &strm) {
-        strm << fmt::format("\n{:^22}\n", "Symbol Table");
-        for (auto &symbol: symbolTable) {
-            if (symbol.second.status == Defined)
-                strm << fmt::format("{:04o}  {:<21}\n", symbol.second.value, symbol.second.symbol);
-            else
-                strm << fmt::format("Undef {:<21}\n", symbol.second.value, symbol.second.symbol);
-        }
-    }
-
-    void
-    Assembler::listing(std::ostream &list, const TokenList &tokens, sim::register_type pc, sim::register_type code) {
-
-        /**
-         * Listing for set location commands:
-         *              *0200
-         *    Start,    *0200
-         */
-        auto listLocation =
-                [&list, &tokens, pc]() {
-                    list << fmt::format("{:04o}{:9}", pc, "");
-                    auto itr = tokens.begin();
-                    if (itr->tokenClass == TokenClass::LITERAL) {
-                        if ((itr + 1)->tokenClass == TokenClass::LABEL_CREATE)
-                            list << fmt::format("{:>16}{} ", (itr)->literal, (itr + 1)->literal);
-                        ++itr;
-                    } else {
-                        list << fmt::format("{:>18}{}", "", itr->literal);
-                    }
-                    return itr;
-                };
-
-        /**
-         * Listing for label assignment:
-         *   Label = .
-         *   Label = 0222;
-         */
-        auto listAssignment = [&list, &tokens]() {
-            list << fmt::format("{:13}", "");
-            auto itr = tokens.begin();
-            if (itr->tokenClass == TokenClass::LITERAL) {
-                if ((itr + 1)->tokenClass == TokenClass::ASSIGNMENT)
-                    list << fmt::format("{:>16}{} ", (itr)->literal, (itr + 1)->literal);
-                ++itr;
-            } else {
-                list << fmt::format("{:>18}{}", "", itr->literal);
-            }
-            return itr;
-        };
-
-        /**
-         * Listing for label create:
-         *   Start, CLA CLL
-         *   Value, 0-010
-         */
-        auto listLabelCreate = [&list, &tokens, pc, code]() {
-            list << fmt::format("{:04o}  {:04o}   ", pc, code);
-            auto itr = tokens.begin();
-            if (itr->tokenClass == TokenClass::LITERAL) {
-                if ((itr + 1)->tokenClass == TokenClass::LABEL_CREATE)
-                    list << fmt::format("{:>16}{} ", (itr)->literal, (itr + 1)->literal);
-                ++itr;
-            } else {
-                list << fmt::format("{:>18}{}", "", itr->literal);
-            }
-            return itr;
-        };
-
-        /**
-         * Step through the token list looking for the defining token, then process it.
-         */
-        auto itr = tokens.begin();
-        bool finished = false;
-        std::stringstream strm;
-        for (; itr != tokens.end() && !finished; ++itr) {
-            finished = true;
-            switch (itr->tokenClass) {
-                case TokenClass::LOCATION:
-                    itr = listLocation();
-                    break;
-                case TokenClass::ASSIGNMENT:
-                    itr = listAssignment();
-                    break;
-                case TokenClass::LABEL_CREATE:
-                    itr = listLabelCreate();
-                    break;
-                case TokenClass::OP_CODE:
-                    list << fmt::format("{:04o}  {:04o}   {:18}", pc, code, "");
-                    strm << fmt::format("{} ", itr->literal);
-                    break;
-                case TokenClass::COMMENT:
-                    list << fmt::format("/{}", itr->literal);
-                    break;
-                case TokenClass::OCTAL:
-                case TokenClass::DECIMAL:
-                case TokenClass::AUTOMATIC:
-                    list << fmt::format("{:31}", "");
-                    strm << fmt::format("{} ", itr->literal);
-                    break;
-                case TokenClass::ADD:
-                case TokenClass::SUB:
-                case TokenClass::NUMBER:
-                    list << fmt::format("{:04o}  {:04o}   {:18}", pc, code, "");
-                    itr = tokens.begin();
-                    strm << fmt::format("{} ", itr->literal);
-                    break;
-                default:
-                    finished = false;
-                    break;
-            }
-        }
-
-        if (tokens.front().tokenClass == TokenClass::LITERAL && tokens.size() == 1) {
-            list << fmt::format("{:04o}  {:04o}   {:18}", pc, code, "");
-            list << fmt::format("{:<32}\n", tokens.front().literal);
-            return;
-        }
-
-        /**
-         * List any remaining tokens in the operation section of the instruction.
-         */
-        while (itr != tokens.end() && itr->tokenClass != TokenClass::COMMENT) {
-            strm << fmt::format("{} ", itr->literal);
             ++itr;
         }
-
-        /**
-         * Complete the listing by printing a comment, if one exists, and the end of line.
-         */
-        list << fmt::format("{:<32}", strm.str());
-        if (itr != tokens.end() && itr->tokenClass == TokenClass::COMMENT)
-            list << fmt::format("/{}", itr->literal);
-        list << '\n';
+        return true;
     }
 
-    std::optional<Assembler::word_t> Assembler::find_symbol(const std::string &symbol) {
-        if (auto entry = symbolTable.find(symbol); entry != symbolTable.end()) {
-            return entry->second.value;
+    word_t Assembler::convertNumber(const std::string &literal) const {
+        switch (radix) {
+            case Radix::OCTAL:
+                return stoul(literal, nullptr, 8);
+            case Radix::DECIMAL:
+                return stoul(literal, nullptr, 10);
+            case Radix::AUTOMATIC:
+                return stoul(literal, nullptr, 0);
         }
-        return std::nullopt;
+        return 0;
     }
 
-    std::optional<Assembler::word_t> Assembler::parse_command(const std::string &command, sim::register_type pc) {
-        std::stringstream strm(command);
-        auto tokens = parse_tokens(strm);
-        classify_tokens(tokens);
-        return generate_code(tokens.begin(), tokens.end(), pc);
+    word_t Assembler::convertLabel(const std::string &literal) const {
+        if (auto symbol = symbolTable.find(literal); symbol != symbolTable.end()) {
+            if (symbol->second.status == Defined)
+                return symbol->second.value;
+        }
+        throw std::invalid_argument("Undefined label.");
     }
 
-    std::tuple<std::vector<Assembler::AssemblerToken>::iterator, sim::register_type>
-    Assembler::evaluate_expression(TokenList::iterator first, TokenList::iterator last, sim::register_type pc) {
-        std::optional<int> left;
-        std::optional<int> right;
-
-        TokenClass op = TokenClass::UNKNOWN;
-        auto itr = first;
-        for (; itr != last; ++itr) {
-            switch (itr->tokenClass) {
-                case TokenClass::LITERAL:
-                case TokenClass::NUMBER:
-                case TokenClass::PC_TOKEN:
-                    if (auto value = get_token_value(*itr, pc); value) {
-                        if (left)
-                            right = value;
-                        else
-                            left = value;
-                    }
-
-                    if (left && right && op != TokenClass::UNKNOWN) {
-                        if (op == TokenClass::ADD)
-                            left = left.value() + right.value();
-                        else
-                            left = left.value() - right.value();
-                        op = TokenClass::UNKNOWN;
-                        right = std::nullopt;
-                    }
-                    break;
-                case TokenClass::ADD:
-                case TokenClass::SUB:
-                    op = itr->tokenClass;
-                    break;
-                case TokenClass::COMMENT:
-                    break;
-                default:
-                    throw AssemblerException(fmt::format("Token not allowed in expression: {}", itr->literal));
+    std::tuple<word_t, Assembler::Program::iterator>
+    Assembler::evaluateExpression(Program::iterator first, Program::iterator last) const {
+        std::optional<word_t> left{}, right{};
+        TokenClass opCode = UNKNOWN;
+        while (first != last) {
+            if (!left && !right && !isOperator(opCode) && isValue(first->tokenClass)) {
+                if (first->tokenClass == NUMBER)
+                    left = convertNumber(first->literal);
+                else if (first->tokenClass == LABEL)
+                    left = convertLabel(first->literal);
+                ++first;
+            } else if (left && !right && !isOperator(opCode) && isOperator(first->tokenClass)) {
+                opCode = first->tokenClass;
+                ++first;
+            } else if (left && !right && isOperator(opCode) && isValue(first->tokenClass)) {
+                if (first->tokenClass == NUMBER)
+                    right = convertNumber(first->literal);
+                else if (first->tokenClass == LABEL)
+                    right = convertLabel(first->literal);
+                if (opCode == ADDITION)
+                    left = left.value() + right.value();
+                else
+                    left = left.value() - right.value();
+                right = std::nullopt;
+                opCode = UNKNOWN;
+                ++first;
+            } else if (left && !right && !isOperator(opCode)) {
+                if (left)
+                    return {left.value(),first};
+                throw std::invalid_argument("Bad expression.");
             }
         }
-        if (left && right)
-            throw AssemblerException(fmt::format("Incomplete expression."));
-
-        if (left.value() < 0)
-            return {itr, ((010000 + left.value()) & 07777)};
-        else
-            return {itr, (left.value() & 07777)};
+        return {0,first};
     }
 }
