@@ -9,7 +9,7 @@
 
 #include <string_view>
 
-namespace asmbl {
+namespace pdp8asm {
 
     static constexpr std::string_view PingPong = R"(/ Simple Ping-Pong Assembler
                 OCTAL
@@ -128,16 +128,15 @@ Pop,            0
                 JMP I Pop
                 HLT
 /
-/ Trampoline for Clear subroutine
+/ Trampolines for jumps and subroutine calls
 /
-Clear,          0
-                JMP I _Clear_
-_Clear_,        _Clear
+_Clear,         Clear                   / Subroutine Clear
+_Return,        Return                  / Jump to Return
 /
 /
 /
 *200
-                JMS Clear
+                JMS I _Clear
 /
 / Start of the Forth word processing loop.
 /
@@ -200,6 +199,7 @@ Over,           JMS NextOnStack
                 TAD I Scratch0
                 JMS Push
                 JMP ForthOpCode
+
 *300
 /
 / Clear the abstract machine
@@ -207,7 +207,8 @@ Over,           JMS NextOnStack
 InitPCStackPtr, 07000
 InitialPC,      ForthCode-1
 /
-_Clear,         CLA CLL
+Clear,          0
+                CLA CLL
                 DCA StackPtr            / Set the stack pointer to 0
                 TAD InitPCStackPtr
                 DCA PCStackPtr          / SEt the program counter stack pointer
@@ -216,6 +217,14 @@ _Clear,         CLA CLL
                 TAD InitialPC           / Set starting point for Forth
                 DCA ProgramCounter
                 JMP I Clear
+/
+/ Duplicate the top of stack
+/
+Dup,            FMachineCode
+                CLA
+                TAD I StackPtr
+                JMS Push
+                JMP I _Return
 /
 / Dup2 is a Forth word made up of static codes.
 / Forth words are use 12 bit addresses so page numbers are not important.
