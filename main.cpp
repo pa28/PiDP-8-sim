@@ -8,6 +8,7 @@
 //#include <fmt/format.h>
 //#include "src/cpu.h"
 //#include "src/Pdp8Terminal.h"
+#include "src/NullStream.h"
 #include "assembler/Assembler.h"
 #include "assembler/TestPrograms.h"
 //#include "assembler/TestPrograms.h"
@@ -72,6 +73,9 @@ int main() {
     std::stringstream strm{std::string(pdp8asm::PingPong)}; //pdp8asm::PingPong)};
     assembler.readProgram(strm);
     assembler.pass1();
+    null_stream::NullStreamBuffer nullStreamBuffer{};
+    std::ostream binary(&nullStreamBuffer);
+    assembler.pass2(binary, std::cout);
     return 0;
 #endif
 #endif

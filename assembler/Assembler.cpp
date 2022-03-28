@@ -121,15 +121,26 @@ namespace pdp8asm {
         if (program.back().tokenClass != END_OF_FILE)
             throw std::invalid_argument("Program does not terminate with End of File.");
 
+        std::ostream nullStream(&nullStreamBuffer);
         auto first = program.begin();
         while (first != program.end()) {
-            first = parseLine(first, program.end());
+            first = parseLine(nullStream, nullStream, first, program.end());
+        }
+        return true;
+    }
+
+    bool Assembler::pass2(std::ostream &binary, std::ostream &listing) {
+        assemblerPass = PASS_TWO;
+
+        auto first = program.begin();
+        while (first != program.end()) {
+            first = parseLine(binary, listing, first, program.end());
         }
         return true;
     }
 
     Assembler::Program::iterator
-    Assembler::parseLine(std::vector<AssemblerToken>::iterator first, std::vector<AssemblerToken>::iterator last) {
+    Assembler::parseLine(std::ostream &binary, std::ostream &listing, Program::iterator first, Program::iterator last) {
         // Skip comment lines
         bool incrementProgramCounter = false;
         // Parse lines that begin with LITERALS
@@ -154,9 +165,11 @@ namespace pdp8asm {
         }
 
         if (incrementProgramCounter) {
-            if (assemblerPass == PASS_ONE)
-                while (!isEndOfLine(first->tokenClass))
-                    ++first;
+            if (assemblerPass == PASS_TWO) {
+
+            }
+            while (!isEndOfLine(first->tokenClass))
+                ++first;
             ++programCounter;
         }
 

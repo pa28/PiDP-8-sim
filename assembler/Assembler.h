@@ -15,6 +15,7 @@
 #include <sstream>
 #include <exception>
 #include <utility>
+#include "src/NullStream.h"
 //#include "src/hardware.h"
 //#include "src/CoreMemory.h"
 
@@ -692,6 +693,7 @@ namespace pdp8asm {
         Radix radix{Radix::OCTAL};
         Program program{};
         word_t programCounter = 0;
+        null_stream::NullStreamBuffer nullStreamBuffer{};
 
         enum AssemblerPass { PASS_ZERO, PASS_ONE, PASS_TWO } assemblerPass{PASS_ZERO};
 
@@ -708,7 +710,8 @@ namespace pdp8asm {
          */
         void readProgram(std::istream &istream);
 
-        Assembler::Program::iterator parseLine(Program::iterator first, Program::iterator last);
+        Assembler::Program::iterator
+        parseLine(std::ostream &binary, std::ostream &listing, Program::iterator first, Program::iterator last);
 
         void setLabelValue(const std::string& literal, word_t value);
 
@@ -718,6 +721,8 @@ namespace pdp8asm {
          * @return true on success.
          */
         bool pass1();
+
+        bool pass2(std::ostream& binary, std::ostream& listing);
 
         /**
          * @brief Convert a number from a string.
