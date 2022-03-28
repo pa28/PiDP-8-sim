@@ -73,7 +73,7 @@ namespace pdp8asm {
         symbolTable.clear();
         program.clear();
         for (auto &symbol: PRE_DEFINED_SYMBOLS) {
-            symbolTable.emplace(std::string{symbol.symbol}, Symbol{symbol.value, std::string{symbol.symbol}, Defined});
+            symbolTable.emplace(std::string{symbol.symbol}, Symbol(symbol.value , Defined));
         }
     }
 
@@ -97,7 +97,7 @@ namespace pdp8asm {
                     } else if (auto label = symbolTable.find(literalValue); label != symbolTable.end()) {
                         tokenClass = LABEL;
                     } else {
-                        symbolTable.emplace(literalValue, Symbol{0, literalValue, Undefined});
+                        symbolTable.emplace(literalValue, Symbol{0, Undefined});
                     }
                 }
             }
@@ -339,13 +339,13 @@ namespace pdp8asm {
             symbol->second.value = value;
             symbol->second.status = Defined;
         } else {
-            symbolTable.emplace(literal, Symbol{value, literal, Defined});
+            symbolTable.emplace(literal, Symbol{value, Defined});
         }
     }
 
     void Assembler::undefinedLabel(const std::string &literal) {
         if (auto symbol = symbolTable.find(literal); symbol != symbolTable.end()) {
-            symbolTable.emplace(literal, Symbol{0, literal, Undefined});
+            symbolTable.emplace(literal, Symbol{0, Undefined});
         }
     }
 
