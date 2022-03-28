@@ -61,10 +61,20 @@ namespace pdp8asm {
         }
     }
 
+    /**
+     * @brief Determine if token is end of a line
+     * @param tokenClass
+     * @return boolean
+     */
     inline bool isEndOfLine(TokenClass tokenClass) {
         return tokenClass == END_OF_LINE || tokenClass == END_OF_FILE;
     }
 
+    /**
+     * @brief Determine if token is the end of the code line.
+     * @param tokenClass
+     * @return boolean
+     */
     inline bool isEndOfCodeLine(TokenClass tokenClass) {
         return tokenClass == END_OF_LINE || tokenClass == END_OF_FILE || tokenClass == COMMENT;
     }
@@ -715,9 +725,22 @@ namespace pdp8asm {
          */
         void readProgram(std::istream &istream);
 
+        /**
+         * @brief Pars a single line of assembly code.
+         * @param binary The output stream for the binary program in BIN format, only used in pass 2.
+         * @param listing The output stream for the program listing, only used in pass 2.
+         * @param first The first token in the line.
+         * @param last The end of the program.
+         * @return The next token after the line.
+         */
         Assembler::Program::iterator
         parseLine(std::ostream &binary, std::ostream &listing, Program::iterator first, Program::iterator last);
 
+        /**
+         * @brief Set a label value, define the label if necessary.
+         * @param literal The name of the label.
+         * @param value The value to assign.
+         */
         void setLabelValue(const std::string& literal, word_t value);
 
         /**
@@ -727,8 +750,21 @@ namespace pdp8asm {
          */
         bool pass1();
 
+        /**
+         * @brief Perform the second assembly pass.
+         * @details This pass generates the binary program and a listing.
+         * @param binary Output stream for the binary program in BIN format.
+         * @param listing Output stream for the program listing.
+         * @return true on success.
+         */
         bool pass2(std::ostream& binary, std::ostream& listing);
 
+        /**
+         * @brief Generate a code listing of a line of assembly to an output stream
+         * @param listing The output stream
+         * @param first The first token on the line
+         * @param last The end of the line.
+         */
         void generateListing(std::ostream& listing, Program::iterator first, Program::iterator last);
 
         /**
@@ -759,6 +795,12 @@ namespace pdp8asm {
         [[nodiscard]] std::tuple<word_t, Program::iterator>
         evaluateExpression(Program::iterator first, Program::iterator last) const;
 
+        /**
+         * @brief Evaluate the op code portion of an instruction.
+         * @param first The first op code.
+         * @param last The end of the program.
+         * @return a tuple containing the binary op code and then next token to process.
+         */
         [[nodiscard]] std::tuple<word_t, Program::iterator>
                 evaluateOpCode(Program::iterator first, Program::iterator last);
     };
