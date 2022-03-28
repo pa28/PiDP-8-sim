@@ -39,7 +39,7 @@ namespace pdp8asm {
         switch (tokenClass) {
             case NUMBER:
             case LABEL:
-                return true;
+            case PROGRAM_COUNTER:                return true;
             default:
                 return false;
         }
@@ -60,6 +60,10 @@ namespace pdp8asm {
         }
     }
 
+    inline bool isEndOfLine(TokenClass tokenClass) {
+        return tokenClass == END_OF_LINE || tokenClass == END_OF_FILE;
+    }
+
     /**
      * @brief The state of token parsing.
      */
@@ -67,7 +71,7 @@ namespace pdp8asm {
         UNDETERMINED,   ///< No data yes.
         FAILED,         ///< Character stream failed to match token syntax.
         PASSING,        ///< So far the character stream has matched token syntax.
-        FAILED_ON       ///< The character stream failed to match token syntax on the current caracter.
+        FAILED_ON       ///< The character stream failed to match token syntax on the current character.
     };
 
     /**
@@ -687,6 +691,9 @@ namespace pdp8asm {
         std::map<std::string, Instruction> instructionTable;
         Radix radix{Radix::OCTAL};
         Program program{};
+        word_t programCounter = 0;
+
+        enum AssemblerPass { PASS_ZERO, PASS_ONE, PASS_TWO } assemblerPass{PASS_ZERO};
 
         Assembler();
 
@@ -700,6 +707,10 @@ namespace pdp8asm {
          * @param istream
          */
         void readProgram(std::istream &istream);
+
+        Assembler::Program::iterator parseLine(Program::iterator first, Program::iterator last);
+
+        void setLabelValue(const std::string& literal, word_t value);
 
         /**
          * @brief Perform the first assembly pass.

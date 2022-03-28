@@ -104,27 +104,76 @@ namespace pdp8asm {
             if (tokenClass != WHITE_SPACE)
                 program.emplace_back(tokenClass, literalValue);
         } while (tokenClass != pdp8asm::END_OF_FILE);
+
+        for (auto first = program.begin(); first != program.end(); ++first) {
+            auto next = first + 1;
+            if (next != program.end()) {
+                if (first->tokenClass == LITERAL && next->tokenClass == LABEL_DEFINE || next->tokenClass == LABEL_ASSIGN) {
+                    first->tokenClass = LABEL;
+                    ++first;
+                }
+            }
+        }
     }
 
     bool Assembler::pass1() {
+        assemblerPass = PASS_ONE;
         if (program.back().tokenClass != END_OF_FILE)
             throw std::invalid_argument("Program does not terminate with End of File.");
-        word_t programCounter = 0;
 
-        auto itr = program.begin();
-        while (itr != program.end()) {
-            switch (itr->tokenClass) {
-                case LOCATION: {
-                    ++itr;
-                    std::tie(programCounter,itr) = evaluateExpression(itr, program.end());
-                }
-                    break;
-                default:
-                    break;
-            }
-            ++itr;
+        auto first = program.begin();
+        while (first != program.end()) {
+            first = parseLine(first, program.end());
         }
         return true;
+    }
+
+    Assembler::Program::iterator
+    Assembler::parseLine(std::vector<AssemblerToken>::iterator first, std::vector<AssemblerToken>::iterator last) {
+        // Skip comment lines
+        bool incrementProgramCounter = false;
+        // Parse lines that begin with LITERALS
+        if (first->tokenClass == LITERAL) {
+            if (first->tokenClass == LITERAL && first->literal == "OCTAL") {
+                radix = Radix::OCTAL;
+                ++first;
+            }
+        } else if (first->tokenClass == LABEL && (first+1)->tokenClass == LABEL_ASSIGN) {
+            auto[value, itr] = evaluateExpression(first+2, last);
+            setLabelValue(first->literal, value);
+            first = itr;
+        } else if (first->tokenClass == LABEL && (first+1)->tokenClass == LABEL_DEFINE) {
+            setLabelValue(first->literal, programCounter);
+            incrementProgramCounter = true;
+            ++first;
+            ++first;
+        } else if (first->tokenClass == LOCATION) {
+            std::tie(programCounter, first) = evaluateExpression(first+1, last);
+        } else if (!isEndOfLine(first->tokenClass) && first->tokenClass != COMMENT) {
+            incrementProgramCounter = true;
+        }
+
+        if (incrementProgramCounter) {
+            if (assemblerPass == PASS_ONE)
+                while (!isEndOfLine(first->tokenClass))
+                    ++first;
+            ++programCounter;
+        }
+
+        if (first->tokenClass == COMMENT)
+            ++first;
+        if (isEndOfLine(first->tokenClass))
+            ++first;
+        return first;
+    }
+
+    void Assembler::setLabelValue(const std::string& literal, word_t value) {
+        if (auto symbol = symbolTable.find(literal); symbol != symbolTable.end()) {
+            symbol->second.value = value;
+            symbol->second.status = Defined;
+        } else {
+            symbolTable.emplace(literal, Symbol{value, literal, Defined});
+        }
     }
 
     word_t Assembler::convertNumber(const std::string &literal) const {
@@ -157,6 +206,8 @@ namespace pdp8asm {
                     left = convertNumber(first->literal);
                 else if (first->tokenClass == LABEL)
                     left = convertLabel(first->literal);
+                else if (first->tokenClass == PROGRAM_COUNTER)
+                    left = programCounter;
                 ++first;
             } else if (left && !right && !isOperator(opCode) && isOperator(first->tokenClass)) {
                 opCode = first->tokenClass;
@@ -166,6 +217,8 @@ namespace pdp8asm {
                     right = convertNumber(first->literal);
                 else if (first->tokenClass == LABEL)
                     right = convertLabel(first->literal);
+                else if (first->tokenClass == PROGRAM_COUNTER)
+                    left = programCounter;
                 if (opCode == ADDITION)
                     left = left.value() + right.value();
                 else
@@ -174,6 +227,8 @@ namespace pdp8asm {
                 opCode = UNKNOWN;
                 ++first;
             } else if (left && !right && !isOperator(opCode)) {
+                if (left.value() > 07777)
+                    left = left.value() & 07777;
                 if (left)
                     return {left.value(),first};
                 throw std::invalid_argument("Bad expression.");
