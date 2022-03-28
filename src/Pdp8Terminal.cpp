@@ -28,7 +28,7 @@ namespace sim {
 
         while (runConsole) {
             setCursorPosition();
-            auto [timeoutRemainder, selectResults] = selectOnAll(selectTimeout);
+            auto[timeoutRemainder, selectResults] = selectOnAll(selectTimeout);
             for (auto const &selectResult: selectResults) {
                 if (selectResult.listIndex < 0) {
                     if (selectResult.selectRead || selectResult.selectWrite) {
@@ -38,7 +38,7 @@ namespace sim {
                     if (selectResult.selectRead) {
                         if (selectResult.selectRead || selectResult.selectWrite) {
                             auto c = managedTerminals[selectResult.listIndex].terminal->
-                                selected(selectResult.selectRead, selectResult.selectWrite);
+                                    selected(selectResult.selectRead, selectResult.selectWrite);
                             if (c == EOF) {
                                 managedTerminals[selectResult.listIndex].disconnected = true;
                             }
@@ -47,9 +47,10 @@ namespace sim {
                 }
             }
 
-            auto removeCount = std::count_if(managedTerminals.begin(), managedTerminals.end(), [](const TelnetTerminalSet &t){
-                return t.disconnected;
-            });
+            auto removeCount = std::count_if(managedTerminals.begin(), managedTerminals.end(),
+                                             [](const TelnetTerminalSet &t) {
+                                                 return t.disconnected;
+                                             });
 
             if (removeCount) {
                 managedTerminals.erase(std::remove_if(managedTerminals.begin(), managedTerminals.end(),
@@ -139,7 +140,7 @@ namespace sim {
                         commandHistory.push_back(fmt::format("Examine {:04o} -> {:04o}", pc.value(), word));
                     }
                 }
-                break;
+                    break;
                 case 'e': {
                     auto pc = cpu.PC()[cpu.wordIndex]();
                     auto code = cpu.examine();
@@ -204,7 +205,8 @@ namespace sim {
         printPanelFlag(16u, 44u, cpu.InstReg() == PDP8I::Instruction::OPR);
         print("  Managed terms: {:02}", managedTerminals.size());
 
-        printPanelFlag(2u, 56u, cpu.cycleState() == PDP8I::CycleState::Fetch || cpu.cycleState() == PDP8I::CycleState::Interrupt);
+        printPanelFlag(2u, 56u, cpu.cycleState() == PDP8I::CycleState::Fetch ||
+                                cpu.cycleState() == PDP8I::CycleState::Interrupt);
         printPanelFlag(4u, 56u, cpu.cycleState() == PDP8I::CycleState::Execute);
         printPanelFlag(6u, 56u, cpu.cycleState() == PDP8I::CycleState::Defer);
 
@@ -319,7 +321,7 @@ namespace sim {
     }
 
     void Pdp8Terminal::commandHelp() {
-        for (auto help : CommandLineHelp) {
+        for (auto help: CommandLineHelp) {
             commandHistory.emplace_back(help);
         }
     }
@@ -329,19 +331,20 @@ namespace sim {
             return std::stoul(argument, nullptr, 8);
 
         } catch (const std::invalid_argument &ia) {
-            try {
-                std::string arg(argument.substr(argument.find_first_not_of(' ')));
-                assembler.setNumberRadix(pdp8asm::Assembler::Radix::OCTAL);
-                if (auto value = assembler.find_symbol(arg); value) {
-                    return value.value();
-                } else if (auto cmd = assembler.parse_command(arg, cpu.PC()[cpu.wordIndex]())) {
-                    return cmd.value();
-                }
-                assembler.setNumberRadix(pdp8asm::Assembler::Radix::AUTOMATIC);
-                commandHistory.push_back(fmt::format("Error: argument not octal number, no symbol found: {}", arg));
-            } catch (const pdp8asm::AssemblerException& ae) {
-                commandHistory.emplace_back(ae.what());
-            }
+            commandHistory.push_back(fmt::format("Error: invalid argument: {}", argument));
+//            try {
+//                std::string arg(argument.substr(argument.find_first_not_of(' ')));
+//                assembler.setNumberRadix(pdp8asm::Assembler::Radix::OCTAL);
+//                if (auto value = assembler.find_symbol(arg); value) {
+//                    return value.value();
+//                } else if (auto cmd = assembler.parse_command(arg, cpu.PC()[cpu.wordIndex]())) {
+//                    return cmd.value();
+//                }
+//                assembler.setNumberRadix(pdp8asm::Assembler::Radix::AUTOMATIC);
+//                commandHistory.push_back(fmt::format("Error: argument not octal number, no symbol found: {}", arg));
+//            } catch (const pdp8asm::AssemblerException &ae) {
+//                commandHistory.emplace_back(ae.what());
+//            }
         } catch (const std::out_of_range &oor) {
             commandHistory.push_back(fmt::format("Error: argument out of range: {}", argument));
             return std::nullopt;
@@ -368,10 +371,10 @@ namespace sim {
         for (int i = 0; i < managedTerminals.size(); ++i) {
             auto tifd = managedTerminals[i].terminal->getReadFd();
             auto tofd = managedTerminals[i].terminal->getWriteFd();
-            selectResults.emplace_back( i, tifd, tofd, false, false);
+            selectResults.emplace_back(i, tifd, tofd, false, false);
         }
 
-        for (auto const& selectResult : selectResults) {
+        for (auto const &selectResult: selectResults) {
             if (selectResult.readFd >= 0) {
                 FD_SET(selectResult.readFd, &readFds);
             }
@@ -384,7 +387,7 @@ namespace sim {
         if (auto stat = ::select(FD_SETSIZE, &readFds, &writeFds, &exceptFds, &timeout); stat == -1) {
             throw TerminalConnectionException("Call to select failed.");
         } else if (stat > 0) {
-            for (auto& selectResult : selectResults) {
+            for (auto &selectResult: selectResults) {
                 if (FD_ISSET(selectResult.readFd, &readFds))
                     selectResult.selectRead = true;
                 if (FD_ISSET(selectResult.writeFd, &writeFds))
