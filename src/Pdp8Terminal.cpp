@@ -259,9 +259,8 @@ namespace sim {
     }
 
     void Pdp8Terminal::loadSourceStream(std::istream &sourceCode, const std::string &title) {
-        assembler.pass1(sourceCode);
-        sourceCode.clear();
-        sourceCode.seekg(0);
+        assembler.readProgram(sourceCode);
+        assembler.pass1();
         std::stringstream binary;
         std::ostream nullStrm(&nullStreamBuffer);
 
@@ -271,9 +270,9 @@ namespace sim {
         managedTerminals.back().terminal->print("\033[1;1H");
         managedTerminals.back().terminal->print("\033]0;PiDP-8/I Source Listing {}\007", title).flush();
 
-        assembler.pass2(sourceCode, binary, managedTerminals.back().terminal->out());
+        assembler.pass2(binary, managedTerminals.back().terminal->out());
 
-        assembler.dump_symbols(managedTerminals.back().terminal->out());
+//        assembler.dump_symbols(managedTerminals.back().terminal->out());
         managedTerminals.back().terminal->out().flush();
         auto startAddress = cpu.readBinaryFormat(binary);
         printPanel();
@@ -286,13 +285,9 @@ namespace sim {
     }
 
     void Pdp8Terminal::loadForth() {
-        try {
-            assembler.clear();
-            std::stringstream sourceCode(std::string{pdp8asm::Forth});
-            loadSourceStream(sourceCode, "Fourth");
-        } catch (const pdp8asm::AssemblerAbort& aa) {
-            commandHistory.emplace_back(aa.what());
-        }
+        assembler.clear();
+        std::stringstream sourceCode(std::string{pdp8asm::Forth});
+        loadSourceStream(sourceCode, "Fourth");
     }
 
 
