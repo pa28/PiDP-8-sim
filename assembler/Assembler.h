@@ -440,7 +440,8 @@ namespace pdp8asm {
     };
 
     /**
-     * A number.
+     * @struct Number
+     * @brief Syntax for decoding a number in the source stream.
      */
     struct Number : public TokenType {
         enum class InternalState {
@@ -500,6 +501,7 @@ namespace pdp8asm {
 
     /**
      * @brief A class that can apply token parsers to an input stream converting it to a token stream.
+     * @details Tokens are matched by a set of structures which embody each different token syntax.
      */
     struct TokenParser {
         using TokenList = std::vector<std::unique_ptr<TokenType>>;
@@ -524,6 +526,11 @@ namespace pdp8asm {
             tokenList.push_back(std::make_unique<EndOfInstruction>());
         }
 
+        /**
+         * @brief Convert a stream of characters into the next token.
+         * @return A tuple containing a token class value and the string literal that matched token syntax.
+         * @throws std::runtime_error When ambiguous tokens are encountered.
+         */
         std::tuple<TokenClass, std::string> nextToken();
     };
 
@@ -728,6 +735,7 @@ namespace pdp8asm {
          * @param first The first token in the line.
          * @param last The end of the program.
          * @return The next token after the line.
+         * @throws std::invalid_argument Line did not end where expected.
          */
         Assembler::Program::iterator
         parseLine(std::ostream &binary, std::ostream &listing, Program::iterator first, Program::iterator last);
@@ -750,6 +758,7 @@ namespace pdp8asm {
          * @brief Perform the first assembly pass.
          * @details This ensures the program can define all labels used in the program.
          * @return true on success.
+         * @throws std::invalid_argument Program does not end with END_OF_FILE token.
          */
         bool pass1();
 
@@ -783,7 +792,7 @@ namespace pdp8asm {
          * @brief Looks up a liable to get its defined value.
          * @param literal
          * @return The label value.
-         * @throws std::invalid_argument
+         * @throws std::invalid_argument Undefined label
          */
         [[nodiscard]] word_t convertLabel(const std::string& literal) const;
 
@@ -793,7 +802,9 @@ namespace pdp8asm {
          * @param last The limit of the expression, the expression may end before this point.
          * (may be the end of the program).
          * @return A tuple with the expression value and the next token in the program after the expression.
-         * @throws std::invalid_argument
+         * @throws std::invalid_argument Bad expression
+         * @throws std::invalid_argument Invalid microcode combination.
+         * @throws std::invalid_argument Memory location out of range (addressing crosses page boundary).
          */
         [[nodiscard]] std::tuple<word_t, Program::iterator>
         evaluateExpression(Program::iterator first, Program::iterator last) const;
@@ -803,6 +814,7 @@ namespace pdp8asm {
          * @param first The first op code.
          * @param last The end of the program.
          * @return a tuple containing the binary op code and then next token to process.
+         * @throws std::invalid_argument Called without OpCode.
          */
         [[nodiscard]] std::tuple<word_t, Program::iterator>
                 evaluateOpCode(Program::iterator first, Program::iterator last);
