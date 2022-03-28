@@ -5,9 +5,9 @@
 #include <sys/resource.h>
 #include <chrono>
 #include <thread>
-//#include <fmt/format.h>
-//#include "src/cpu.h"
-//#include "src/Pdp8Terminal.h"
+#include <fmt/format.h>
+#include "src/cpu.h"
+#include "src/Pdp8Terminal.h"
 #include "src/NullStream.h"
 #include "assembler/Assembler.h"
 #include "assembler/TestPrograms.h"
@@ -64,19 +64,22 @@ int main() {
 
     terminal.setCursorPosition(5u,0u);
 #else
-//    TerminalSocket terminalSocket;
-//    terminalSocket.open();
-//    Pdp8Terminal terminal(terminalSocket);
-//    terminal.console();
+    sim::TerminalSocket terminalSocket;
+    terminalSocket.open();
+    sim::Pdp8Terminal terminal(terminalSocket);
+    terminal.console();
 
+/*
     pdp8asm::Assembler  assembler{};
-    std::stringstream strm{std::string(pdp8asm::PingPong)}; //pdp8asm::PingPong)};
+    std::stringstream strm{std::string(pdp8asm::Forth)}; //pdp8asm::PingPong)};
     assembler.readProgram(strm);
     assembler.pass1();
     null_stream::NullStreamBuffer nullStreamBuffer{};
     std::ostream binary(&nullStreamBuffer);
     assembler.pass2(binary, std::cout);
+    */
     return 0;
+
 #endif
 #endif
 }
