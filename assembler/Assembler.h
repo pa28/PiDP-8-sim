@@ -744,6 +744,13 @@ namespace pdp8asm {
         void setLabelValue(const std::string& literal, word_t value);
 
         /**
+         * @brief Make an undefined label entry in the symbol table, if one does not already exist.
+         * @details These will be used to help resolve forward label references.
+         * @param literal The name of the label.
+         */
+        void undefinedLabel(const std::string& literal);
+
+        /**
          * @brief Perform the first assembly pass.
          * @details This ensures the program can define all labels used in the program.
          * @return true on success.
