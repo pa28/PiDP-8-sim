@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <ext/stdio_filebuf.h>
+#include "src/NullStream.h"
 #include <fmt/format.h>
 #include <array>
 #include <iostream>
@@ -26,22 +26,10 @@
 
 namespace sim {
 
+    using namespace null_stream;
     // https://datatracker.ietf.org/doc/html/rfc1073
     // https://datatracker.ietf.org/doc/html/rfc1184
     // http://pcmicro.com/netfoss/telnet.html
-
-    using stdio_filebuf = __gnu_cxx::stdio_filebuf<char>;   ///< Used to create NullStreamBuffer.
-
-    /**
-     * @class NullStreamBuffer
-     * @brief A Stream buffer that doesnt buffer data.
-     * @details A NullStreamBuffer may be used where you have to pass a std::istream or std::ostream but
-     * don't want any output. Create the required stream with a NullStreamBuffer and pass it wehre required.
-     */
-    class NullStreamBuffer : public std::streambuf {
-    protected:
-        int overflow(int c) override { return c; }
-    };
 
     /**
      * @namespace TerminalConsts
