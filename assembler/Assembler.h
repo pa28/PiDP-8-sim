@@ -529,7 +529,6 @@ namespace pdp8asm {
 
     enum SymbolStatus {
         Undefined,  ///< An undefined symbol
-        ReDefined,  ///< Symbol has been redefined, redefinition location stored in value.
         Defined,    ///< A defined symbol
     };
 
@@ -550,15 +549,14 @@ namespace pdp8asm {
  */
     struct Symbol {
         word_t value{};
-        std::string symbol{};
         SymbolStatus status{Undefined};
 
         Symbol() = default;
 
         ~Symbol() = default;
 
-        Symbol(word_t value, std::string symbol, SymbolStatus status)
-                : value(value), symbol(std::move(symbol)), status(status) {}
+        Symbol(word_t value, SymbolStatus status)
+                : value(value), status(status) {}
 
         Symbol(const Symbol &) = default;
 
@@ -568,8 +566,6 @@ namespace pdp8asm {
 
         Symbol &operator=(Symbol &&) = default;
 
-        explicit Symbol(const PreDefinedSymbol &preDefinedSymbol)
-                : value(preDefinedSymbol.value), symbol(preDefinedSymbol.symbol), status(Undefined) {}
     };
 
     /**
