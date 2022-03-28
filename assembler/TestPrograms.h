@@ -14,7 +14,6 @@ namespace pdp8asm {
     static constexpr std::string_view PingPong = R"(/ Simple Ping-Pong Assembler
                 OCTAL
 *0174
-First           = .
 CycleCount,     0-2                     / 0 - Number of times to cycle before halting
 Accumulator,    17                      / Initial value and temp store for the ACC
 SemiCycle,      0-10                    / 0 - Semi cycle initial count
@@ -35,13 +34,11 @@ Loop2,          RAR
                 ISZ Counter             / Increment count
                 JMP Loop2               / Second semi cycle loop ends
                 DCA Accumulator         / Save Acc
-/               ISZ CycleCount          / Uncomment to cycle for a bit and end.
                 JMP OuterLoop           / Outer loop ends.
-                HLT
 BufferSize      = 10
-Buffer          = .
-                *.+BufferSize
-BufferEnd       = .
+Buffer,
+                *.+BufferSize-1
+BufferEnd,
 *Initialize
 )";
 

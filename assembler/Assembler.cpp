@@ -108,7 +108,8 @@ namespace pdp8asm {
         for (auto first = program.begin(); first != program.end(); ++first) {
             auto next = first + 1;
             if (next != program.end()) {
-                if (first->tokenClass == LITERAL && next->tokenClass == LABEL_DEFINE || next->tokenClass == LABEL_ASSIGN) {
+                if (first->tokenClass == LITERAL && next->tokenClass == LABEL_DEFINE ||
+                    next->tokenClass == LABEL_ASSIGN) {
                     first->tokenClass = LABEL;
                     ++first;
                 }
@@ -143,44 +144,189 @@ namespace pdp8asm {
     Assembler::parseLine(std::ostream &binary, std::ostream &listing, Program::iterator first, Program::iterator last) {
         // Skip comment lines
         bool incrementProgramCounter = false;
+        auto startOfLine = first;
         // Parse lines that begin with LITERALS
         if (first->tokenClass == LITERAL) {
             if (first->tokenClass == LITERAL && first->literal == "OCTAL") {
                 radix = Radix::OCTAL;
                 ++first;
             }
-        } else if (first->tokenClass == LABEL && (first+1)->tokenClass == LABEL_ASSIGN) {
-            auto[value, itr] = evaluateExpression(first+2, last);
+        } else if (first->tokenClass == LABEL && (first + 1)->tokenClass == LABEL_ASSIGN) {
+            auto[value, itr] = evaluateExpression(first + 2, last);
             setLabelValue(first->literal, value);
             first = itr;
-        } else if (first->tokenClass == LABEL && (first+1)->tokenClass == LABEL_DEFINE) {
+        } else if (first->tokenClass == LABEL && (first + 1)->tokenClass == LABEL_DEFINE) {
             setLabelValue(first->literal, programCounter);
             incrementProgramCounter = true;
             ++first;
             ++first;
         } else if (first->tokenClass == LOCATION) {
-            std::tie(programCounter, first) = evaluateExpression(first+1, last);
+            std::tie(programCounter, first) = evaluateExpression(first + 1, last);
         } else if (!isEndOfLine(first->tokenClass) && first->tokenClass != COMMENT) {
             incrementProgramCounter = true;
         }
 
         if (incrementProgramCounter) {
             if (assemblerPass == PASS_TWO) {
-
+                if (isValue(first->tokenClass)) {
+                    std::tie(codeValue, first) = evaluateExpression(first, last);
+                } else {
+                    if (first->tokenClass == OP_CODE) {
+                        std::tie(codeValue, first) = evaluateOpCode(first, last);
+                    }
+                }
             }
-            while (!isEndOfLine(first->tokenClass))
+            while (!isEndOfLine(first->tokenClass) && first->tokenClass != COMMENT)
                 ++first;
-            ++programCounter;
         }
 
         if (first->tokenClass == COMMENT)
             ++first;
-        if (isEndOfLine(first->tokenClass))
+        if (isEndOfLine(first->tokenClass)) {
+            generateListing(listing, startOfLine, first);
+            codeValue = std::nullopt;
+            if (incrementProgramCounter && assemblerPass == PASS_TWO) {
+                ++programCounter;
+            }
             ++first;
+        } else
+            throw std::invalid_argument("Line did not end where expected.");
         return first;
     }
 
-    void Assembler::setLabelValue(const std::string& literal, word_t value) {
+    void Assembler::generateListing(std::ostream &listing, Assembler::Program::iterator first,
+                                    Assembler::Program::iterator last) {
+        if (codeValue) {
+            listing << fmt::format("{:04o}  {:04o}  ", programCounter, codeValue.value());
+        } else if (first->tokenClass == LABEL && (first + 1)->tokenClass == LABEL_DEFINE) {
+            listing << fmt::format("{:04o}        ", programCounter);
+        } else
+            listing << fmt::format("{:12}", "");
+
+        if (first->tokenClass == LABEL) {
+            if (auto next = first + 1; next->tokenClass == LABEL_DEFINE || next->tokenClass == LABEL_ASSIGN) {
+                listing << fmt::format("{:>18}{} ", first->literal, next->literal);
+                first = next;
+            } else {
+                listing << fmt::format("{:>18}  ", first->literal);
+            }
+            ++first;
+        } else if (first->tokenClass == COMMENT) {
+            listing << first->literal;
+            ++first;
+        } else {
+            listing << fmt::format("{:>18}  ", "");
+        }
+
+        std::stringstream strm{};
+        for (; first != last && first->tokenClass != COMMENT; ++first) {
+            strm << first->literal << ' ';
+        }
+
+        listing << fmt::format("{:<32}", strm.str());
+        if (first->tokenClass == COMMENT) {
+            listing << first->literal;
+            ++first;
+        }
+        listing << '\n';
+    }
+
+    std::tuple<word_t, Assembler::Program::iterator>
+    Assembler::evaluateOpCode(Assembler::Program::iterator first, Assembler::Program::iterator last) {
+        if (first->tokenClass != OP_CODE)
+            throw std::invalid_argument("Called without OpCode.");
+
+        word_t code = 0u;
+        word_t arg = 0u;
+        bool opCode = false;
+        bool memoryOpr = false;
+        bool finished = false;
+        bool zeroFlag = false;
+        CombinationType restrict{CombinationType::Gr};
+
+        for (; first != last; ++first) {
+            switch (first->tokenClass) {
+                case TokenClass::END_OF_FILE:
+                case TokenClass::END_OF_LINE:
+                case TokenClass::COMMENT:
+                    finished = true;
+                    break;
+                case TokenClass::NUMBER:
+                case TokenClass::LITERAL:
+                case TokenClass::LABEL:
+                case TokenClass::PROGRAM_COUNTER:
+                    std::tie(arg, first) = evaluateExpression(first, last);
+                    finished = first == last;
+                    break;
+                case TokenClass::OP_CODE:
+                    if (auto op = instructionTable.find(first->literal); op != instructionTable.end()) {
+                        opCode = true;
+                        switch (op->second.orCombination) {
+                            case CombinationType::Memory:
+                                code = op->second.opCode;
+                                memoryOpr = true;
+                                break;
+                            case CombinationType::Flag:
+                            case CombinationType::Gr:
+                                code |= op->second.opCode;
+                                break;
+                            case CombinationType::Mask:
+                                if (memoryOpr && op->second.opCode == 07577)
+                                    zeroFlag = true;
+                                else
+                                    code &= op->second.opCode;
+                                break;
+                            case CombinationType::Gr1:
+                                if (restrict == CombinationType::Gr || restrict == CombinationType::Gr1) {
+                                    code |= op->second.opCode;
+                                    restrict = CombinationType::Gr1;
+                                } else
+                                    throw std::invalid_argument("Invalid microcode combination:");
+                                break;
+                            case CombinationType::Gr2:
+                                if (restrict == CombinationType::Gr || restrict == CombinationType::Gr2) {
+                                    code |= op->second.opCode;
+                                    restrict = CombinationType::Gr2;
+                                } else
+                                    throw std::invalid_argument("Invalid microcode combination:");
+                                break;
+                            case CombinationType::Gr3:
+                                if (restrict == CombinationType::Gr || restrict == CombinationType::Gr3) {
+                                    code |= op->second.opCode;
+                                    restrict = CombinationType::Gr3;
+                                } else
+                                    throw std::invalid_argument("Invalid microcode combination:");
+                                break;
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+            finished |= isEndOfCodeLine(first->tokenClass);
+            if (finished)
+                break;
+        }
+
+        if (opCode) {
+            if (memoryOpr) {
+                code |= arg & 0177;
+                if (arg > 0177) {
+                    if ((arg & 07300) != (programCounter & 07300)) {
+                        throw std::invalid_argument(fmt::format("Memory location out of range {:04o}", arg));
+                    }
+                    code |= 0200;       // Current page flag;
+                }
+                if (zeroFlag)
+                    code &= 07577;      // Zero flag forced by 'Z' token in source.
+            }
+        } else {
+            code = arg;
+        }
+        return {code, first};
+    }
+
+    void Assembler::setLabelValue(const std::string &literal, word_t value) {
         if (auto symbol = symbolTable.find(literal); symbol != symbolTable.end()) {
             symbol->second.value = value;
             symbol->second.status = Defined;
@@ -243,10 +389,10 @@ namespace pdp8asm {
                 if (left.value() > 07777)
                     left = left.value() & 07777;
                 if (left)
-                    return {left.value(),first};
+                    return {left.value(), first};
                 throw std::invalid_argument("Bad expression.");
             }
         }
-        return {0,first};
+        return {0, first};
     }
 }

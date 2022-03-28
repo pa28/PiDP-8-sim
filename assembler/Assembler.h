@@ -65,6 +65,10 @@ namespace pdp8asm {
         return tokenClass == END_OF_LINE || tokenClass == END_OF_FILE;
     }
 
+    inline bool isEndOfCodeLine(TokenClass tokenClass) {
+        return tokenClass == END_OF_LINE || tokenClass == END_OF_FILE || tokenClass == COMMENT;
+    }
+
     /**
      * @brief The state of token parsing.
      */
@@ -692,7 +696,8 @@ namespace pdp8asm {
         std::map<std::string, Instruction> instructionTable;
         Radix radix{Radix::OCTAL};
         Program program{};
-        word_t programCounter = 0;
+        word_t programCounter{0};
+        std::optional<word_t> codeValue{};
         null_stream::NullStreamBuffer nullStreamBuffer{};
 
         enum AssemblerPass { PASS_ZERO, PASS_ONE, PASS_TWO } assemblerPass{PASS_ZERO};
@@ -724,6 +729,8 @@ namespace pdp8asm {
 
         bool pass2(std::ostream& binary, std::ostream& listing);
 
+        void generateListing(std::ostream& listing, Program::iterator first, Program::iterator last);
+
         /**
          * @brief Convert a number from a string.
          * @param literal The string representation.
@@ -749,7 +756,11 @@ namespace pdp8asm {
          * @return A tuple with the expression value and the next token in the program after the expression.
          * @throws std::invalid_argument
          */
-        [[nodiscard]] std::tuple<word_t, Program::iterator> evaluateExpression(Program::iterator first, Program::iterator last) const;
+        [[nodiscard]] std::tuple<word_t, Program::iterator>
+        evaluateExpression(Program::iterator first, Program::iterator last) const;
+
+        [[nodiscard]] std::tuple<word_t, Program::iterator>
+                evaluateOpCode(Program::iterator first, Program::iterator last);
     };
 }
 
