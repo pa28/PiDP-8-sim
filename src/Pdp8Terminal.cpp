@@ -279,16 +279,16 @@ namespace sim {
 
     void Pdp8Terminal::loadPingPong() {
         assembler.clear();
-        std::stringstream sourceCode(std::string{asmbl::PingPong});
+        std::stringstream sourceCode(std::string{pdp8asm::PingPong});
         loadSourceStream(sourceCode, "Ping Pong");
     }
 
     void Pdp8Terminal::loadForth() {
         try {
             assembler.clear();
-            std::stringstream sourceCode(std::string{asmbl::Forth});
+            std::stringstream sourceCode(std::string{pdp8asm::Forth});
             loadSourceStream(sourceCode, "Fourth");
-        } catch (const asmbl::AssemblerAbort& aa) {
+        } catch (const pdp8asm::AssemblerAbort& aa) {
             commandHistory.emplace_back(aa.what());
         }
     }
@@ -331,15 +331,15 @@ namespace sim {
         } catch (const std::invalid_argument &ia) {
             try {
                 std::string arg(argument.substr(argument.find_first_not_of(' ')));
-                assembler.setNumberRadix(asmbl::Assembler::Radix::OCTAL);
+                assembler.setNumberRadix(pdp8asm::Assembler::Radix::OCTAL);
                 if (auto value = assembler.find_symbol(arg); value) {
                     return value.value();
                 } else if (auto cmd = assembler.parse_command(arg, cpu.PC()[cpu.wordIndex]())) {
                     return cmd.value();
                 }
-                assembler.setNumberRadix(asmbl::Assembler::Radix::AUTOMATIC);
+                assembler.setNumberRadix(pdp8asm::Assembler::Radix::AUTOMATIC);
                 commandHistory.push_back(fmt::format("Error: argument not octal number, no symbol found: {}", arg));
-            } catch (const asmbl::AssemblerException& ae) {
+            } catch (const pdp8asm::AssemblerException& ae) {
                 commandHistory.emplace_back(ae.what());
             }
         } catch (const std::out_of_range &oor) {

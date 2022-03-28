@@ -69,7 +69,7 @@ int main() {
 //    terminal.console();
 
     pdp8asm::Assembler  assembler{};
-    std::stringstream strm{std::string("*200 + 2 - 1\n")}; //pdp8asm::PingPong)};
+    std::stringstream strm{std::string(pdp8asm::PingPong)}; //pdp8asm::PingPong)};
     assembler.readProgram(strm);
     assembler.pass1();
     return 0;
