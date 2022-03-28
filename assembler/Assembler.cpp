@@ -85,7 +85,13 @@ namespace pdp8asm {
             std::string literalValue;
             std::tie(tokenClass, literalValue) = tokenParser.nextToken();
             if (tokenClass == LITERAL) {
-                if (auto opCode = instructionTable.find(literalValue); opCode != instructionTable.end()) {
+                if (literalValue == "OCTAL") {
+                    tokenClass = OCTAL;
+                } else if (literalValue == "DECIMAL") {
+                    tokenClass = DECIMAL;
+                } else if (literalValue == "AUTOMATIC") {
+                    tokenClass = AUTOMATIC;
+                } else if (auto opCode = instructionTable.find(literalValue); opCode != instructionTable.end()) {
                     tokenClass = OP_CODE;
                 } else {
                     std::string upperCase{};
@@ -154,11 +160,15 @@ namespace pdp8asm {
         bool incrementProgramCounter = false;
         auto startOfLine = first;
         // Parse lines that begin with LITERALS
-        if (first->tokenClass == LITERAL) {
-            if (first->tokenClass == LITERAL && first->literal == "OCTAL") {
-                radix = Radix::OCTAL;
-                ++first;
-            }
+        if (first->tokenClass == OCTAL) {
+            radix = Radix::OCTAL;
+            ++first;
+        } else if (first->tokenClass == DECIMAL) {
+            radix = Radix::DECIMAL;
+            ++first;
+        } else if (first->tokenClass == AUTOMATIC) {
+            radix = Radix::AUTOMATIC;
+            ++first;
         } else if (first->tokenClass == LABEL && (first + 1)->tokenClass == LABEL_ASSIGN) {
             auto[value, itr] = evaluateExpression(first + 2, last);
             setLabelValue(first->literal, value);
