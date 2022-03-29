@@ -425,4 +425,26 @@ namespace pdp8asm {
         }
         return {0, first};
     }
+
+    void Assembler::dumpSymbols(std::ostream &strm) {
+        strm << fmt::format("\n{:^22}\n", "Symbol Table");
+        for (auto &symbol: symbolTable) {
+            if (symbol.second.status == Defined)
+                strm << fmt::format("{:04o}  {:<21}\n", symbol.second.value, symbol.first);
+            else
+                strm << fmt::format("Undef {:<21}\n", symbol.second.value, symbol.first);
+        }
+    }
+
+    void BinaryInputFormatter::write(word_t address, word_t data) {
+        write(address);
+        binary << static_cast<char>((data & 07700) >> 6) << static_cast<char>(data & 077);
+    }
+
+    void BinaryInputFormatter::write(word_t address) {
+        if (!programCounter || programCounter.value() != address) {
+            programCounter = address;
+            binary << static_cast<char>(((address & 07700) >> 6) | 0100) << static_cast<char>(address & 077);
+        }
+    }
 }

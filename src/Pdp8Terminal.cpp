@@ -272,7 +272,7 @@ namespace sim {
 
         assembler.pass2(binary, managedTerminals.back().terminal->out());
 
-//        assembler.dump_symbols(managedTerminals.back().terminal->out());
+        assembler.dumpSymbols(managedTerminals.back().terminal->out());
         managedTerminals.back().terminal->out().flush();
         auto startAddress = cpu.readBinaryFormat(binary);
         printPanel();

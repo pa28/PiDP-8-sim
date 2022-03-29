@@ -841,6 +841,8 @@ namespace pdp8asm {
          */
         [[nodiscard]] std::tuple<word_t, Program::iterator>
                 evaluateOpCode(Program::iterator first, Program::iterator last);
+
+        void dumpSymbols(std::ostream &strm);
     };
 }
 
