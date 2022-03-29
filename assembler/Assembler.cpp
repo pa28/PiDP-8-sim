@@ -157,6 +157,8 @@ namespace pdp8asm {
     Assembler::Program::iterator
     Assembler::parseLine(std::ostream &binary, std::ostream &listing, Program::iterator first, Program::iterator last) {
         // Skip comment lines
+        BinaryInputFormatter    binaryInputFormatter(binary);
+
         bool incrementProgramCounter = false;
         auto startOfLine = first;
         // Parse lines that begin with LITERALS
@@ -180,6 +182,8 @@ namespace pdp8asm {
             ++first;
         } else if (first->tokenClass == LOCATION) {
             std::tie(programCounter, first) = evaluateExpression(first + 1, last);
+            if (assemblerPass == PASS_TWO)
+                binaryInputFormatter.write(programCounter);
         } else if (!isEndOfLine(first->tokenClass) && first->tokenClass != COMMENT) {
             incrementProgramCounter = true;
         }
@@ -202,10 +206,12 @@ namespace pdp8asm {
             ++first;
         if (isEndOfLine(first->tokenClass)) {
             generateListing(listing, startOfLine, first);
-            codeValue = std::nullopt;
             if (incrementProgramCounter && assemblerPass == PASS_TWO) {
+                if (codeValue)
+                    binaryInputFormatter.write(programCounter, codeValue.value());
                 ++programCounter;
             }
+            codeValue = std::nullopt;
             ++first;
         } else
             throw std::invalid_argument("Line did not end where expected.");

@@ -26,6 +26,28 @@ namespace pdp8asm {
 
     using word_t = uint16_t;
 
+    /**
+     * @class BinaryInputFormatter
+     * @brief Convert address data pairs into a stream of bytes formatted to the DEC BIN tape format.
+     */
+    class BinaryInputFormatter {
+    protected:
+        std::ostream& binary;
+        std::optional<word_t>   programCounter{};
+
+    public:
+
+        BinaryInputFormatter() = delete;
+
+        ~BinaryInputFormatter() = default;
+
+        explicit BinaryInputFormatter(std::ostream& strm) : binary(strm) {}
+
+        void write(word_t address, word_t data);
+
+        void write(word_t address);
+    };
+
     enum TokenClass {
         UNKNOWN, END_OF_FILE, WHITE_SPACE, END_OF_LINE, COMMENT, LITERAL, LABEL, OP_CODE, NUMBER, LABEL_DEFINE,
         LABEL_ASSIGN, LOCATION, PROGRAM_COUNTER, ADDITION, SUBTRACTION, END_OF_INSTRUCTION,
