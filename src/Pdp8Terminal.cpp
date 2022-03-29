@@ -62,12 +62,6 @@ namespace sim {
             if (cpu.runFlag()) {
                 cpu.instruction_step();
                 printPanel();
-                auto pc = cpu.PC()[cpu.wordIndex]();
-                auto fpc = cpu.readCore(0, 010)[cpu.wordIndex]();
-                auto fop = cpu.readCore(0, fpc)[cpu.wordIndex]();
-                std::cout << fmt::format("{:04o} {:04o} {:04o}\n", pc, fpc, fop);
-                if (cpu.PC()[cpu.wordIndex]() == 0245)
-                    cpu.stop();
             }
 
             std::this_thread::sleep_for(timeoutRemainder);
