@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "src/NullStream.h"
+#include <assembler/NullStream.h>
 #include <fmt/format.h>
 #include <array>
 #include <iostream>
@@ -23,8 +23,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
+#include <vector>
 
-namespace sim {
+namespace pdp8 {
 
     using namespace null_stream;
     // https://datatracker.ietf.org/doc/html/rfc1073
@@ -295,11 +296,11 @@ namespace sim {
         template<typename U1, typename U2>
         requires std::unsigned_integral<U1> && std::unsigned_integral<U2>
         void setCursorPosition(U1 line, U2 column) {
-            print("\033[{};{}H", line, column);
+            ostrm << fmt::format("\033[{};{}H", line, column);
         }
 
         void setCursorPosition() {
-            print("\033[{};{}H", inputLine, inputColumn);
+            ostrm << fmt::format("\033[{};{}H", inputLine, inputColumn);
         }
 
         void parseInput();
@@ -315,7 +316,7 @@ namespace sim {
 
         virtual void inputBufferChanged() {
             setCursorPosition(inputLine, 1u);
-            print("\033[0K> {}", inputLineBuffer);
+            ostrm << fmt::format("\033[0K> {}", inputLineBuffer);
             inputColumn = static_cast<unsigned int>(inputLineBuffer.size() + 3u);
             setCursorPosition();
             out().flush();

@@ -1,0 +1,23 @@
+/ DeepThought
+
+    *0200
+	cla
+	tad	delay
+	tad i _AutoIndex1
+	cla
+	cla
+loop,
+    cla
+	jmp	loop
+	jmp 0
+	cla
+	osr
+	jmp	loop
+
+pattern,	startPat
+delay,	00000
+
+startPat = 07700
+
+$
+/* vim: set ts=12 sw=12  noet autoindent : */

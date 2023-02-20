@@ -7,11 +7,13 @@
 
 #pragma once
 
-#include "src/Terminal.h"
-#include "src/cpu.h"
+#include "Terminal.h"
+#include "PDP8.h"
 #include "assembler/Assembler.h"
+#include "assembler/TestPrograms.h"
+#include <fmt/format.h>
 
-namespace sim {
+namespace pdp8 {
 
     /**
      * @class Pdp8Terminal
@@ -22,7 +24,7 @@ namespace sim {
 
     protected:
 
-        PDP8I cpu{};
+        PDP8 pdp8{};
 
         pdp8asm::Assembler assembler{};
 
@@ -37,7 +39,7 @@ namespace sim {
         void windowSizeChanged() override {
             TelnetTerminal::windowSizeChanged();
             inputLine = termHeight;
-            print("\033[2J");
+            ostrm << fmt::format("\033[2J");
             printPanelSilk();
             printPanel();
             inputBufferChanged();
@@ -51,7 +53,7 @@ namespace sim {
 
         void commandHelp();
 
-        std::optional<register_type> parseArgument(const std::string &argument);
+        std::optional<unsigned int> parseArgument(const std::string &argument);
 
         static constexpr std::array<std::string_view, 6> CommandLineHelp =
                 {{
@@ -63,14 +65,12 @@ namespace sim {
                          "quit -- Exit the program."
                  }};
 
-        template<size_t width, size_t offset, typename U1, typename U2>
-        requires std::unsigned_integral<U2> && std::unsigned_integral<U2>
-        std::tuple<size_t, size_t> printPanelField(U1 line, U2 col, slice_value<width, offset> slice) {
+        std::tuple<size_t, size_t> printPanelField(size_t line, size_t col, size_t width, uint value) {
             using namespace TerminalConsts;
-            for (auto idx = slice.WIDTH; idx > 0; --idx) {
+            for (auto idx = width; idx > 0; --idx) {
                 setCursorPosition(line, col);
-                auto lightIdx = slice() & (1 << (idx - 1)) ? 1 : 0;
-                print("{} ", Light[lightIdx]);
+                auto lightIdx = value & (1 << (idx - 1)) ? 1 : 0;
+                ostrm << fmt::format("{} ", Light[lightIdx]);
                 col += 2;
             }
             return {line, col};
@@ -81,7 +81,7 @@ namespace sim {
         void printPanelFlag(U1 line, U2 col, bool flag) {
             using namespace TerminalConsts;
             setCursorPosition(line, col);
-            print("{}", Light[flag ? 1 : 0]);
+            ostrm << fmt::format("{} ", Light[flag ? 1 : 0]);
         }
 
         struct SelectAllResult {

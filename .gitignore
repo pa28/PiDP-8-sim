@@ -1,2 +1,4 @@
-cmake-build-*
 .idea
+cmake-build-*
+*.bin
+*.swp

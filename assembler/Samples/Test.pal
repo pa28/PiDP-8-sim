@@ -1,6 +1,7 @@
-/ DeepThought
-
-
+/ DeepThought - No really
+/ This is just a bunch of assembly to test the assembler,
+/ not meant to be a workable program, or even run.
+/
 	cla
 	tad	delay
 	clsi

@@ -11,7 +11,7 @@
 #include <sys/select.h>
 #include "Terminal.h"
 
-namespace sim {
+namespace pdp8 {
 //    NullStreamBuffer Terminal::nullStreamBuffer;
 
 

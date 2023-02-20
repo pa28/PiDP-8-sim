@@ -8,15 +8,13 @@
 #include <chrono>
 #include <thread>
 #include "Pdp8Terminal.h"
-#include "assembler/TestPrograms.h"
-#include "src/cpu.h"
 
-namespace sim {
+namespace pdp8 {
 
     void Pdp8Terminal::console() {
-        print("\033c").flush();
-        print("\033[1;1H").flush();
-        print("\033]0;PiDP-8/I Console\007");
+        ostrm << fmt::format("\033c"); ostrm.flush();
+        ostrm << fmt::format("\033[1;1H"); ostrm.flush();
+        ostrm << fmt::format("\033]0;PiDP-8/I Console\007");
         setCharacterMode();
         negotiateAboutWindowSize();
 
@@ -59,8 +57,8 @@ namespace sim {
                                                       }), managedTerminals.end());
             }
 
-            if (cpu.runFlag()) {
-                cpu.instruction_step();
+            if (pdp8.run_flag) {
+                pdp8.instructionStep();
                 printPanel();
             }
 
@@ -104,7 +102,7 @@ namespace sim {
                 commandHistory.emplace_back("Load FORTH");
                 return;
             } else if (command == "RIM") {
-                cpu.rimLoader();
+                pdp8.rimLoader();
                 printPanel();
                 return;
             }
@@ -114,7 +112,7 @@ namespace sim {
                 case 'L': {
                     if (auto address = parseArgument(command.substr(1)); address) {
                         commandHistory.push_back(command);
-                        cpu.loadAddress(address.value());
+                        pdp8.memory.memoryAddress.setPageWordAddress(address.value());
                     }
                     printPanel();
                 }
@@ -123,44 +121,44 @@ namespace sim {
                 case 'D': {
                     if (auto code = parseArgument(command.substr(1)); code) {
                         commandHistory.push_back(command);
-                        cpu.deposit(code.value());
+                        pdp8.memory.deposit(code.value());
                     }
                     printPanel();
                 }
                     break;
                 case 'E': {
                     if (auto pc = parseArgument(command.substr(1)); pc) {
-                        auto word = cpu.examineAt(pc.value());
+                        auto word = pdp8.memory.read(pdp8.memory.fieldRegister.getInstField(), pc.value()).getData();
                         commandHistory.push_back(fmt::format("Examine {:04o} -> {:04o}", pc.value(), word));
                     }
                 }
                     break;
                 case 'e': {
-                    auto pc = cpu.PC()[cpu.wordIndex]();
-                    auto code = cpu.examine();
+                    auto pc = pdp8.memory.programCounter.getProgramCounter();
+                    auto code = pdp8.memory.examine().getData();
                     commandHistory.push_back(fmt::format("Examine {:04o} -> {:04o}", pc, code));
                 }
                     printPanel();
                     lastCommand = command;
                     break;
                 case 'c':
-                    commandHistory.push_back(fmt::format("1 Cycle @ {:04o}", cpu.PC()[cpu.wordIndex]()));
-                    cpu.instruction_cycle();
+                    commandHistory.push_back(fmt::format("1 Cycle @ {:04o}", pdp8.memory.programCounter.getProgramCounter()));
+                    pdp8.instructionStep();
                     printPanel();
                     lastCommand = command;
                     break;
                 case 's':
-                    commandHistory.push_back(fmt::format("1 Instruction @ {:04o}", cpu.PC()[cpu.wordIndex]()));
-                    cpu.instruction_step();
+                    commandHistory.push_back(fmt::format("1 Instruction @ {:04o}", pdp8.memory.programCounter.getProgramCounter()));
+                    pdp8.instructionStep();
                     printPanel();
                     lastCommand = command;
                     break;
                 case 'C':
-                    cpu.run();
+                    pdp8.run_flag = true;
                     printPanel();
                     break;
                 case 'S':
-                    cpu.stop();
+                    pdp8.run_flag = false;
                     printPanel();
                     break;
                 case '?':
@@ -176,39 +174,39 @@ namespace sim {
 
     void Pdp8Terminal::printPanel() {
         using namespace TerminalConsts;
-        print("{}", color(Regular, Yellow));
+        ostrm << fmt::format("{}", color(Regular, Yellow));
 
         size_t margin = 1;
         size_t line = 3, column = 2;
-        std::tie(line, column) = printPanelField(line, column, cpu.fieldRegister()[cpu.data_field]);
-        std::tie(line, column) = printPanelField(line, column, cpu.fieldRegister()[cpu.instruction_field]);
-        std::tie(line, column) = printPanelField(line, column, cpu.PC()[cpu.wordIndex]);
-        std::tie(line, column) = printPanelField(line + 3u, 14u, cpu.MA()[cpu.wordIndex]);
-        std::tie(line, column) = printPanelField(line + 3u, 14u, cpu.MB()[cpu.wordIndex]);
-        std::tie(line, column) = printPanelField(line + 3u, 12u, cpu.LAC()[cpu.arithmetic]);
-        std::tie(line, column) = printPanelField(line + 3u, 2u, cpu.SC()[cpu.step_counter_index]);
-        std::tie(line, column) = printPanelField(line, 14u, cpu.MQ()[cpu.wordIndex]);
+        std::tie(line, column) = printPanelField(line, column, 3, pdp8.memory.fieldRegister.getDataField());
+        std::tie(line, column) = printPanelField(line, column, 3, pdp8.memory.fieldRegister.getInstField());
+        std::tie(line, column) = printPanelField(line, column, 12, pdp8.memory.programCounter.getProgramCounter());
+        std::tie(line, column) = printPanelField(line + 3u, 14u, 12, pdp8.memory.memoryAddress.getPageWordAddress());
+        std::tie(line, column) = printPanelField(line + 3u, 14u, 12, pdp8.memory.memoryBuffer.getData());
+        std::tie(line, column) = printPanelField(line + 3u, 12u, 13, pdp8.accumulator.getArithmetic());
+        std::tie(line, column) = printPanelField(line + 3u, 2u, 5, pdp8.stepCounter.value);
+        std::tie(line, column) = printPanelField(line, 14u, 12, pdp8.mulQuotient.getWord());
 
-        printPanelFlag(2u, 44u, cpu.InstReg() == PDP8I::Instruction::AND);
-        printPanelFlag(4u, 44u, cpu.InstReg() == PDP8I::Instruction::TAD);
-        printPanelFlag(6u, 44u, cpu.InstReg() == PDP8I::Instruction::ISZ);
-        printPanelFlag(8u, 44u, cpu.InstReg() == PDP8I::Instruction::DCA);
-        printPanelFlag(10u, 44u, cpu.InstReg() == PDP8I::Instruction::JMS);
-        printPanelFlag(12u, 44u, cpu.InstReg() == PDP8I::Instruction::JMP);
-        printPanelFlag(14u, 44u, cpu.InstReg() == PDP8I::Instruction::IOT);
-        printPanelFlag(16u, 44u, cpu.InstReg() == PDP8I::Instruction::OPR);
-        print("  Managed terms: {:02}", managedTerminals.size());
+        printPanelFlag(2u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::AND);
+        printPanelFlag(4u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::TAD);
+        printPanelFlag(6u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::ISZ);
+        printPanelFlag(8u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::DCA);
+        printPanelFlag(10u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::JMS);
+        printPanelFlag(12u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::JMP);
+        printPanelFlag(14u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::IOT);
+        printPanelFlag(16u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::OPR);
+        ostrm << fmt::format("  Managed terms: {:02}", managedTerminals.size());
 
-        printPanelFlag(2u, 56u, cpu.cycleState() == PDP8I::CycleState::Fetch ||
-                                cpu.cycleState() == PDP8I::CycleState::Interrupt);
-        printPanelFlag(4u, 56u, cpu.cycleState() == PDP8I::CycleState::Execute);
-        printPanelFlag(6u, 56u, cpu.cycleState() == PDP8I::CycleState::Defer);
+        printPanelFlag(2u, 56u, pdp8.cycle_state == PDP8::CycleState::Fetch ||
+                                pdp8.cycle_state == PDP8::CycleState::Interrupt);
+        printPanelFlag(4u, 56u, pdp8.cycle_state == PDP8::CycleState::Execute);
+        printPanelFlag(6u, 56u, pdp8.cycle_state == PDP8::CycleState::Defer);
 
-        printPanelFlag(2u, 66u, cpu.interruptEnable());
+        printPanelFlag(2u, 66u, pdp8.interrupt_enable);
         printPanelFlag(4u, 66u, false);
-        printPanelFlag(6u, 66u, cpu.runFlag());
+        printPanelFlag(6u, 66u, pdp8.run_flag);
 
-        print("{}", color(Regular));
+        ostrm << fmt::format("{}", color(Regular));
         setCursorPosition();
 
         out().flush();
@@ -216,37 +214,37 @@ namespace sim {
 
     void Pdp8Terminal::printPanelSilk() {
         using namespace TerminalConsts;
-        print("\033[{};{}H{:^6}{:^6}{:^24}", 2u, 2u, "Data", "Inst", "Program Counter");
-        print("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
-        print("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
-        print("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
-        print("\033[{};{}H{:^10}", 14u, 2u, "Step Cnt");
-        print("\033[{};{}H{:^24}", 14u, 14u, "Multiplier Quotient");
+        ostrm << fmt::format("\033[{};{}H{:^6}{:^6}{:^24}", 2u, 2u, "Data", "Inst", "Program Counter");
+        ostrm << fmt::format("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
+        ostrm << fmt::format("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
+        ostrm << fmt::format("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
+        ostrm << fmt::format("\033[{};{}H{:^10}", 14u, 2u, "Step Cnt");
+        ostrm << fmt::format("\033[{};{}H{:^24}", 14u, 14u, "Multiplier Quotient");
 
-        print("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
-        print("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
-        print("\033[{};{}H{:<8}{:<12}{:<6}", 6u, 40u, "Isz", "Defer", "Run");
-        print("\033[{};{}H{:<8}{:<12}", 8u, 40u, "Dca", "Wrd Cnt");
-        print("\033[{};{}H{:<8}{:<12}", 10u, 40u, "Jms", "Cur Adr");
-        print("\033[{};{}H{:<8}{:<12}", 12u, 40u, "Jmp", "Break");
-        print("\033[{};{}H{:<8}", 14u, 40u, "Iot");
-        print("\033[{};{}H{:<8}", 16u, 40u, "Opr");
+        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
+        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
+        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 6u, 40u, "Isz", "Defer", "Run");
+        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 8u, 40u, "Dca", "Wrd Cnt");
+        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 10u, 40u, "Jms", "Cur Adr");
+        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 12u, 40u, "Jmp", "Break");
+        ostrm << fmt::format("\033[{};{}H{:<8}", 14u, 40u, "Iot");
+        ostrm << fmt::format("\033[{};{}H{:<8}", 16u, 40u, "Opr");
 
-        print(color(Regular, Yellow));
-        print("\033[{};{}H{}", 4u, 2u, Bar);
-        print("\033[{};{}H{}", 4u, 14u, Bar);
-        print("\033[{};{}H{}", 4u, 26u, Bar);
-        print("\033[{};{}H{}", 7u, 14u, Bar);
-        print("\033[{};{}H{}", 7u, 26u, Bar);
-        print("\033[{};{}H{}", 10u, 14u, Bar);
-        print("\033[{};{}H{}", 10u, 26u, Bar);
-        print("\033[{};{}H{}", 13u, 14u, Bar);
-        print("\033[{};{}H{}", 13u, 26u, Bar);
-        print("\033[{};{}H{}", 16u, 6u, Bar);
-        print("\033[{};{}H{}", 16u, 14u, Bar);
-        print("\033[{};{}H{}", 16u, 26u, Bar);
+        ostrm << fmt::format("{}", color(Regular, Yellow));
+        ostrm << fmt::format("\033[{};{}H{}", 4u, 2u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 4u, 14u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 4u, 26u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 7u, 14u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 7u, 26u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 10u, 14u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 10u, 26u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 13u, 14u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 13u, 26u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 16u, 6u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 16u, 14u, Bar);
+        ostrm << fmt::format("\033[{};{}H{}", 16u, 26u, Bar);
 
-        print("{}", color(Regular));
+        ostrm << fmt::format("{}", color(Regular));
 
         setCursorPosition();
         out().flush();
@@ -260,15 +258,16 @@ namespace sim {
 
         managedTerminals.emplace_back();
 
-        managedTerminals.back().terminal->print("\033c");
-        managedTerminals.back().terminal->print("\033[1;1H");
-        managedTerminals.back().terminal->print("\033]0;PiDP-8/I Source Listing {}\007", title).flush();
+        managedTerminals.back().terminal->out() << fmt::format("\033c");
+        managedTerminals.back().terminal->out() << fmt::format("\033[1;1H");
+        managedTerminals.back().terminal->out() << fmt::format("\033]0;PiDP-8/I Source Listing {}\007", title);
+        managedTerminals.back().terminal->out() << std::flush;
 
         assembler.pass2(binary, managedTerminals.back().terminal->out());
 
         assembler.dumpSymbols(managedTerminals.back().terminal->out());
         managedTerminals.back().terminal->out().flush();
-        auto startAddress = cpu.readBinaryFormat(binary);
+        auto startAddress = pdp8.readBinaryFormat(binary);
         printPanel();
     }
 
@@ -303,7 +302,7 @@ namespace sim {
         }
 
         for (; itr != commandHistory.end(); ++itr, ++startLine) {
-            print("\033[{};{}H{:<80}\n", startLine, 1, *itr);
+            ostrm << fmt::format("\033[{};{}H{:<80}\n", startLine, 1, *itr);
         }
         setCursorPosition();
         out().flush();
@@ -315,7 +314,7 @@ namespace sim {
         }
     }
 
-    std::optional<register_type> Pdp8Terminal::parseArgument(const std::string &argument) {
+    std::optional<unsigned int> Pdp8Terminal::parseArgument(const std::string &argument) {
         try {
             return std::stoul(argument, nullptr, 8);
 
@@ -326,7 +325,7 @@ namespace sim {
 //                assembler.setNumberRadix(pdp8asm::Assembler::Radix::OCTAL);
 //                if (auto value = assembler.find_symbol(arg); value) {
 //                    return value.value();
-//                } else if (auto cmd = assembler.parse_command(arg, cpu.PC()[cpu.wordIndex]())) {
+//                } else if (auto cmd = assembler.parse_command(arg, pdp8.PC()[pdp8.wordIndex]())) {
 //                    return cmd.value();
 //                }
 //                assembler.setNumberRadix(pdp8asm::Assembler::Radix::AUTOMATIC);
