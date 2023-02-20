@@ -29,27 +29,27 @@ int main() {
                         return true;
                     },
                     [](PDP8& pdp8) {
-                        pdp8.instructionReg.value = pdp8asm::generateOpCode("CAM");
+                        pdp8.instructionReg.value = pdp8asm::generateOpCode("CAM", 0);
                         pdp8.execute();
                         return pdp8.accumulator.getAcc() == 0 && pdp8.mulQuotient.getWord() == 0;
                     },
                     [](PDP8& pdp8) {
-                        pdp8.instructionReg.value = pdp8asm::generateOpCode("MQA");
+                        pdp8.instructionReg.value = pdp8asm::generateOpCode("MQA", 0);
                         pdp8.execute();
                         return pdp8.accumulator.getAcc() == 07777 && pdp8.mulQuotient.getWord() == 06543;
                     },
                     [](PDP8& pdp8) {
-                        pdp8.instructionReg.value = pdp8asm::generateOpCode("CLA MQA");
+                        pdp8.instructionReg.value = pdp8asm::generateOpCode("CLA MQA", 0);
                         pdp8.execute();
                         return pdp8.accumulator.getAcc() == 06543 && pdp8.mulQuotient.getWord() == 06543;
                     },
                     [](PDP8& pdp8) {
-                        pdp8.instructionReg.value = pdp8asm::generateOpCode("MQL");
+                        pdp8.instructionReg.value = pdp8asm::generateOpCode("MQL", 0);
                         pdp8.execute();
                         return pdp8.accumulator.getAcc() == 0 && pdp8.mulQuotient.getWord() == 01234;
                     },
                     [](PDP8& pdp8) {
-                        pdp8.instructionReg.value = pdp8asm::generateOpCode("SWP");
+                        pdp8.instructionReg.value = pdp8asm::generateOpCode("SWP", 0);
                         pdp8.execute();
                         return pdp8.accumulator.getAcc() == 06543 && pdp8.mulQuotient.getWord() == 01234;
                     }

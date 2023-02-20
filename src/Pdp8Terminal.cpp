@@ -113,6 +113,7 @@ namespace pdp8 {
                     if (auto address = parseArgument(command.substr(1)); address) {
                         commandHistory.push_back(command);
                         pdp8.memory.memoryAddress.setPageWordAddress(address.value());
+                        pdp8.memory.programCounter.setProgramCounter(address.value());
                     }
                     printPanel();
                 }
@@ -316,26 +317,15 @@ namespace pdp8 {
 
     std::optional<unsigned int> Pdp8Terminal::parseArgument(const std::string &argument) {
         try {
-            return std::stoul(argument, nullptr, 8);
-
+            char* pos;
+            auto code = std::strtoul(argument.c_str(), &pos, 8);
+            if (pos - argument.c_str() == argument.length())
+                return code;
+            return pdp8asm::generateOpCode(argument, pdp8.memory.programCounter.getProgramCounter());
         } catch (const std::invalid_argument &ia) {
-            commandHistory.push_back(fmt::format("Error: invalid argument: {}", argument));
-//            try {
-//                std::string arg(argument.substr(argument.find_first_not_of(' ')));
-//                assembler.setNumberRadix(pdp8asm::Assembler::Radix::OCTAL);
-//                if (auto value = assembler.find_symbol(arg); value) {
-//                    return value.value();
-//                } else if (auto cmd = assembler.parse_command(arg, pdp8.PC()[pdp8.wordIndex]())) {
-//                    return cmd.value();
-//                }
-//                assembler.setNumberRadix(pdp8asm::Assembler::Radix::AUTOMATIC);
-//                commandHistory.push_back(fmt::format("Error: argument not octal number, no symbol found: {}", arg));
-//            } catch (const pdp8asm::AssemblerException &ae) {
-//                commandHistory.emplace_back(ae.what());
-//            }
+            commandHistory.emplace_back(ia.what());
         } catch (const std::out_of_range &oor) {
             commandHistory.push_back(fmt::format("Error: argument out of range: {}", argument));
-            return std::nullopt;
         }
         return std::nullopt;
     }
