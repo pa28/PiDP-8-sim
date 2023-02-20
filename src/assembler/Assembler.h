@@ -644,7 +644,7 @@ namespace pdp8asm {
         CombinationType orCombination;
     };
 
-    static constexpr std::array<Instruction, 59> InstructionSet =
+    static constexpr std::array<Instruction, 69> InstructionSet =
             {{
                      // Instruction flags
                      {00400, "I", Flag},
@@ -703,12 +703,24 @@ namespace pdp8asm {
                      {06012, "RRB", Memory},
                      {06014, "RFC", Memory},
                      {06016, "RBC", Memory}, // Read buffer and continue
-                     // High speed paper tap output
+                     // High speed paper tape output
                      {06020, "PCE", Memory},
                      {06021, "PSF", Memory},
                      {06022, "PCF", Memory},
                      {06024, "PPC", Memory},
                      {06026, "PLS", Memory},
+                     // DecWriter LA30 Keyboard
+                     {06030, "KCF", Memory},
+                     {06031, "KSF", Memory},
+                     {06034, "KRS", Memory},
+                     {06035, "KIE", Memory},
+                     {06036, "KRB", Memory},
+                     // DecWriter LA30 Printer
+                     {06040, "TFL", Memory},
+                     {06041, "TSF", Memory},
+                     {06042, "TCF", Memory},
+                     {06044, "TPC", Memory},
+                     {06046, "TLS", Memory},
                      // Realtime clock - homebrew
                      /*
                       * Flag register bits

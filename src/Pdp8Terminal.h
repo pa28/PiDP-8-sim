@@ -22,11 +22,11 @@ namespace pdp8 {
     class Pdp8Terminal : public TelnetTerminal {
     public:
 
-    protected:
-
         PDP8 pdp8{};
 
         pdp8asm::Assembler assembler{};
+
+    protected:
 
         std::string lastCommand{};
 
