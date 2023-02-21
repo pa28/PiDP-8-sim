@@ -22,13 +22,8 @@ namespace pdp8 {
      * @class IOTDevice
      */
     class IOTDevice {
-    protected:
-        unsigned int mDeviceId{};
-        bool mInterrupt{false};
-
     public:
         IOTDevice() = default;
-        explicit IOTDevice(unsigned int deviceId) : mDeviceId(deviceId) {}
 
         IOTDevice(const IOTDevice&) = delete;
         IOTDevice(IOTDevice&&) = default;
@@ -37,11 +32,9 @@ namespace pdp8 {
 
         virtual ~IOTDevice() = default;
 
-        [[nodiscard]] auto deviceId() const { return mDeviceId; }
+        virtual void operation(PDP8 &pdp8, unsigned int device, unsigned int opCode) = 0;
 
-        [[nodiscard]] bool getInterrupt() const { return mInterrupt; }
-
-        virtual void operation(PDP8 &pdp8, unsigned int opCode);
+        virtual bool getInterruptRequest() = 0;
     };
 
 } // pdp8

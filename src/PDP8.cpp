@@ -253,6 +253,12 @@ namespace pdp8 {
                 memory.fieldRegister.setInstBuffer(instructionReg.getFieldReg());
             }
         }
+
+        auto deviceSel = instructionReg.getDeviceSel();
+        auto devOp = instructionReg.getDeviceOpr();
+        if (auto device = iotDevices.find(deviceSel); device != iotDevices.end()) {
+            device->second->operation(*this, deviceSel, devOp);
+        }
         // Other IOT instructions not supported yet.
     }
 

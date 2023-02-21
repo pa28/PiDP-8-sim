@@ -13,7 +13,4 @@
 #include <PDP8.h>
 
 namespace pdp8 {
-    void IOTDevice::operation(PDP8 &pdp8, unsigned int opCode) {
-
-    }
 } // pdp8
