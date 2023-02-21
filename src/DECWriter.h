@@ -19,29 +19,40 @@
 #define PDP8_DECWRITER_H
 
 #include <IOTDevice.h>
+#include <Pdp8Terminal.h>
 
 namespace pdp8 {
 
 /**
- * @class DECWriterKeyBoard
+ * @class DECWriter
  */
-    class DECWriterKeyBoard : public IOTDevice {
+    class DECWriter : public IOTDevice {
     public:
-        DECWriterKeyBoard() : IOTDevice(3) {}
-        ~DECWriterKeyBoard() override = default;
+        std::shared_ptr<Terminal> terminal{};
 
-        void operation(PDP8 &pdp8, unsigned int opCode) override;
-    };
+        unsigned int keyboardDevice{3};
+        unsigned int printerDevice{4};
 
-/**
- * @class DECWriterKeyBoard
- */
-    class DECWriterPrinter : public IOTDevice {
-    public:
-        DECWriterPrinter() : IOTDevice(4) {}
-        ~DECWriterPrinter() override = default;
+        unsigned int keyboardBuffer{};
+        unsigned int printerBuffer{};
 
-        void operation(PDP8 &pdp8, unsigned int opCode) override;
+        bool interruptEnable{false};
+        bool printerFlag{true};
+        bool keyboardFlag{false};
+
+        DECWriter() = default;
+        DECWriter(unsigned int keyDev, unsigned int prnDev) : DECWriter() {
+            keyboardDevice = keyDev;
+            printerDevice = prnDev;
+        }
+
+        ~DECWriter() override = default;
+
+        void operation(PDP8 &pdp8, unsigned int device, unsigned int opCode) override;
+
+        bool getInterruptRequest() override;
+
+        void performInputOutput();
     };
 
 } // pdp8
