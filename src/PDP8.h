@@ -18,13 +18,14 @@
 #ifndef PDP8_PDP8_H
 #define PDP8_PDP8_H
 
-#include <vector>
+#include <memory>
 #include <HostInterface.h>
 #include <Memory.h>
 #include <Instruction.h>
 #include <Accumulator.h>
 #include <atomic>
 #include <IOTDevice.h>
+#include <map>
 
 namespace pdp8 {
 
@@ -81,7 +82,7 @@ namespace pdp8 {
         OperatorSwitchRegister opSxReg{};
         StepCounter stepCounter{};
 
-        std::vector<IOTDevice> iotDevices{};
+        std::map<unsigned int, std::shared_ptr<IOTDevice>> iotDevices{};
 
         void instructionCycle();
 
