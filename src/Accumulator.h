@@ -34,6 +34,15 @@ namespace pdp8 {
         using msb_t = registers::register_t<1,1,13>;
         using lowerNibble_t = registers::register_t<6,7,13>;
         using upperNibble_t = registers::register_t<6,1,13>;
+        using asciiChar_t = registers::register_t<8,4,12>;
+
+        [[nodiscard]] base_type getAscii() const {
+            return get<asciiChar_t>();
+        }
+
+        void setAscii(base_type value) {
+            set<asciiChar_t>(value);
+        }
 
         [[nodiscard]] base_type getMostSig() const {
             return get<msb_t>();
