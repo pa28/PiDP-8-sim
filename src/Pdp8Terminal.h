@@ -17,7 +17,7 @@ namespace pdp8 {
 
     /**
      * @class Pdp8Terminal
-     * @brief A terminal for the
+     * @brief A terminal for the management of a PDP8 instance.
      */
     class Pdp8Terminal : public TelnetTerminal {
     public:
