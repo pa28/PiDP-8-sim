@@ -247,31 +247,24 @@ namespace pdp8 {
         for (auto const &selectResult: selectResults) {
             if (selectResult.selectRead) {
                 if (selectResult.selectRead || selectResult.selectWrite) {
-                    auto c = at(selectResult.listIndex).
+                    auto c = at(selectResult.listIndex)->
                             selected(selectResult.selectRead, selectResult.selectWrite);
                     if (c == EOF) {
-                        at(selectResult.listIndex).disconnected = true;
+                        at(selectResult.listIndex)->disconnected = true;
                     }
                 }
             }
         }
 
-        auto removeCount = std::count_if(begin(), end(),
-                                         [](const TelnetTerminal &t) {
-                                             return t.disconnected;
-                                         });
-
-        if (removeCount) {
-            erase(std::remove_if(begin(), end(),
-                                                  [](const TelnetTerminal &t) {
-                                                      return t.disconnected;
-                                                  }), end());
-        }
-
         for (auto &term : *this) {
-            if (term.timerTick)
-                term.disconnected = term.timerTick();
+            if (!term->disconnected && term->timerTick)
+                term->disconnected = !term->timerTick();
         }
+
+        erase(std::remove_if(begin(), end(),
+                          [](const std::unique_ptr<TelnetTerminal> &t) {
+                              return t->disconnected;
+                          }), end());
 
         std::this_thread::sleep_for(timeoutRemainder);
     }
@@ -291,8 +284,8 @@ namespace pdp8 {
         std::vector<SelectAllResult> selectResults{};
 
         for (int i = 0; i < size(); ++i) {
-            auto tifd = at(i).getReadFd();
-            auto tofd = at(i).getWriteFd();
+            auto tifd = at(i)->getReadFd();
+            auto tofd = at(i)->getWriteFd();
             selectResults.emplace_back(i, tifd, tofd, false, false);
         }
 
