@@ -24,6 +24,10 @@
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <vector>
+#include <chrono>
+#include <thread>
+#include <functional>
+
 
 namespace pdp8 {
 
@@ -249,6 +253,10 @@ namespace pdp8 {
         static constexpr int ECHO = 1;
         static constexpr int SUPPRESS_GO_AHEAD = 3;
 
+        std::function<bool()> timerTick{};
+
+        bool disconnected{false};
+
     protected:
         std::string inputLineBuffer{};              ///< Buffer to read input from the user
         unsigned int inputLine{1u};                 ///< The line the input buffer is on
@@ -262,6 +270,10 @@ namespace pdp8 {
 
     public:
         TelnetTerminal() = default;
+        TelnetTerminal(const TelnetTerminal&) = delete;
+        TelnetTerminal(TelnetTerminal&&) = default;
+        TelnetTerminal& operator=(const TelnetTerminal&) = delete;
+        TelnetTerminal& operator=(TelnetTerminal&&) = default;
 
         virtual ~TelnetTerminal() = default;
 
@@ -311,25 +323,27 @@ namespace pdp8 {
         }
     };
 
-    class TelnetTerminalSet {
+    class TerminalManager : public std::vector<TelnetTerminal> {
+    protected:
+
+        std::chrono::microseconds selectTimeout{10000};
+        struct SelectAllResult {
+            int listIndex{-1};
+            int readFd{-1}, writeFd{-1};
+            bool selectRead{false};
+            bool selectWrite{false};
+
+            SelectAllResult() = default;
+            SelectAllResult(int idx, int read, int write, bool readSel, bool writeSel)
+                    : listIndex(idx), readFd(read), writeFd(write), selectRead(readSel), selectWrite(writeSel) {}
+        };
+
+        std::tuple<std::chrono::microseconds, std::vector<SelectAllResult>>
+        selectOnAll(std::chrono::microseconds timeoutUs);
+
     public:
-        bool disconnected{false};
-        std::unique_ptr<TerminalSocket> socket{};
-        std::unique_ptr<TelnetTerminal> terminal{};
-
-        TelnetTerminalSet() {
-            socket = std::make_unique<TerminalSocket>();
-            socket->open();
-            terminal = std::make_unique<TelnetTerminal>(socket.get());
-        }
-
-        TelnetTerminalSet(const TelnetTerminalSet&) = delete;
-        TelnetTerminalSet(TelnetTerminalSet&&) = default;
-
-        TelnetTerminalSet& operator=(const TelnetTerminalSet&) = delete;
-        TelnetTerminalSet& operator=(TelnetTerminalSet&&) = default;
-
-        ~TelnetTerminalSet() = default;
+        void serviceTerminals();
     };
+
 }
 

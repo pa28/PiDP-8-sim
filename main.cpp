@@ -6,9 +6,15 @@ using namespace pdp8;
 
 int main() {
 
+
     signal(SIGCHLD, SIG_IGN);
-    TerminalSocket terminalSocket;
+    auto terminalSocket = TerminalSocket();
     terminalSocket.open();
-    Pdp8Terminal terminal(terminalSocket);
-    terminal.console();
+
+    TerminalManager terminalManager{};
+
+    terminalManager.emplace_back(terminalSocket);
+
+    while (!terminalManager.empty())
+        terminalManager.serviceTerminals();
 }
