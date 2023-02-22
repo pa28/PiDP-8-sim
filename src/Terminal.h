@@ -104,33 +104,6 @@ namespace pdp8 {
     };
 
     /**
-     * @class TerminalPipe -- Deprecated due to poor support.
-     * @brief Use /dev/ptmx to set up a connection to a virtual terminal that supports adopting an open
-     * /dev/ptmx file descriptor. XTerm supports this.
-     */
-    class [[maybe_unused]] TerminalPipe : public TerminalConnection {
-    protected:
-        std::string ptsName{};
-
-    public:
-
-        TerminalPipe() = default;
-
-        ~TerminalPipe() override {
-            kill(childPid, SIGKILL);
-            int waitStatus;
-            wait(&waitStatus);
-        }
-
-        /**
-         * @brief Execute as a process the executable found at a filesystem path location.
-         * @param process The file system path location
-         * @throws TerminalPipeException
-         */
-        void open(const std::string &title);
-    };
-
-    /**
      * @class TerminalSocket
      * @brief Launch a TerminalConnection to a virtual terminal and run telnet to connect back to this
      * process using TCP/IP and the loop back device and a system assigned server port number.

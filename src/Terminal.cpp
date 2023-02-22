@@ -15,59 +15,6 @@ namespace pdp8 {
 //    NullStreamBuffer Terminal::nullStreamBuffer;
 
 
-    void TerminalPipe::open(const std::string& title) {
-        // Open a pseudo-terminal master
-
-        auto ptmx = ::open("/dev/ptmx", O_RDWR | O_NOCTTY);
-        ptsName = ptsname(ptmx);
-
-        if (ptmx == -1) {
-            throw TerminalConnectionException("Failed to open pseudo-terminal master-slave for use with xterm. Aborting...");
-        } else if (unlockpt(ptmx) != 0) {
-            close(ptmx);
-            throw TerminalConnectionException("Failed to unlock pseudo-terminal master-slave for use with xterm. Aborting...");
-        } else if (grantpt(ptmx) != 0) {
-            close(ptmx);
-            throw TerminalConnectionException("Failed to grant access rights to pseudo-terminal master-slave for use with xterm Aborting...");
-        }
-
-        // open the corresponding pseudo-terminal slave (that's us)
-        ptsName = ptsname(ptmx);
-        fmt::print("Slave-master terminal: {}\n", ptsName);
-        terminalFd = ::open(ptsName.c_str(), O_RDWR | O_NOCTTY);
-
-        if (terminalFd == -1) {
-            close(ptmx);
-            throw TerminalConnectionException("Failed to open client side terminal endpoint: " + ptsName);
-        }
-
-        childPid = fork();
-        if (childPid == -1) {
-            close(ptmx);
-            close(terminalFd);
-            throw TerminalConnectionException("Failed to fork terminal process.");
-        }
-
-        if (childPid == 0) {
-            char *argv[7];
-            asprintf(argv+0, "xterm");
-            asprintf(argv+1, "-S%s/%d", ptsName.c_str(), ptmx);
-            asprintf(argv+2, "-T");
-            asprintf(argv+3, "%s", title.c_str());
-            asprintf(argv+4, "-n");
-            asprintf(argv+5, "%s", title.c_str());
-            argv[6] = nullptr;
-
-            execvp(argv[0], argv);
-            throw TerminalConnectionException("Failed to exec terminal program.");
-        } else {
-            close(ptmx);
-        }
-
-        iBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::in);
-        oBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::out);
-    }
-
     void TerminalSocket::open() {
         if ((socket = ::socket(AF_INET, SOCK_STREAM, 0)) == -1)
             throw TerminalConnectionException("socket failed.");
