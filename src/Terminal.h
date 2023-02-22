@@ -83,6 +83,10 @@ namespace pdp8 {
 
     public:
         TerminalConnection() = default;
+        TerminalConnection(const TerminalConnection&) = delete;
+        TerminalConnection(TerminalConnection&&) = default;
+        TerminalConnection& operator=(const TerminalConnection&) = delete;
+        TerminalConnection& operator=(TerminalConnection&&) = default;
 
         virtual ~TerminalConnection() {
             if (terminalFd >= 0)
@@ -141,6 +145,10 @@ namespace pdp8 {
     public:
 
         TerminalSocket() = default;             ///< Constructor
+        TerminalSocket(const TerminalSocket&) = delete;
+        TerminalSocket(TerminalSocket&&) = default;
+        TerminalSocket& operator=(const TerminalSocket&) = delete;
+        TerminalSocket& operator=(TerminalSocket&&) = default;
 
         /**
          * @brief Destructor, wait for the client to exit.
@@ -172,8 +180,8 @@ namespace pdp8 {
 
     protected:
         NullStreamBuffer nullStreamBuffer{};   ///< Null buffer for unused streams
-        std::ostream ostrm;                    ///< Output stream
-        std::istream istrm;                    ///< Input stream
+        std::unique_ptr<std::ostream> ostrm;                    ///< Output stream
+        std::unique_ptr<std::istream> istrm;                    ///< Input stream
 
         int ofd{-1};                           ///< File descriptor of the output stream
         int ifd{-1};                           ///< File descriptor of the input stream
@@ -185,7 +193,12 @@ namespace pdp8 {
          * @details Both streams have null buffers. An object constructed with this won't communicate
          * anything.
          */
-        Terminal() : ostrm(&nullStreamBuffer), istrm(&nullStreamBuffer) {}
+        Terminal() : ostrm(std::make_unique<std::ostream>(&nullStreamBuffer)),
+                        istrm(std::make_unique<std::istream>(&nullStreamBuffer)) {}
+        Terminal(const Terminal&) = delete;
+        Terminal(Terminal&&) = default;
+        Terminal& operator=(const Terminal&) = delete;
+        Terminal& operator=(Terminal&&) = default;
 
         ~Terminal() = default;
 
@@ -198,14 +211,16 @@ namespace pdp8 {
          * @brief Construct an outbound only connection using a provided stream buffer.
          * @param outbuff The output stream buffer.
          */
-        explicit Terminal(stdio_filebuf *outbuff) : ostrm(outbuff), istrm(&nullStreamBuffer) {}
+        explicit Terminal(stdio_filebuf *outbuff)
+            : ostrm(std::make_unique<std::ostream>(outbuff)), istrm(std::make_unique<std::istream>(&nullStreamBuffer)) {}
 
         /**
          * @brief Construct a bi-directional connection using provided in and out stream buffers.
          * @param inBuff The input buffer.
          * @param outBuff The output buffer
          */
-        Terminal(stdio_filebuf *inBuff, stdio_filebuf *outBuff) : ostrm(outBuff), istrm(inBuff) {}
+        Terminal(stdio_filebuf *inBuff, stdio_filebuf *outBuff)
+            : ostrm(std::make_unique<std::ostream>(outBuff)), istrm(std::make_unique<std::istream>(inBuff)) {}
 
         /**
          * @brief Construct a bi-directional connection using buffers provided by a TerminalConnection
@@ -223,9 +238,9 @@ namespace pdp8 {
             ofd = terminalConnection->terminalFd;
         }
 
-        std::ostream &out() { return ostrm; }   ///< Get the out stream
+        std::ostream &out() { return *ostrm; }   ///< Get the out stream
 
-        std::istream &in() { return istrm; }    ///< Get the in stream
+        std::istream &in() { return *istrm; }    ///< Get the in stream
 
         /**
          * @brief Use the format library to format output to the out stream.
@@ -296,11 +311,11 @@ namespace pdp8 {
         template<typename U1, typename U2>
         requires std::unsigned_integral<U1> && std::unsigned_integral<U2>
         void setCursorPosition(U1 line, U2 column) {
-            ostrm << fmt::format("\033[{};{}H", line, column);
+            *ostrm << fmt::format("\033[{};{}H", line, column);
         }
 
         void setCursorPosition() {
-            ostrm << fmt::format("\033[{};{}H", inputLine, inputColumn);
+            *ostrm << fmt::format("\033[{};{}H", inputLine, inputColumn);
         }
 
         void parseInput();
@@ -316,7 +331,7 @@ namespace pdp8 {
 
         virtual void inputBufferChanged() {
             setCursorPosition(inputLine, 1u);
-            ostrm << fmt::format("\033[0K> {}", inputLineBuffer);
+            (*ostrm) << fmt::format("\033[0K> {}", inputLineBuffer);
             inputColumn = static_cast<unsigned int>(inputLineBuffer.size() + 3u);
             setCursorPosition();
             out().flush();

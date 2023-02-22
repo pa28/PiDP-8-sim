@@ -186,7 +186,7 @@ namespace pdp8 {
 
     int Terminal::selected(bool selectedRead, bool selectedWrite) {
         if (selectedRead) {
-            return istrm.get();
+            return istrm->get();
         }
         return 0;
     }

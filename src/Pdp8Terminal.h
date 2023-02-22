@@ -39,7 +39,7 @@ namespace pdp8 {
         void windowSizeChanged() override {
             TelnetTerminal::windowSizeChanged();
             inputLine = termHeight;
-            ostrm << fmt::format("\033[2J");
+            *ostrm << fmt::format("\033[2J");
             printPanelSilk();
             printPanel();
             inputBufferChanged();
@@ -47,7 +47,7 @@ namespace pdp8 {
 
         std::vector<std::string> commandHistory{};
 
-        std::vector<TelnetTerminalSet> managedTerminals{};
+        std::vector<TelnetTerminal> managedTerminals{};
 
         void printCommandHistory();
 
@@ -70,7 +70,7 @@ namespace pdp8 {
             for (auto idx = width; idx > 0; --idx) {
                 setCursorPosition(line, col);
                 auto lightIdx = value & (1 << (idx - 1)) ? 1 : 0;
-                ostrm << fmt::format("{} ", Light[lightIdx]);
+                *ostrm << fmt::format("{} ", Light[lightIdx]);
                 col += 2;
             }
             return {line, col};
@@ -81,7 +81,7 @@ namespace pdp8 {
         void printPanelFlag(U1 line, U2 col, bool flag) {
             using namespace TerminalConsts;
             setCursorPosition(line, col);
-            ostrm << fmt::format("{} ", Light[flag ? 1 : 0]);
+            *ostrm << fmt::format("{} ", Light[flag ? 1 : 0]);
         }
 
         struct SelectAllResult {

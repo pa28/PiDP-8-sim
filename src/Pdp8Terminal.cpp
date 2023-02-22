@@ -12,9 +12,9 @@
 namespace pdp8 {
 
     void Pdp8Terminal::console() {
-        ostrm << fmt::format("\033c"); ostrm.flush();
-        ostrm << fmt::format("\033[1;1H"); ostrm.flush();
-        ostrm << fmt::format("\033]0;PiDP-8/I Console\007");
+        *ostrm << fmt::format("\033c"); ostrm->flush();
+        *ostrm << fmt::format("\033[1;1H"); ostrm->flush();
+        *ostrm << fmt::format("\033]0;PiDP-8/I Console\007");
         setCharacterMode();
         negotiateAboutWindowSize();
 
@@ -35,7 +35,7 @@ namespace pdp8 {
                 } else {
                     if (selectResult.selectRead) {
                         if (selectResult.selectRead || selectResult.selectWrite) {
-                            auto c = managedTerminals[selectResult.listIndex].terminal->
+                            auto c = managedTerminals[selectResult.listIndex].
                                     selected(selectResult.selectRead, selectResult.selectWrite);
                             if (c == EOF) {
                                 managedTerminals[selectResult.listIndex].disconnected = true;
@@ -46,13 +46,13 @@ namespace pdp8 {
             }
 
             auto removeCount = std::count_if(managedTerminals.begin(), managedTerminals.end(),
-                                             [](const TelnetTerminalSet &t) {
+                                             [](const TelnetTerminal &t) {
                                                  return t.disconnected;
                                              });
 
             if (removeCount) {
                 managedTerminals.erase(std::remove_if(managedTerminals.begin(), managedTerminals.end(),
-                                                      [](const TelnetTerminalSet &t) {
+                                                      [](const TelnetTerminal &t) {
                                                           return t.disconnected;
                                                       }), managedTerminals.end());
             }
@@ -175,7 +175,7 @@ namespace pdp8 {
 
     void Pdp8Terminal::printPanel() {
         using namespace TerminalConsts;
-        ostrm << fmt::format("{}", color(Regular, Yellow));
+        *ostrm << fmt::format("{}", color(Regular, Yellow));
 
         size_t margin = 1;
         size_t line = 3, column = 2;
@@ -196,7 +196,7 @@ namespace pdp8 {
         printPanelFlag(12u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::JMP);
         printPanelFlag(14u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::IOT);
         printPanelFlag(16u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::OPR);
-        ostrm << fmt::format("  Managed terms: {:02}", managedTerminals.size());
+        *ostrm << fmt::format("  Managed terms: {:02}", managedTerminals.size());
 
         printPanelFlag(2u, 56u, pdp8.cycle_state == PDP8::CycleState::Fetch ||
                                 pdp8.cycle_state == PDP8::CycleState::Interrupt);
@@ -207,7 +207,7 @@ namespace pdp8 {
         printPanelFlag(4u, 66u, false);
         printPanelFlag(6u, 66u, pdp8.run_flag);
 
-        ostrm << fmt::format("{}", color(Regular));
+        *ostrm << fmt::format("{}", color(Regular));
         setCursorPosition();
 
         out().flush();
@@ -215,37 +215,37 @@ namespace pdp8 {
 
     void Pdp8Terminal::printPanelSilk() {
         using namespace TerminalConsts;
-        ostrm << fmt::format("\033[{};{}H{:^6}{:^6}{:^24}", 2u, 2u, "Data", "Inst", "Program Counter");
-        ostrm << fmt::format("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
-        ostrm << fmt::format("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
-        ostrm << fmt::format("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
-        ostrm << fmt::format("\033[{};{}H{:^10}", 14u, 2u, "Step Cnt");
-        ostrm << fmt::format("\033[{};{}H{:^24}", 14u, 14u, "Multiplier Quotient");
+        *ostrm << fmt::format("\033[{};{}H{:^6}{:^6}{:^24}", 2u, 2u, "Data", "Inst", "Program Counter");
+        *ostrm << fmt::format("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
+        *ostrm << fmt::format("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
+        *ostrm << fmt::format("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
+        *ostrm << fmt::format("\033[{};{}H{:^10}", 14u, 2u, "Step Cnt");
+        *ostrm << fmt::format("\033[{};{}H{:^24}", 14u, 14u, "Multiplier Quotient");
 
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 6u, 40u, "Isz", "Defer", "Run");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 8u, 40u, "Dca", "Wrd Cnt");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 10u, 40u, "Jms", "Cur Adr");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 12u, 40u, "Jmp", "Break");
-        ostrm << fmt::format("\033[{};{}H{:<8}", 14u, 40u, "Iot");
-        ostrm << fmt::format("\033[{};{}H{:<8}", 16u, 40u, "Opr");
+        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
+        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
+        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 6u, 40u, "Isz", "Defer", "Run");
+        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 8u, 40u, "Dca", "Wrd Cnt");
+        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 10u, 40u, "Jms", "Cur Adr");
+        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 12u, 40u, "Jmp", "Break");
+        *ostrm << fmt::format("\033[{};{}H{:<8}", 14u, 40u, "Iot");
+        *ostrm << fmt::format("\033[{};{}H{:<8}", 16u, 40u, "Opr");
 
-        ostrm << fmt::format("{}", color(Regular, Yellow));
-        ostrm << fmt::format("\033[{};{}H{}", 4u, 2u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 4u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 4u, 26u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 7u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 7u, 26u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 10u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 10u, 26u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 13u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 13u, 26u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 16u, 6u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 16u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 16u, 26u, Bar);
+        *ostrm << fmt::format("{}", color(Regular, Yellow));
+        *ostrm << fmt::format("\033[{};{}H{}", 4u, 2u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 4u, 14u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 4u, 26u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 7u, 14u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 7u, 26u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 10u, 14u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 10u, 26u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 13u, 14u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 13u, 26u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 16u, 6u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 16u, 14u, Bar);
+        *ostrm << fmt::format("\033[{};{}H{}", 16u, 26u, Bar);
 
-        ostrm << fmt::format("{}", color(Regular));
+        *ostrm << fmt::format("{}", color(Regular));
 
         setCursorPosition();
         out().flush();
@@ -259,12 +259,12 @@ namespace pdp8 {
 
         managedTerminals.emplace_back();
 
-        managedTerminals.back().terminal->out() << fmt::format("\033c");
-        managedTerminals.back().terminal->out() << fmt::format("\033[1;1H");
-        managedTerminals.back().terminal->out() << fmt::format("\033]0;PiDP-8/I Source Listing {}\007", title);
-        managedTerminals.back().terminal->out() << std::flush;
+        managedTerminals.back().out() << fmt::format("\033c");
+        managedTerminals.back().out() << fmt::format("\033[1;1H");
+        managedTerminals.back().out() << fmt::format("\033]0;PiDP-8/I Source Listing {}\007", title);
+        managedTerminals.back().out() << std::flush;
 
-        assembler.pass2(binary, managedTerminals.back().terminal->out());
+        assembler.pass2(binary, managedTerminals.back().out());
 
         assembler.dumpSymbols(managedTerminals.back().terminal->out());
         managedTerminals.back().terminal->out().flush();
@@ -303,7 +303,7 @@ namespace pdp8 {
         }
 
         for (; itr != commandHistory.end(); ++itr, ++startLine) {
-            ostrm << fmt::format("\033[{};{}H{:<80}\n", startLine, 1, *itr);
+            *ostrm << fmt::format("\033[{};{}H{:<80}\n", startLine, 1, *itr);
         }
         setCursorPosition();
         out().flush();
@@ -347,8 +347,8 @@ namespace pdp8 {
         selectResults.emplace_back(-1, ifd, ofd, false, false);
 
         for (int i = 0; i < managedTerminals.size(); ++i) {
-            auto tifd = managedTerminals[i].terminal->getReadFd();
-            auto tofd = managedTerminals[i].terminal->getWriteFd();
+            auto tifd = managedTerminals[i].getReadFd();
+            auto tofd = managedTerminals[i].getWriteFd();
             selectResults.emplace_back(i, tifd, tofd, false, false);
         }
 
