@@ -266,8 +266,8 @@ namespace pdp8 {
 
         assembler.pass2(binary, managedTerminals.back().out());
 
-        assembler.dumpSymbols(managedTerminals.back().terminal->out());
-        managedTerminals.back().terminal->out().flush();
+        assembler.dumpSymbols(managedTerminals.back().out());
+        managedTerminals.back().out().flush();
         auto startAddress = pdp8.readBinaryFormat(binary);
         printPanel();
     }
