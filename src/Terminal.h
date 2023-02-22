@@ -323,7 +323,19 @@ namespace pdp8 {
         }
     };
 
-    class TerminalManager : public std::vector<TelnetTerminal> {
+    /**
+     * @class TerminalManager
+     * @brief Manages a collection of TelnetTerminals.
+     * @details The list of active terminals is scanned for activity using select(2). Terminals that need service
+     * are have their selected(bool selectRead, selectWrite) method called. Terminals that have been disconnected
+     * are marked for removal from the list. Finally each unmarked terminal which has set a timerTick callback will
+     * be called on the timerTick method. This provides an opportunity for the terminal to do internal processing
+     * which should be kept to much less than the selectTimeout period. Any terminal which returns false will be
+     * marked for removal. Finally all terminals marked for removal are removed.
+     */
+    class TerminalManager : public std::vector<std::unique_ptr<TelnetTerminal>> {
+    public:
+
     protected:
 
         std::chrono::microseconds selectTimeout{1};
@@ -338,11 +350,41 @@ namespace pdp8 {
                     : listIndex(idx), readFd(read), writeFd(write), selectRead(readSel), selectWrite(writeSel) {}
         };
 
+        /**
+         * @brief Perform select(2) on all terminals file descriptors, waiting for the provided timeout.
+         * @param timeoutUs The wait timeout duration.
+         * @return A tuple with the time remaining from the timeout and a list of terminals which need service.
+         */
         std::tuple<std::chrono::microseconds, std::vector<SelectAllResult>>
         selectOnAll(std::chrono::microseconds timeoutUs);
 
     public:
+
+        /**
+         * @brief Service the list of terminals. This should be called regularly in the application event loop
+         * on the main thread. The method will consume at least selectTimeout microseconds which can be used to
+         * set the tempo of the program.
+         */
         void serviceTerminals();
+
+        /**
+         * @brief Find a managed terminal of the given type starting at first.
+         * @tparam Terminal The type of terminal to look for.
+         * @param first The location in the list to start searching.
+         * @return A tuple with the an iterator to the found terminal and an iterator to the next on the list.
+         * Either or both of these may be end().
+         */
+        template<class Terminal>
+                requires std::derived_from<Terminal, TelnetTerminal>
+        auto findTerminal(iterator first) {
+            auto found = std::find_if(first, end(), [](const iterator itr) {
+               return std::dynamic_pointer_cast<Terminal>(*itr);
+            });
+
+            if (found != end())
+                return std::make_tuple(found, found+1);
+            return std::make_tuple(found, end());
+        }
     };
 
 }
