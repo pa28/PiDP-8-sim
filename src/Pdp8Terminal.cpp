@@ -11,7 +11,7 @@
 
 namespace pdp8 {
 
-    void Pdp8Terminal::console() {
+    void Pdp8Terminal::initialize() {
         *ostrm << fmt::format("\033c"); ostrm->flush();
         *ostrm << fmt::format("\033[1;1H"); ostrm->flush();
         *ostrm << fmt::format("\033]0;PiDP-8/I Console\007");
@@ -20,49 +20,22 @@ namespace pdp8 {
 
         std::chrono::microseconds selectTimeout(10000);
         std::this_thread::sleep_for(selectTimeout);
+
         parseInput();
         commandHelp();
         inputBufferChanged();
+        initialized = true;
+    }
 
-        while (runConsole) {
-            setCursorPosition();
-            auto[timeoutRemainder, selectResults] = selectOnAll(selectTimeout);
-            for (auto const &selectResult: selectResults) {
-                if (selectResult.listIndex < 0) {
-                    if (selectResult.selectRead || selectResult.selectWrite) {
-                        selected(selectResult.selectRead, selectResult.selectWrite);
-                    }
-                } else {
-                    if (selectResult.selectRead) {
-                        if (selectResult.selectRead || selectResult.selectWrite) {
-                            auto c = managedTerminals[selectResult.listIndex].
-                                    selected(selectResult.selectRead, selectResult.selectWrite);
-                            if (c == EOF) {
-                                managedTerminals[selectResult.listIndex].disconnected = true;
-                            }
-                        }
-                    }
-                }
-            }
+    void Pdp8Terminal::console() {
+        if (!initialized)
+            initialize();
 
-            auto removeCount = std::count_if(managedTerminals.begin(), managedTerminals.end(),
-                                             [](const TelnetTerminal &t) {
-                                                 return t.disconnected;
-                                             });
+        setCursorPosition();
 
-            if (removeCount) {
-                managedTerminals.erase(std::remove_if(managedTerminals.begin(), managedTerminals.end(),
-                                                      [](const TelnetTerminal &t) {
-                                                          return t.disconnected;
-                                                      }), managedTerminals.end());
-            }
-
-            if (pdp8.run_flag) {
-                pdp8.instructionStep();
-                printPanel();
-            }
-
-            std::this_thread::sleep_for(timeoutRemainder);
+        if (pdp8.run_flag) {
+            pdp8.instructionStep();
+            printPanel();
         }
     }
 
@@ -328,53 +301,5 @@ namespace pdp8 {
             commandHistory.push_back(fmt::format("Error: argument out of range: {}", argument));
         }
         return std::nullopt;
-    }
-
-    std::tuple<std::chrono::microseconds, std::vector<Pdp8Terminal::SelectAllResult>>
-    Pdp8Terminal::selectOnAll(std::chrono::microseconds timeoutUs) {
-
-        fd_set readFds, writeFds, exceptFds;
-        FD_ZERO(&readFds);
-        FD_ZERO(&writeFds);
-        FD_ZERO(&exceptFds);
-        struct timeval timeout{};
-
-        timeout.tv_sec = 0;
-        timeout.tv_usec = timeoutUs.count();
-
-        std::vector<SelectAllResult> selectResults{};
-
-        selectResults.emplace_back(-1, ifd, ofd, false, false);
-
-        for (int i = 0; i < managedTerminals.size(); ++i) {
-            auto tifd = managedTerminals[i].getReadFd();
-            auto tofd = managedTerminals[i].getWriteFd();
-            selectResults.emplace_back(i, tifd, tofd, false, false);
-        }
-
-        for (auto const &selectResult: selectResults) {
-            if (selectResult.readFd >= 0) {
-                FD_SET(selectResult.readFd, &readFds);
-            }
-
-            if (selectResult.writeFd >= 0) {
-                FD_SET(selectResult.writeFd, &writeFds);
-            }
-        }
-
-        if (auto stat = ::select(FD_SETSIZE, &readFds, &writeFds, &exceptFds, &timeout); stat == -1) {
-            throw TerminalConnectionException("Call to select failed.");
-        } else if (stat > 0) {
-            for (auto &selectResult: selectResults) {
-                if (FD_ISSET(selectResult.readFd, &readFds))
-                    selectResult.selectRead = true;
-                if (FD_ISSET(selectResult.writeFd, &writeFds))
-                    selectResult.selectWrite = true;
-            }
-        }
-
-        std::chrono::microseconds timeoutRemainder{timeout.tv_usec};
-
-        return {timeoutRemainder, selectResults};
     }
 }
