@@ -54,16 +54,16 @@ namespace pdp8 {
 
         CycleState cycle_state{CycleState::Fetch};
 
-        std::atomic_bool idle_flag{false};
-        std::atomic_bool interrupt_enable{false};
-        std::atomic_bool interrupt_request{false};
-        std::atomic_bool error_flag{false};
-        std::atomic_bool interrupt_deferred{false};
-        std::atomic_int interrupt_delayed{0};
-        std::atomic_bool short_jmp_flag{false};
-        std::atomic_bool halt_flag{false};
-        std::atomic_bool run_flag{false};
-        std::atomic_bool greater_than_flag{false};
+        bool idle_flag{false};
+        bool interrupt_enable{false};
+        bool interrupt_request{false};
+        bool error_flag{false};
+        bool interrupt_deferred{false};
+        int interrupt_delayed{0};
+        bool short_jmp_flag{false};
+        bool halt_flag{false};
+        bool run_flag{false};
+        bool greater_than_flag{false};
 
         small_register_t switch_register{0};
 
@@ -74,6 +74,11 @@ namespace pdp8 {
             memory.fieldRegister.setInstField(0);
             memory.fieldRegister.setInstBuffer(0);
         }
+
+        PDP8(const PDP8&) = delete;
+        PDP8(PDP8&&) = default;
+        PDP8& operator = (const PDP8&) = delete;
+        PDP8& operator = (PDP8&&) = default;
 
         Memory memory{};
         InstructionReg instructionReg{};
