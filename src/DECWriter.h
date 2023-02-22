@@ -19,13 +19,17 @@
 #define PDP8_DECWRITER_H
 
 #include <IOTDevice.h>
-#include <Pdp8Terminal.h>
+#include <Terminal.h>
 
 namespace pdp8 {
 
-/**
- * @class DECWriter
- */
+    class DECWriterTerminal : public TelnetTerminal {
+
+    };
+
+    /**
+     * @class DECWriter
+     */
     class DECWriter : public IOTDevice {
     public:
         std::shared_ptr<Terminal> terminal{};
