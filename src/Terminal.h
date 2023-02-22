@@ -326,7 +326,7 @@ namespace pdp8 {
     class TerminalManager : public std::vector<TelnetTerminal> {
     protected:
 
-        std::chrono::microseconds selectTimeout{10000};
+        std::chrono::microseconds selectTimeout{1};
         struct SelectAllResult {
             int listIndex{-1};
             int readFd{-1}, writeFd{-1};
