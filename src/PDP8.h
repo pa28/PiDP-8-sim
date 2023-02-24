@@ -25,6 +25,7 @@
 #include <Accumulator.h>
 #include <atomic>
 #include <IOTDevice.h>
+#include <Terminal.h>
 #include <map>
 
 namespace pdp8 {
@@ -86,6 +87,7 @@ namespace pdp8 {
         MulQuotient mulQuotient{};
         OperatorSwitchRegister opSxReg{};
         StepCounter stepCounter{};
+        TerminalManager terminalManager{};
 
         std::map<unsigned int, std::shared_ptr<IOTDevice>> iotDevices{};
 

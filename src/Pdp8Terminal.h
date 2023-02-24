@@ -22,7 +22,7 @@ namespace pdp8 {
     class Pdp8Terminal : public TelnetTerminal {
     public:
 
-        PDP8 pdp8{};
+        PDP8 &pdp8;
 
         pdp8asm::Assembler assembler{};
 
@@ -98,15 +98,15 @@ namespace pdp8 {
         void loadSourceStream(std::istream &sourceCode, const std::string &title);
 
     public:
-        Pdp8Terminal() = default;
+//        Pdp8Terminal() = default;
         Pdp8Terminal(const Pdp8Terminal&) = delete;
         Pdp8Terminal(Pdp8Terminal&&) = default;
         Pdp8Terminal& operator=(const Pdp8Terminal&) = delete;
-        Pdp8Terminal& operator=(Pdp8Terminal&&) = default;
+//        Pdp8Terminal& operator=(Pdp8Terminal&&) = default;
 
         ~Pdp8Terminal() override = default;
 
-        explicit Pdp8Terminal(TerminalSocket &connection) : TelnetTerminal(connection) {
+        explicit Pdp8Terminal(PDP8& pdp8, TerminalSocket &connection) : pdp8(pdp8), TelnetTerminal(connection) {
             timerTick = [this]() -> bool {
                 console();
                 return runConsole;
