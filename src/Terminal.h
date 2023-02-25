@@ -78,32 +78,32 @@ namespace pdp8 {
     class TerminalConnection {
         friend class Terminal;
 
-    protected:
-        pid_t childPid{-1};         ///< The terminal process pid.
-        int terminalFd{-1};         ///< The terminal file descriptor. Closed on destruction if open.
+    public:
+        std::unique_ptr<pid_t> childPid{};         ///< The terminal process pid.
+        std::unique_ptr<int> terminalFd{};         ///< The terminal file descriptor. Closed on destruction if open.
+        std::unique_ptr<int> outFd{};              ///< The output file descriptor.
+        std::unique_ptr<int> inFd{};               ///< The input file descriptor.
 
-        std::unique_ptr<stdio_filebuf> iBuffer{};
-        std::unique_ptr<stdio_filebuf> oBuffer{};
+        std::unique_ptr<stdio_filebuf> iStrmBuf{};
+        std::unique_ptr<stdio_filebuf> oStrmBuf{};
 
     public:
         TerminalConnection() = default;
         TerminalConnection(const TerminalConnection&) = delete;
-        TerminalConnection(TerminalConnection&&) = default;
+        TerminalConnection(TerminalConnection&& other) = default;
+
         TerminalConnection& operator=(const TerminalConnection&) = delete;
         TerminalConnection& operator=(TerminalConnection&&) = default;
 
         virtual ~TerminalConnection() {
-            if (terminalFd >= 0)
-                close(terminalFd);
-        }
+            if (terminalFd && *terminalFd >= 0)
+                close(*terminalFd);
 
-        /**
-         * @brief Write a string to the output file descriptor.
-         * @param buf
-         * @return
-         */
-        size_t write(const char *buf) const {
-            return ::write(terminalFd, buf, strlen(buf));
+            if (outFd && *outFd >= 0)
+                close(*outFd);
+
+            if (inFd && *inFd >= 0)
+                close(*inFd);
         }
     };
 
@@ -114,10 +114,10 @@ namespace pdp8 {
      */
     class TerminalSocket : public TerminalConnection {
     protected:
-        struct sockaddr_in sock_address{};      ///< Address of the this program
-        struct sockaddr_in client_address{};    ///< Address of the telnet client
-        socklen_t client_addr_len{};            ///< Client address structure size.
-        int socket{-1};                         ///< The listen socket file descriptor
+        std::unique_ptr<struct sockaddr_in> sock_address{};      ///< Address of the this program
+        std::unique_ptr<struct sockaddr_in> client_address{};    ///< Address of the telnet client
+        std::unique_ptr<socklen_t> client_addr_len{};            ///< Client address structure size.
+        std::unique_ptr<int> socket{};                           ///< The listen socket file descriptor
 
     public:
 
@@ -132,9 +132,8 @@ namespace pdp8 {
          */
         ~TerminalSocket() override {
             int waitStatus;
-            if (terminalFd >= 0)
-                close(terminalFd);
-            terminalFd = -1;
+            if (terminalFd && *terminalFd >= 0)
+                close(*terminalFd);
         }
 
         /**
@@ -144,6 +143,7 @@ namespace pdp8 {
 
         void openServer(int listenPort);
     };
+#if 0
 
     /**
      * @class Terminal
@@ -156,7 +156,6 @@ namespace pdp8 {
         };
 
     protected:
-        NullStreamBuffer nullStreamBuffer{};   ///< Null buffer for unused streams
         std::unique_ptr<std::ostream> ostrm;                    ///< Output stream
         std::unique_ptr<std::istream> istrm;                    ///< Input stream
 
@@ -170,34 +169,20 @@ namespace pdp8 {
          * @details Both streams have null buffers. An object constructed with this won't communicate
          * anything.
          */
-        Terminal() : ostrm(std::make_unique<std::ostream>(&nullStreamBuffer)),
-                        istrm(std::make_unique<std::istream>(&nullStreamBuffer)) {}
+        Terminal() = default;
         Terminal(const Terminal&) = delete;
         Terminal(Terminal&&) = default;
         Terminal& operator=(const Terminal&) = delete;
         Terminal& operator=(Terminal&&) = default;
 
-        ~Terminal() = default;
+        virtual ~Terminal() = default;
+
+        Terminal(std::stdio_filebuf *outbuff)
 
         [[nodiscard]] auto getReadFd() const { return ifd; }
         [[nodiscard]] auto getWriteFd() const { return ofd; }
 
         virtual int selected(bool selectedRead, bool selectedWrite);
-
-        /**
-         * @brief Construct an outbound only connection using a provided stream buffer.
-         * @param outbuff The output stream buffer.
-         */
-        explicit Terminal(stdio_filebuf *outbuff)
-            : ostrm(std::make_unique<std::ostream>(outbuff)), istrm(std::make_unique<std::istream>(&nullStreamBuffer)) {}
-
-        /**
-         * @brief Construct a bi-directional connection using provided in and out stream buffers.
-         * @param inBuff The input buffer.
-         * @param outBuff The output buffer
-         */
-        Terminal(stdio_filebuf *inBuff, stdio_filebuf *outBuff)
-            : ostrm(std::make_unique<std::ostream>(outBuff)), istrm(std::make_unique<std::istream>(inBuff)) {}
 
         /**
          * @brief Construct a bi-directional connection using buffers provided by a TerminalConnection
@@ -215,8 +200,28 @@ namespace pdp8 {
             ofd = terminalConnection->terminalFd;
         }
 
+        /**
+         * @brief Test if the output stream exists.
+         * @return True if it exists
+         */
+        [[nodiscard]] bool outExists() const { return ostrm.operator bool(); }
+
+        /**
+         * @brief Test if the input stream exists.
+         * @return True if it exists
+         */
+        [[nodiscard]] bool inExists() const { return istrm.operator bool(); }
+
+        /**
+         * @brief Access the output stream.
+         * @return A std::ostream&
+         */
         std::ostream &out() { return *ostrm; }   ///< Get the out stream
 
+        /**
+         * @brief Access the input stream.
+         * @return A std::istream&
+         */
         std::istream &in() { return *istrm; }    ///< Get the in stream
 
         /**
@@ -275,7 +280,7 @@ namespace pdp8 {
         TelnetTerminal& operator=(const TelnetTerminal&) = delete;
         TelnetTerminal& operator=(TelnetTerminal&&) = default;
 
-        virtual ~TelnetTerminal() = default;
+        ~TelnetTerminal() override = default;
 
         explicit TelnetTerminal(TerminalConnection &connection) : Terminal(connection) {}
 
@@ -323,6 +328,12 @@ namespace pdp8 {
         }
     };
 
+    template<class TerminalType, class ConnectionType>
+        requires (std::derived_from<TelnetTerminal, TerminalType> && std::derived_from<)
+    std::shared_ptr<TerminalType> terminalFactory(ConnectionType connection) {
+
+    }
+
     /**
      * @class TerminalManager
      * @brief Manages a collection of TelnetTerminals.
@@ -333,7 +344,7 @@ namespace pdp8 {
      * which should be kept to much less than the selectTimeout period. Any terminal which returns false will be
      * marked for removal. Finally all terminals marked for removal are removed.
      */
-    class TerminalManager : public std::vector<std::unique_ptr<TelnetTerminal>> {
+    class TerminalManager : public std::vector<std::shared_ptr<TelnetTerminal>> {
     public:
 
     protected:
@@ -377,15 +388,13 @@ namespace pdp8 {
         template<class Terminal>
                 requires std::derived_from<Terminal, TelnetTerminal>
         auto findTerminal(iterator first) {
-            auto found = std::find_if(first, end(), [](const iterator itr) {
-               return std::dynamic_pointer_cast<Terminal>(*itr);
-            });
-
-            if (found != end())
-                return std::make_tuple(found, found+1);
-            return std::make_tuple(found, end());
+            for (auto found = first; found != end(); ++found) {
+                if( auto ptr = std::dynamic_pointer_cast<Terminal>(*found); ptr)
+                    return std::make_tuple(found, found+1);
+            }
+            return std::make_tuple(end(), end());
         }
     };
-
+#endif
 }
 

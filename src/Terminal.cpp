@@ -14,37 +14,37 @@
 namespace pdp8 {
 //    NullStreamBuffer Terminal::nullStreamBuffer;
 
-
     void TerminalSocket::open() {
-        if ((socket = ::socket(AF_INET, SOCK_STREAM, 0)) == -1)
+        if (socket = std::make_unique<int>(::socket(AF_INET, SOCK_STREAM, 0)); *socket == -1)
             throw TerminalConnectionException("socket failed.");
 
         int options = 1;
-        if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &options, sizeof(options)))
+        if (setsockopt(*socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &options, sizeof(options)))
             throw TerminalConnectionException("setsockopt failed.");
 
-        sock_address.sin_family = AF_INET;
-        sock_address.sin_addr.s_addr = inet_addr("127.0.0.1");
-        sock_address.sin_port = htons(0);
+        sock_address = std::make_unique<struct sockaddr_in>();
+        sock_address->sin_family = AF_INET;
+        sock_address->sin_addr.s_addr = inet_addr("127.0.0.1");
+        sock_address->sin_port = htons(0);
 
-        if (bind(socket, (struct sockaddr *) &sock_address, sizeof(sock_address)) == -1) {
+        if (bind(*socket, (struct sockaddr *)sock_address.get(), sizeof(*sock_address)) == -1) {
             perror("bind");
             throw TerminalConnectionException("bind failed.");
         }
 
-        if (listen(socket, 1) == -1)
+        if (listen(*socket, 1) == -1)
             throw TerminalConnectionException("listen failed.");
 
         socklen_t len = sizeof(sock_address);
-        getsockname(socket, (struct sockaddr *) &sock_address, &len);
-        auto port = ntohs(sock_address.sin_port);
+        getsockname(*socket, (struct sockaddr *) sock_address.get(), &len);
+        auto port = ntohs(sock_address->sin_port);
 
-        childPid = fork();
-        if (childPid == -1) {
+        childPid = std::make_unique<int>(fork());
+        if (*childPid == -1) {
             throw TerminalConnectionException("Failed to fork terminal process.");
         }
 
-        if (childPid == 0) {
+        if (*childPid == 0) {
             char *argv[4];
             asprintf(argv+0, "mate-terminal");
             asprintf(argv+1, "-e");
@@ -57,47 +57,51 @@ namespace pdp8 {
             execvp(argv[0], argv);
             throw TerminalConnectionException("Failed to exec terminal program.");
         } else {
-            if ((terminalFd = accept(socket, (struct sockaddr *) &client_address, (socklen_t *) &client_addr_len)) ==
+            client_address = std::make_unique<struct sockaddr_in>();
+            client_addr_len = std::make_unique<socklen_t>();
+            terminalFd = std::make_unique<int>();
+            if ((*terminalFd = accept(*socket, (struct sockaddr *) client_address.get(), (socklen_t *)client_addr_len.get())) ==
                 -1)
                 throw TerminalConnectionException("accept failed.");
 
-            iBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::in);
-            oBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::out);
+            iStrmBuf = std::make_unique<stdio_filebuf>(*terminalFd, std::ios::in);
+            oStrmBuf = std::make_unique<stdio_filebuf>(*terminalFd, std::ios::out);
         }
     }
 
     void TerminalSocket::openServer(int listenPort) {
-        if ((socket = ::socket(AF_INET, SOCK_STREAM, 0)) == -1)
+        if ((*socket = ::socket(AF_INET, SOCK_STREAM, 0)) == -1)
             throw TerminalConnectionException("socket failed.");
 
         int options = 1;
-        if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &options, sizeof(options)))
+        if (setsockopt(*socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &options, sizeof(options)))
             throw TerminalConnectionException("setsockopt failed.");
 
-        sock_address.sin_family = AF_INET;
-        sock_address.sin_addr.s_addr = inet_addr("127.0.0.1");
-        sock_address.sin_port = htons(listenPort);
+        sock_address->sin_family = AF_INET;
+        sock_address->sin_addr.s_addr = inet_addr("127.0.0.1");
+        sock_address->sin_port = htons(listenPort);
 
-        if (bind(socket, (struct sockaddr *) &sock_address, sizeof(sock_address)) == -1) {
+        if (bind(*socket, (struct sockaddr *) &sock_address, sizeof(sock_address)) == -1) {
             perror("bind");
             throw TerminalConnectionException("bind failed.");
         }
 
-        if (listen(socket, 1) == -1)
+        if (listen(*socket, 1) == -1)
             throw TerminalConnectionException("listen failed.");
 
         socklen_t len = sizeof(sock_address);
-        getsockname(socket, (struct sockaddr *) &sock_address, &len);
-        auto port = ntohs(sock_address.sin_port);
+        getsockname(*socket, (struct sockaddr *) sock_address.get(), &len);
+        auto port = ntohs(sock_address->sin_port);
 
-        if ((terminalFd = accept(socket, (struct sockaddr *) &client_address, (socklen_t *) &client_addr_len)) ==
+        if ((*terminalFd = accept(*socket, (struct sockaddr *) &client_address, (socklen_t *) &client_addr_len)) ==
             -1)
             throw TerminalConnectionException("accept failed.");
 
-        iBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::in);
-        oBuffer = std::make_unique<stdio_filebuf>(terminalFd, std::ios::out);
+        iStrmBuf = std::make_unique<stdio_filebuf>(*terminalFd, std::ios::in);
+        oStrmBuf = std::make_unique<stdio_filebuf>(*terminalFd, std::ios::out);
     }
 
+#if 0
     std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
     Terminal::select(bool selRead, bool selWrite, unsigned int timeoutUs) {
         SelectStatus readSelect = Timeout, writeSelect = Timeout;
@@ -248,22 +252,22 @@ namespace pdp8 {
             if (selectResult.selectRead) {
                 if (selectResult.selectRead || selectResult.selectWrite) {
                     auto c = at(selectResult.listIndex)->
-                            selected(selectResult.selectRead, selectResult.selectWrite);
+                            telnetTerminal->selected(selectResult.selectRead, selectResult.selectWrite);
                     if (c == EOF) {
-                        at(selectResult.listIndex)->disconnected = true;
+                        at(selectResult.listIndex)->telnetTerminal->disconnected = true;
                     }
                 }
             }
         }
 
         for (auto &term : *this) {
-            if (!term->disconnected && term->timerTick)
-                term->disconnected = !term->timerTick();
+            if (!term->telnetTerminal->disconnected && term->telnetTerminal->timerTick)
+                term->telnetTerminal->disconnected = !term->telnetTerminal->timerTick();
         }
 
         erase(std::remove_if(begin(), end(),
-                          [](const std::unique_ptr<TelnetTerminal> &t) {
-                              return t->disconnected;
+                          [](const std::shared_ptr<PopupTerminal> &t) {
+                              return t->telnetTerminal->disconnected;
                           }), end());
 
         std::this_thread::sleep_for(timeoutRemainder);
@@ -284,8 +288,8 @@ namespace pdp8 {
         std::vector<SelectAllResult> selectResults{};
 
         for (int i = 0; i < size(); ++i) {
-            auto tifd = at(i)->getReadFd();
-            auto tofd = at(i)->getWriteFd();
+            auto tifd = at(i)->telnetTerminal->getReadFd();
+            auto tofd = at(i)->telnetTerminal->getWriteFd();
             selectResults.emplace_back(i, tifd, tofd, false, false);
         }
 
@@ -314,4 +318,5 @@ namespace pdp8 {
 
         return {timeoutRemainder, selectResults};
     }
+#endif
 }

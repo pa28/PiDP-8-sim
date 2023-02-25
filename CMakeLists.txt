@@ -9,7 +9,7 @@ file(GLOB TEST_SRC tests/libs/*.cpp)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(PDP8 main.cpp ${SOURCE} ${LIB_FMT})
+add_executable(PDP8 main.cpp src/Terminal.cpp) #${SOURCE} ${LIB_FMT})
 
 add_executable(TestOprInst tests/TestOprInst.cpp ${TEST_SRC} ${SOURCE} ${LIB_FMT})
 
