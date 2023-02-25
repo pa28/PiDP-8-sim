@@ -11,7 +11,22 @@
 
 namespace pdp8asm {
 
-    static constexpr std::string_view PingPong = R"(/ Simple Ping-Pong Assembler
+    static constexpr std::string_view DecWriter =
+            R"(
+                OCTAL
+*177
+Prompt,         041
+                TAD Prompt
+Print,          TLS
+Loop,           KSF
+                JMP Loop
+                KRB
+                JMP Print
+*200
+)";
+
+    static constexpr std::string_view PingPong =
+            R"(/ Simple Ping-Pong Assembler
                 OCTAL
 *0174
 CycleCount,     0-2                     / 0 - Number of times to cycle before halting

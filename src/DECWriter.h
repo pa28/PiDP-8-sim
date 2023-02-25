@@ -20,11 +20,28 @@
 
 #include <IOTDevice.h>
 #include <Terminal.h>
+#include <functional>
 
 namespace pdp8 {
 
     class DECWriterTerminal : public TelnetTerminal {
+        friend class DECWriter;
 
+    protected:
+        std::function<void()> inputWaiting{};
+
+    public:
+        DECWriterTerminal() : TelnetTerminal() {}
+        DECWriterTerminal(const DECWriterTerminal&) = delete;
+        DECWriterTerminal(DECWriterTerminal&&) = default;
+        DECWriterTerminal& operator=(const DECWriterTerminal&) = delete;
+        DECWriterTerminal& operator=(DECWriterTerminal&&) = default;
+
+        explicit DECWriterTerminal(TerminalConnection &terminalConnection) : TelnetTerminal(terminalConnection) {
+        }
+
+        int selected(bool selectedRead, bool selectedWrite) override;
+        void inputBufferChanged() override;
     };
 
     /**
@@ -32,7 +49,8 @@ namespace pdp8 {
      */
     class DECWriter : public IOTDevice {
     public:
-        std::shared_ptr<Terminal> terminal{};
+        std::shared_ptr<PopupTerminal> terminal{};
+        TerminalSocket terminalSocket{};
 
         unsigned int keyboardDevice{3};
         unsigned int printerDevice{4};
@@ -56,7 +74,9 @@ namespace pdp8 {
 
         bool getInterruptRequest() override;
 
-        void performInputOutput();
+        void performInputOutput(PDP8 &pdp8);
+
+        void nextChar();
     };
 
 } // pdp8
