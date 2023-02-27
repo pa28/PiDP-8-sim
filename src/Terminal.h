@@ -301,7 +301,7 @@ namespace pdp8 {
             *oStrm << fmt::format("\033[{};{}H", inputLine, inputColumn);
         }
 
-        void parseInput();
+        void parseInput(bool charModeProcessing = false);
 
         void parseIacBuffer(const std::vector<int>& buffer);
 
@@ -333,8 +333,10 @@ namespace pdp8 {
      */
     class TerminalManager : public std::vector<std::shared_ptr<TelnetTerminal>> {
     public:
+        std::shared_ptr<TelnetTerminal> terminalQueue{};
 
     protected:
+        bool service{true};
 
         std::chrono::microseconds selectTimeout{10000};
         struct SelectAllResult {
@@ -360,6 +362,9 @@ namespace pdp8 {
         selectOnAll(std::chrono::microseconds timeoutUs);
 
     public:
+        void closeAll() {
+            service = false;
+        }
 
         /**
          * @brief Service the list of terminals. This should be called regularly in the application event loop

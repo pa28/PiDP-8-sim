@@ -65,6 +65,7 @@ namespace pdp8 {
         lastCommand.clear();
         if (!command.empty()) {
             if (command == "quit") {
+                pdp8.terminalManager.closeAll();
                 runConsole = false;
                 return;
             } else if (command == "PING PONG") {

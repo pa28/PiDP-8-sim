@@ -249,6 +249,16 @@ namespace pdp8 {
     }
 
     void TerminalManager::serviceTerminals() {
+        if (!service) {
+            for (auto &term : *this) {
+                if (term->disconnectCallback) {
+                    term->disconnectCallback();
+                }
+            }
+            clear();
+            return;
+        }
+
         std::this_thread::sleep_for(selectTimeout);
 
         if (terminalQueue) {
@@ -272,8 +282,9 @@ namespace pdp8 {
         }
 
         for (auto &term : *this) {
-            if (!term->disconnected && term->timerTick)
+            if (!term->disconnected && term->timerTick) {
                 term->disconnected = !term->timerTick();
+            }
         }
 
         erase(std::remove_if(begin(), end(),
@@ -329,5 +340,6 @@ namespace pdp8 {
 
         return {timeoutRemainder, selectResults};
     }
+
 #endif
 }
