@@ -154,7 +154,7 @@ namespace pdp8 {
         out().put(static_cast<char>(IAC)).put(static_cast<char>(DO)).put(NAWS).flush();
     }
 
-    void TelnetTerminal::parseInput() {
+    void TelnetTerminal::parseInput(bool charModeProcessing) {
         enum ActionState { NONE, OFF, ON, BUFFER };
         // 0377 0375 0001 0377 0375 0003 0377 0373 0037 0377 0372 0037 0000 0120 0000 0030 0377 0360
         ActionState actionState = NONE;
@@ -214,7 +214,7 @@ namespace pdp8 {
                         std::cout << fmt::format("Unhandled code 2 {}\n", c);
                         break;
                 }
-            } else if (std::isprint(c)) {
+            } else if (std::isprint(c) || charModeProcessing) {
                 inputLineBuffer.push_back(static_cast<char>(c));
                 inputBufferChanged();
             } else {

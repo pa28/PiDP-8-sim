@@ -116,6 +116,8 @@ namespace pdp8 {
 
         if (!printerFlag) {
             terminal->out().put(static_cast<char>(printerBuffer & 0xFF));
+            if (printerBuffer == '\r')
+                terminal->out().put('\n');
             terminal->out().flush();
             printerFlag = true;
         }
@@ -127,7 +129,7 @@ namespace pdp8 {
 
     int DECWriterTerminal::selected(bool selectedRead, bool selectedWrite) {
         if (selectedRead) {
-            parseInput();
+            parseInput(true);
             inputBufferChanged();
         }
         return 0;
