@@ -252,13 +252,16 @@ namespace pdp8 {
         std::this_thread::sleep_for(selectTimeout);
         auto[timeoutRemainder, selectResults] = selectOnAll(selectTimeout);
         for (auto const &selectResult: selectResults) {
+            bool disconnected{false};
             if (selectResult.selectRead) {
-                if (selectResult.selectRead || selectResult.selectWrite) {
-                    auto c = at(selectResult.listIndex)->selected(selectResult.selectRead, selectResult.selectWrite);
-                    if (c == EOF) {
-                        at(selectResult.listIndex)->disconnected = true;
-                    }
+                if (at(selectResult.listIndex)->connection->iStrmBuf->in_avail() == 0) {
+                    if (at(selectResult.listIndex)->disconnectCallback)
+                        at(selectResult.listIndex)->disconnectCallback();
+                    disconnected = at(selectResult.listIndex)->disconnected = true;
                 }
+            }
+            if (!disconnected && (selectResult.selectRead || selectResult.selectWrite)) {
+                auto c = at(selectResult.listIndex)->selected(selectResult.selectRead, selectResult.selectWrite);
             }
         }
 

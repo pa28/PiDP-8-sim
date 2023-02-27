@@ -253,6 +253,7 @@ namespace pdp8 {
         static constexpr int SUPPRESS_GO_AHEAD = 3;
 
         std::function<bool()> timerTick{};
+        std::function<void()> disconnectCallback{};
 
         bool disconnected{false};
 

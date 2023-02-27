@@ -100,6 +100,10 @@ namespace pdp8 {
                 nextChar();
             };
 
+            terminal->disconnectCallback = [this]() -> void {
+                terminal.reset();
+            };
+
             pdp8.terminalManager.push_back(terminal);
             terminal->setCharacterMode();
             terminal->negotiateAboutWindowSize();
