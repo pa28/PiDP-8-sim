@@ -175,7 +175,7 @@ namespace pdp8 {
         printPanelFlag(12u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::JMP);
         printPanelFlag(14u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::IOT);
         printPanelFlag(16u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::OPR);
-        *oStrm << fmt::format("  Managed terms: {:02}", managedTerminals.size());
+        *oStrm << fmt::format("  Managed terms: {:02}", pdp8.terminalManager.size());
 
         printPanelFlag(2u, 56u, pdp8.cycle_state == PDP8::CycleState::Fetch ||
                                 pdp8.cycle_state == PDP8::CycleState::Interrupt);
@@ -235,17 +235,18 @@ namespace pdp8 {
         assembler.pass1();
         std::stringstream binary;
 
-        managedTerminals.emplace_back();
+        auto terminal = std::make_shared<TelnetTerminal>();
+        pdp8.terminalManager.terminalQueue = terminal;
 
-        managedTerminals.back().out() << fmt::format("\033c");
-        managedTerminals.back().out() << fmt::format("\033[1;1H");
-        managedTerminals.back().out() << fmt::format("\033]0;PiDP-8/I Source Listing {}\007", title);
-        managedTerminals.back().out() << std::flush;
+        terminal->out() << fmt::format("\033c");
+        terminal->out() << fmt::format("\033[1;1H");
+        terminal->out() << fmt::format("\033]0;PiDP-8/I Source Listing {}\007", title);
+        terminal->out() << std::flush;
 
-        assembler.pass2(binary, managedTerminals.back().out());
+        assembler.pass2(binary, terminal->out());
 
-        assembler.dumpSymbols(managedTerminals.back().out());
-        managedTerminals.back().out().flush();
+        assembler.dumpSymbols(terminal->out());
+        terminal->out().flush();
         auto startAddress = pdp8.readBinaryFormat(binary);
         printPanel();
     }

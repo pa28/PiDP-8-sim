@@ -50,7 +50,7 @@ namespace pdp8 {
 
         std::vector<std::string> commandHistory{};
 
-        std::vector<TelnetTerminal> managedTerminals{};
+//        std::vector<TelnetTerminal> managedTerminals{};
 
         void printCommandHistory();
 

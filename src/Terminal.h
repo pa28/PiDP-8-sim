@@ -338,7 +338,7 @@ namespace pdp8 {
     protected:
         bool service{true};
 
-        std::chrono::microseconds selectTimeout{10000};
+        std::chrono::microseconds selectTimeout{1000};
         struct SelectAllResult {
             int listIndex{-1};
             int readFd{-1}, writeFd{-1};
