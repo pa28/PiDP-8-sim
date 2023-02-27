@@ -95,14 +95,16 @@ namespace pdp8 {
 
         void loadForth();
 
+        void decWriter();
+
         void loadSourceStream(std::istream &sourceCode, const std::string &title);
 
     public:
-//        Pdp8Terminal() = default;
+        Pdp8Terminal() = delete;
         Pdp8Terminal(const Pdp8Terminal&) = delete;
         Pdp8Terminal(Pdp8Terminal&&) = default;
         Pdp8Terminal& operator=(const Pdp8Terminal&) = delete;
-//        Pdp8Terminal& operator=(Pdp8Terminal&&) = default;
+        Pdp8Terminal& operator=(Pdp8Terminal&&) = delete;
 
         ~Pdp8Terminal() override = default;
 

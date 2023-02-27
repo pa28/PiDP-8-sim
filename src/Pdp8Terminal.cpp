@@ -79,6 +79,10 @@ namespace pdp8 {
                 pdp8.rimLoader();
                 printPanel();
                 return;
+            } else if (command == "DECW") {
+                decWriter();
+                commandHistory.emplace_back("Load DECWriter");
+                return;
             }
 
             switch (command.front()) {
@@ -257,6 +261,11 @@ namespace pdp8 {
         loadSourceStream(sourceCode, "Fourth");
     }
 
+    void Pdp8Terminal::decWriter() {
+        assembler.clear();
+        std::stringstream sourceCode(std::string{pdp8asm::DecWriter});
+        loadSourceStream(sourceCode, "DECWriter");
+    }
 
     void Pdp8Terminal::printCommandHistory() {
         if (commandHistory.empty())
