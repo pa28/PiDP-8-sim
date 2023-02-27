@@ -37,9 +37,6 @@ namespace pdp8 {
         DECWriterTerminal& operator=(const DECWriterTerminal&) = delete;
         DECWriterTerminal& operator=(DECWriterTerminal&&) = default;
 
-        explicit DECWriterTerminal(TerminalConnection &terminalConnection) : TelnetTerminal(terminalConnection) {
-        }
-
         int selected(bool selectedRead, bool selectedWrite) override;
         void inputBufferChanged() override;
     };
@@ -49,7 +46,7 @@ namespace pdp8 {
      */
     class DECWriter : public IOTDevice {
     public:
-        std::shared_ptr<PopupTerminal> terminal{};
+        std::shared_ptr<DECWriterTerminal> terminal{};
         TerminalSocket terminalSocket{};
 
         unsigned int keyboardDevice{3};

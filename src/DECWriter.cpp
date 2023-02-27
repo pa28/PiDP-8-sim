@@ -93,16 +93,13 @@ namespace pdp8 {
         }
     }
 
-
     void DECWriter::performInputOutput(PDP8 &pdp8) {
 //        std::chrono::microseconds delay{100000};
         if (!terminal) {
-            terminal = std::make_shared<PopupTerminal>();
-            terminal->telnetTerminal = std::make_unique<DECWriterTerminal>(terminal->terminalSocket);
+            terminal = std::make_shared<DECWriterTerminal>();
             terminal->inputWaiting = [this]() -> void {
                 nextChar();
             };
-
 
             pdp8.terminalManager.push_back(terminal);
             terminal->setCharacterMode();

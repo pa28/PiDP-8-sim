@@ -64,6 +64,9 @@ namespace pdp8 {
                 -1)
                 throw TerminalConnectionException("accept failed.");
 
+            outFd = std::make_unique<int>(*terminalFd);
+            inFd = std::make_unique<int>(*terminalFd);
+
             iStrmBuf = std::make_unique<stdio_filebuf>(*terminalFd, std::ios::in);
             oStrmBuf = std::make_unique<stdio_filebuf>(*terminalFd, std::ios::out);
         }
@@ -101,7 +104,7 @@ namespace pdp8 {
         oStrmBuf = std::make_unique<stdio_filebuf>(*terminalFd, std::ios::out);
     }
 
-#if 0
+#if 1
     std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
     Terminal::select(bool selRead, bool selWrite, unsigned int timeoutUs) {
         SelectStatus readSelect = Timeout, writeSelect = Timeout;
@@ -116,19 +119,19 @@ namespace pdp8 {
         timeout.tv_usec = timeoutUs;
 
         if (selRead)
-            FD_SET(ifd, &readFds);
+            FD_SET(*connection->inFd, &readFds);
         if (selWrite)
-            FD_SET(ofd, &writeFds);
+            FD_SET(*connection->outFd, &writeFds);
 
-        auto nfds = std::max(ifd,ofd) + 1;
+        auto nfds = std::max(*connection->inFd,*connection->outFd) + 1;
 
         if (auto stat = ::select(nfds, &readFds, &writeFds, &exceptFds, &timeout); stat == -1) {
             throw TerminalConnectionException("Call to select failed.");
         } else if (stat > 0) {
-            if (FD_ISSET(ifd, &readFds))
+            if (FD_ISSET(*connection->inFd, &readFds))
                 readSelect = Data;
 
-            if (FD_ISSET(ofd, &writeFds))
+            if (FD_ISSET(*connection->outFd, &writeFds))
                 writeSelect = Data;
         }
 
@@ -137,7 +140,7 @@ namespace pdp8 {
 
     int Terminal::selected(bool selectedRead, bool selectedWrite) {
         if (selectedRead) {
-            return istrm->get();
+            return iStrm->get();
         }
         return 0;
     }
@@ -155,7 +158,7 @@ namespace pdp8 {
         enum ActionState { NONE, OFF, ON, BUFFER };
         // 0377 0375 0001 0377 0375 0003 0377 0373 0037 0377 0372 0037 0000 0120 0000 0030 0377 0360
         ActionState actionState = NONE;
-        while (in().rdbuf()->in_avail() && in()) {
+        while (iStrm->rdbuf()->in_avail() && in()) {
             // Process IAC communications
             auto c = in().get();
             if (c == IAC) {
@@ -251,23 +254,22 @@ namespace pdp8 {
         for (auto const &selectResult: selectResults) {
             if (selectResult.selectRead) {
                 if (selectResult.selectRead || selectResult.selectWrite) {
-                    auto c = at(selectResult.listIndex)->
-                            telnetTerminal->selected(selectResult.selectRead, selectResult.selectWrite);
+                    auto c = at(selectResult.listIndex)->selected(selectResult.selectRead, selectResult.selectWrite);
                     if (c == EOF) {
-                        at(selectResult.listIndex)->telnetTerminal->disconnected = true;
+                        at(selectResult.listIndex)->disconnected = true;
                     }
                 }
             }
         }
 
         for (auto &term : *this) {
-            if (!term->telnetTerminal->disconnected && term->telnetTerminal->timerTick)
-                term->telnetTerminal->disconnected = !term->telnetTerminal->timerTick();
+            if (!term->disconnected && term->timerTick)
+                term->disconnected = !term->timerTick();
         }
 
         erase(std::remove_if(begin(), end(),
-                          [](const std::shared_ptr<PopupTerminal> &t) {
-                              return t->telnetTerminal->disconnected;
+                          [](const std::shared_ptr<TelnetTerminal> &t) {
+                              return t->disconnected;
                           }), end());
 
         std::this_thread::sleep_for(timeoutRemainder);
@@ -288,9 +290,9 @@ namespace pdp8 {
         std::vector<SelectAllResult> selectResults{};
 
         for (int i = 0; i < size(); ++i) {
-            auto tifd = at(i)->telnetTerminal->getReadFd();
-            auto tofd = at(i)->telnetTerminal->getWriteFd();
-            selectResults.emplace_back(i, tifd, tofd, false, false);
+            auto readFd = at(i)->getReadFd();
+            auto writeFd = at(i)->getWriteFd();
+            selectResults.emplace_back(i, readFd, writeFd, false, false);
         }
 
         for (auto const &selectResult: selectResults) {

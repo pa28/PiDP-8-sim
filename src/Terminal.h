@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
+#include <utility>
 #include <vector>
 #include <chrono>
 #include <thread>
@@ -76,7 +77,6 @@ namespace pdp8 {
      * @brief TerminalConnection base class. This provides a standard interface to an open connection.
      */
     class TerminalConnection {
-        friend class Terminal;
 
     public:
         std::unique_ptr<pid_t> childPid{};         ///< The terminal process pid.
@@ -87,7 +87,6 @@ namespace pdp8 {
         std::unique_ptr<stdio_filebuf> iStrmBuf{};
         std::unique_ptr<stdio_filebuf> oStrmBuf{};
 
-    public:
         TerminalConnection() = default;
         TerminalConnection(const TerminalConnection&) = delete;
         TerminalConnection(TerminalConnection&& other) = default;
@@ -105,6 +104,8 @@ namespace pdp8 {
             if (inFd && *inFd >= 0)
                 close(*inFd);
         }
+
+        virtual void open() {}
     };
 
     /**
@@ -131,7 +132,6 @@ namespace pdp8 {
          * @brief Destructor, wait for the client to exit.
          */
         ~TerminalSocket() override {
-            int waitStatus;
             if (terminalFd && *terminalFd >= 0)
                 close(*terminalFd);
         }
@@ -139,11 +139,10 @@ namespace pdp8 {
         /**
          * @brief Open the connection, fork mate-terminal and run telnet to connect back to the listening port.
          */
-        void open();
+        void open() override;
 
         void openServer(int listenPort);
     };
-#if 0
 
     /**
      * @class Terminal
@@ -155,74 +154,69 @@ namespace pdp8 {
             Timeout, Data
         };
 
-    protected:
-        std::unique_ptr<std::ostream> ostrm;                    ///< Output stream
-        std::unique_ptr<std::istream> istrm;                    ///< Input stream
-
-        int ofd{-1};                           ///< File descriptor of the output stream
-        int ifd{-1};                           ///< File descriptor of the input stream
-
-    public:
+        std::shared_ptr<TerminalConnection> connection;
+        std::unique_ptr<std::ostream> oStrm;                    ///< Output stream
+        std::unique_ptr<std::istream> iStrm;                    ///< Input stream
 
         /**
          * @brief Default constructor
          * @details Both streams have null buffers. An object constructed with this won't communicate
          * anything.
          */
-        Terminal() = default;
+        Terminal() {
+            connection = std::make_shared<TerminalConnection>();
+            oStrm = std::make_unique<std::ostream>(connection->oStrmBuf.get());
+            iStrm = std::make_unique<std::istream>(connection->iStrmBuf.get());
+        }
+
+        explicit Terminal(std::shared_ptr<TerminalConnection> terminalConnection) {
+            connection = std::move(terminalConnection);
+        }
+
         Terminal(const Terminal&) = delete;
-        Terminal(Terminal&&) = default;
+        Terminal(Terminal&&)  noexcept = default;
         Terminal& operator=(const Terminal&) = delete;
         Terminal& operator=(Terminal&&) = default;
 
         virtual ~Terminal() = default;
 
-        Terminal(std::stdio_filebuf *outbuff)
+        [[nodiscard]] auto getReadFd() const { return *connection->inFd; }
+        [[nodiscard]] auto getWriteFd() const { return *connection->outFd; }
 
-        [[nodiscard]] auto getReadFd() const { return ifd; }
-        [[nodiscard]] auto getWriteFd() const { return ofd; }
+        void setReadFd(int fd) {
+            connection->inFd = std::make_unique<int>(fd);
+        }
+
+        void setWriteFd(int fd) {
+            connection->outFd = std::make_unique<int>(fd);
+        }
 
         virtual int selected(bool selectedRead, bool selectedWrite);
-
-        /**
-         * @brief Construct a bi-directional connection using buffers provided by a TerminalConnection
-         * @param terminalConnection The terminal connection
-         */
-        explicit Terminal(TerminalConnection &terminalConnection)
-                : Terminal(terminalConnection.iBuffer.get(), terminalConnection.oBuffer.get()) {
-            ifd = terminalConnection.terminalFd;
-            ofd = terminalConnection.terminalFd;
-        }
-
-        explicit Terminal(TerminalConnection* terminalConnection)
-                : Terminal(terminalConnection->iBuffer.get(), terminalConnection->oBuffer.get()) {
-            ifd = terminalConnection->terminalFd;
-            ofd = terminalConnection->terminalFd;
-        }
 
         /**
          * @brief Test if the output stream exists.
          * @return True if it exists
          */
-        [[nodiscard]] bool outExists() const { return ostrm.operator bool(); }
+        [[nodiscard]] bool outExists() const { return oStrm.operator bool(); }
 
         /**
          * @brief Test if the input stream exists.
          * @return True if it exists
          */
-        [[nodiscard]] bool inExists() const { return istrm.operator bool(); }
+        [[nodiscard]] bool inExists() const { return iStrm.operator bool(); }
 
         /**
          * @brief Access the output stream.
          * @return A std::ostream&
          */
-        std::ostream &out() { return *ostrm; }   ///< Get the out stream
+        std::ostream &out() {
+            return *oStrm; }   ///< Get the out stream
 
         /**
          * @brief Access the input stream.
          * @return A std::istream&
          */
-        std::istream &in() { return *istrm; }    ///< Get the in stream
+        std::istream &in() { return *iStrm; }    ///< Get the in stream
 
         /**
          * @brief Use the format library to format output to the out stream.
@@ -232,7 +226,7 @@ namespace pdp8 {
          */
         template<typename...Args>
         std::ostream &print(Args...args) {
-            return ostrm << fmt::format(std::forward<Args>(args)...);
+            return oStrm << fmt::format(std::forward<Args>(args)...);
         }
 
         std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
@@ -262,7 +256,6 @@ namespace pdp8 {
 
         bool disconnected{false};
 
-    protected:
         std::string inputLineBuffer{};              ///< Buffer to read input from the user
         unsigned int inputLine{1u};                 ///< The line the input buffer is on
         unsigned int inputColumn{1u};               ///< The Column the input cursor is at.
@@ -274,7 +267,11 @@ namespace pdp8 {
         bool suppressGoAhead{false};
 
     public:
-        TelnetTerminal() = default;
+        TelnetTerminal() : Terminal(std::dynamic_pointer_cast<TerminalConnection>(std::make_shared<TerminalSocket>())) {
+            connection->open();
+            oStrm = std::make_unique<std::ostream>(connection->oStrmBuf.get());
+            iStrm = std::make_unique<std::istream>(connection->iStrmBuf.get());
+        }
         TelnetTerminal(const TelnetTerminal&) = delete;
         TelnetTerminal(TelnetTerminal&&) = default;
         TelnetTerminal& operator=(const TelnetTerminal&) = delete;
@@ -282,11 +279,6 @@ namespace pdp8 {
 
         ~TelnetTerminal() override = default;
 
-        explicit TelnetTerminal(TerminalConnection &connection) : Terminal(connection) {}
-
-        explicit TelnetTerminal(TerminalConnection *connection) : Terminal(connection) {}
-
-    protected:
         void setCharacterMode();
 
         void negotiateAboutWindowSize();
@@ -301,11 +293,11 @@ namespace pdp8 {
         template<typename U1, typename U2>
         requires std::unsigned_integral<U1> && std::unsigned_integral<U2>
         void setCursorPosition(U1 line, U2 column) {
-            *ostrm << fmt::format("\033[{};{}H", line, column);
+            *oStrm << fmt::format("\033[{};{}H", line, column);
         }
 
         void setCursorPosition() {
-            *ostrm << fmt::format("\033[{};{}H", inputLine, inputColumn);
+            *oStrm << fmt::format("\033[{};{}H", inputLine, inputColumn);
         }
 
         void parseInput();
@@ -321,18 +313,12 @@ namespace pdp8 {
 
         virtual void inputBufferChanged() {
             setCursorPosition(inputLine, 1u);
-            (*ostrm) << fmt::format("\033[0K> {}", inputLineBuffer);
+            (*oStrm) << fmt::format("\033[0K> {}", inputLineBuffer);
             inputColumn = static_cast<unsigned int>(inputLineBuffer.size() + 3u);
             setCursorPosition();
             out().flush();
         }
     };
-
-    template<class TerminalType, class ConnectionType>
-        requires (std::derived_from<TelnetTerminal, TerminalType> && std::derived_from<)
-    std::shared_ptr<TerminalType> terminalFactory(ConnectionType connection) {
-
-    }
 
     /**
      * @class TerminalManager
@@ -395,6 +381,5 @@ namespace pdp8 {
             return std::make_tuple(end(), end());
         }
     };
-#endif
 }
 

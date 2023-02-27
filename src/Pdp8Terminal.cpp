@@ -7,14 +7,15 @@
 
 #include <chrono>
 #include <thread>
+#include <assembler/NullStream.h>
 #include "Pdp8Terminal.h"
 
 namespace pdp8 {
 
     void Pdp8Terminal::initialize() {
-        *ostrm << fmt::format("\033c"); ostrm->flush();
-        *ostrm << fmt::format("\033[1;1H"); ostrm->flush();
-        *ostrm << fmt::format("\033]0;PiDP-8/I Console\007");
+        *oStrm << fmt::format("\033c"); oStrm->flush();
+        *oStrm << fmt::format("\033[1;1H"); oStrm->flush();
+        *oStrm << fmt::format("\033]0;PiDP-8/I Console\007");
         setCharacterMode();
         negotiateAboutWindowSize();
 
@@ -148,7 +149,7 @@ namespace pdp8 {
 
     void Pdp8Terminal::printPanel() {
         using namespace TerminalConsts;
-        *ostrm << fmt::format("{}", color(Regular, Yellow));
+        *oStrm << fmt::format("{}", color(Regular, Yellow));
 
         size_t margin = 1;
         size_t line = 3, column = 2;
@@ -169,7 +170,7 @@ namespace pdp8 {
         printPanelFlag(12u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::JMP);
         printPanelFlag(14u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::IOT);
         printPanelFlag(16u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::OPR);
-        *ostrm << fmt::format("  Managed terms: {:02}", managedTerminals.size());
+        *oStrm << fmt::format("  Managed terms: {:02}", managedTerminals.size());
 
         printPanelFlag(2u, 56u, pdp8.cycle_state == PDP8::CycleState::Fetch ||
                                 pdp8.cycle_state == PDP8::CycleState::Interrupt);
@@ -180,7 +181,7 @@ namespace pdp8 {
         printPanelFlag(4u, 66u, false);
         printPanelFlag(6u, 66u, pdp8.run_flag);
 
-        *ostrm << fmt::format("{}", color(Regular));
+        *oStrm << fmt::format("{}", color(Regular));
         setCursorPosition();
 
         out().flush();
@@ -188,37 +189,37 @@ namespace pdp8 {
 
     void Pdp8Terminal::printPanelSilk() {
         using namespace TerminalConsts;
-        *ostrm << fmt::format("\033[{};{}H{:^6}{:^6}{:^24}", 2u, 2u, "Data", "Inst", "Program Counter");
-        *ostrm << fmt::format("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
-        *ostrm << fmt::format("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
-        *ostrm << fmt::format("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
-        *ostrm << fmt::format("\033[{};{}H{:^10}", 14u, 2u, "Step Cnt");
-        *ostrm << fmt::format("\033[{};{}H{:^24}", 14u, 14u, "Multiplier Quotient");
+        *oStrm << fmt::format("\033[{};{}H{:^6}{:^6}{:^24}", 2u, 2u, "Data", "Inst", "Program Counter");
+        *oStrm << fmt::format("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
+        *oStrm << fmt::format("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
+        *oStrm << fmt::format("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
+        *oStrm << fmt::format("\033[{};{}H{:^10}", 14u, 2u, "Step Cnt");
+        *oStrm << fmt::format("\033[{};{}H{:^24}", 14u, 14u, "Multiplier Quotient");
 
-        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
-        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
-        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 6u, 40u, "Isz", "Defer", "Run");
-        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 8u, 40u, "Dca", "Wrd Cnt");
-        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 10u, 40u, "Jms", "Cur Adr");
-        *ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 12u, 40u, "Jmp", "Break");
-        *ostrm << fmt::format("\033[{};{}H{:<8}", 14u, 40u, "Iot");
-        *ostrm << fmt::format("\033[{};{}H{:<8}", 16u, 40u, "Opr");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 6u, 40u, "Isz", "Defer", "Run");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}", 8u, 40u, "Dca", "Wrd Cnt");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}", 10u, 40u, "Jms", "Cur Adr");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}", 12u, 40u, "Jmp", "Break");
+        *oStrm << fmt::format("\033[{};{}H{:<8}", 14u, 40u, "Iot");
+        *oStrm << fmt::format("\033[{};{}H{:<8}", 16u, 40u, "Opr");
 
-        *ostrm << fmt::format("{}", color(Regular, Yellow));
-        *ostrm << fmt::format("\033[{};{}H{}", 4u, 2u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 4u, 14u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 4u, 26u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 7u, 14u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 7u, 26u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 10u, 14u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 10u, 26u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 13u, 14u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 13u, 26u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 16u, 6u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 16u, 14u, Bar);
-        *ostrm << fmt::format("\033[{};{}H{}", 16u, 26u, Bar);
+        *oStrm << fmt::format("{}", color(Regular, Yellow));
+        *oStrm << fmt::format("\033[{};{}H{}", 4u, 2u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 4u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 4u, 26u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 7u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 7u, 26u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 10u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 10u, 26u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 13u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 13u, 26u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 16u, 6u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 16u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 16u, 26u, Bar);
 
-        *ostrm << fmt::format("{}", color(Regular));
+        *oStrm << fmt::format("{}", color(Regular));
 
         setCursorPosition();
         out().flush();
@@ -228,7 +229,6 @@ namespace pdp8 {
         assembler.readProgram(sourceCode);
         assembler.pass1();
         std::stringstream binary;
-        std::ostream nullStrm(&nullStreamBuffer);
 
         managedTerminals.emplace_back();
 
@@ -276,7 +276,7 @@ namespace pdp8 {
         }
 
         for (; itr != commandHistory.end(); ++itr, ++startLine) {
-            *ostrm << fmt::format("\033[{};{}H{:<80}\n", startLine, 1, *itr);
+            *oStrm << fmt::format("\033[{};{}H{:<80}\n", startLine, 1, *itr);
         }
         setCursorPosition();
         out().flush();
