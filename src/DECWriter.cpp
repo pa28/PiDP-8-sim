@@ -94,7 +94,6 @@ namespace pdp8 {
     }
 
     void DECWriter::performInputOutput(PDP8 &pdp8) {
-//        std::chrono::microseconds delay{100000};
         if (!terminal) {
             terminal = std::make_shared<DECWriterTerminal>();
             terminal->inputWaiting = [this]() -> void {
