@@ -104,7 +104,6 @@ namespace pdp8 {
                 terminal.reset();
             };
 
-            pdp8.terminalManager.push_back(terminal);
             terminal->setCharacterMode();
             terminal->negotiateAboutWindowSize();
             terminal->parseInput();
@@ -112,6 +111,7 @@ namespace pdp8 {
             terminal->out() << fmt::format("\033c"); terminal->out().flush();
             terminal->out() << fmt::format("\033[1;1H"); terminal->out().flush();
             terminal->out() << fmt::format("\033]0;DECWriter\007"); terminal->out().flush();
+            pdp8.terminalManager.terminalQueue = terminal;
         }
 
         if (!printerFlag) {

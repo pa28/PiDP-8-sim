@@ -250,6 +250,12 @@ namespace pdp8 {
 
     void TerminalManager::serviceTerminals() {
         std::this_thread::sleep_for(selectTimeout);
+
+        if (terminalQueue) {
+            push_back(std::move(terminalQueue));
+            terminalQueue.reset();
+        }
+
         auto[timeoutRemainder, selectResults] = selectOnAll(selectTimeout);
         for (auto const &selectResult: selectResults) {
             bool disconnected{false};
