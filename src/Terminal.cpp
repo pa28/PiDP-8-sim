@@ -104,7 +104,6 @@ namespace pdp8 {
         oStrmBuf = std::make_unique<stdio_filebuf>(*terminalFd, std::ios::out);
     }
 
-#if 1
     std::tuple<Terminal::SelectStatus, Terminal::SelectStatus, unsigned int>
     Terminal::select(bool selRead, bool selWrite, unsigned int timeoutUs) {
         SelectStatus readSelect = Timeout, writeSelect = Timeout;
@@ -341,5 +340,4 @@ namespace pdp8 {
         return {timeoutRemainder, selectResults};
     }
 
-#endif
 }
