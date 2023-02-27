@@ -158,7 +158,7 @@ namespace pdp8 {
         enum ActionState { NONE, OFF, ON, BUFFER };
         // 0377 0375 0001 0377 0375 0003 0377 0373 0037 0377 0372 0037 0000 0120 0000 0030 0377 0360
         ActionState actionState = NONE;
-        while (iStrm->rdbuf()->in_avail() && in()) {
+        while (iStrm->rdbuf()->in_avail() && *iStrm) {
             // Process IAC communications
             auto c = in().get();
             if (c == IAC) {
