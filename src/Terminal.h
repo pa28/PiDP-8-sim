@@ -341,10 +341,13 @@ namespace pdp8 {
             int readFd{-1}, writeFd{-1};
             bool selectRead{false};
             bool selectWrite{false};
+            bool selectExcept{false};
 
             SelectAllResult() = default;
-            SelectAllResult(int idx, int read, int write, bool readSel, bool writeSel)
-                    : listIndex(idx), readFd(read), writeFd(write), selectRead(readSel), selectWrite(writeSel) {}
+
+            SelectAllResult(int idx, int read, int write, bool readSel, bool writeSel, bool exceptSel)
+                    : listIndex(idx), readFd(read), writeFd(write), selectRead(readSel), selectWrite(writeSel),
+                      selectExcept(exceptSel) {}
         };
 
         /**

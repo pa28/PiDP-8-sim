@@ -292,7 +292,7 @@ namespace pdp8 {
         for (int i = 0; i < size(); ++i) {
             auto readFd = at(i)->getReadFd();
             auto writeFd = at(i)->getWriteFd();
-            selectResults.emplace_back(i, readFd, writeFd, false, false);
+            selectResults.emplace_back(i, readFd, writeFd, false, false, false);
         }
 
         for (auto const &selectResult: selectResults) {
