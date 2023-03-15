@@ -987,7 +987,7 @@ namespace pdp8asm {
      * @return std::optional with the binary op code if it could be translated.
      */
     template<class String>
-    unsigned int generateOpCode(String opCodeStr, unsigned int programCounter) {
+    std::optional<unsigned int> generateOpCode(String opCodeStr, unsigned int programCounter) {
         null_stream::NullStreamBuffer nullStreamBuffer{};
         std::ostream nullStream(&nullStreamBuffer);
 
@@ -1004,11 +1004,10 @@ namespace pdp8asm {
         while (first != last) {
             if (first->tokenClass == OP_CODE) {
                 std::tie(codeValue, first) = assembler.evaluateOpCode(first, last);
-                if (codeValue)
-                    return codeValue.value();
+                return codeValue.value();
             }
         }
-        throw std::invalid_argument(fmt::format("Can't convert {} to instruction code.", opCodeStr));
+        return std::nullopt;
     }
 }
 
