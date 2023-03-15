@@ -38,7 +38,7 @@ namespace pdp8 {
         using word_t = registers::register_t<12,0>;
         using opr_bits_t = registers::register_t<9,3>;
         using device_sel_t = registers::register_t<6,3>;
-        using device_opr_t = registers::register_t<3,0>;
+        using device_opr_t = registers::register_t<3,9>;
         using field_reg_t = registers::register_t<3,3>;
 
     public:

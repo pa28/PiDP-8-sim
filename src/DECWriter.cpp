@@ -16,6 +16,7 @@
 #include "DECWriter.h"
 #include <stdexcept>
 #include <fmt/format.h>
+#include <thread>
 #include <PDP8.h>
 
 namespace pdp8 {
@@ -24,7 +25,7 @@ namespace pdp8 {
             switch (opCode) {
                 case 0: // KCF
                     keyboardFlag = false;
-                    performInputOutput();
+                    performInputOutput(pdp8);
                     break;
                 case 1: // KSF
                     if (keyboardFlag)
@@ -39,7 +40,7 @@ namespace pdp8 {
                 case 6: // KRB
                     keyboardFlag = false;
                     pdp8.accumulator.setAcc(keyboardBuffer & 0377);
-                    performInputOutput();
+                    performInputOutput(pdp8);
                     break;
                 default:
                     throw std::invalid_argument(fmt::format("DECWriter keyboard sent opCode{}", opCode));
@@ -55,7 +56,7 @@ namespace pdp8 {
                     break;
                 case 2: // TCF
                     printerFlag = false;
-                    performInputOutput();
+                    performInputOutput(pdp8);
                     break;
                 case 4: // TPC
                     printerBuffer = pdp8.accumulator.getAscii();
@@ -67,7 +68,7 @@ namespace pdp8 {
                 case 6: // TLS
                     printerFlag = false;
                     printerBuffer = pdp8.accumulator.getAscii();
-                    performInputOutput();
+                    performInputOutput(pdp8);
                     break;
                 default:
                     throw std::invalid_argument(fmt::format("DECWriter printer sent opCode{}", opCode));
@@ -81,27 +82,64 @@ namespace pdp8 {
         return printerFlag || keyboardFlag;
     }
 
-    void DECWriter::performInputOutput() {
-        if (!terminal) {
-            TerminalSocket terminalSocket;
-            terminalSocket.open();
-            terminal = std::make_shared<Terminal>(terminalSocket);
-            terminal->out() << fmt::format("\033c"); terminal->out().flush();
-            terminal->out() << fmt::format("\033[1;1H"); terminal->out().flush();
-            terminal->out() << fmt::format("\033]0;DECWriter\007");
-        }
-
-        if (!printerFlag) {
-            terminal->out().put(static_cast<char>(printerBuffer & 0xFF));
-            printerFlag = true;
-        }
-
-        if (!keyboardFlag) {
-            if (terminal->in().rdbuf()->in_avail() && terminal->in()) {
-                keyboardBuffer = terminal->in().get();
+    void DECWriter::nextChar() {
+        if (!terminal->inputLineBuffer.empty()) {
+            if (!keyboardFlag) {
+                auto c = terminal->inputLineBuffer[0];
+                keyboardBuffer = static_cast<unsigned int>((u_char) c);
+                terminal->inputLineBuffer = terminal->inputLineBuffer.substr(1);
                 keyboardFlag = true;
             }
         }
     }
 
+    void DECWriter::performInputOutput(PDP8 &pdp8) {
+        if (!terminal) {
+            terminal = std::make_shared<DECWriterTerminal>();
+            terminal->inputWaiting = [this]() -> void {
+                nextChar();
+            };
+
+            terminal->disconnectCallback = [this]() -> void {
+                terminal.reset();
+            };
+
+            terminal->setCharacterMode();
+            terminal->negotiateAboutWindowSize();
+            terminal->parseInput();
+
+            terminal->out() << fmt::format("\033c"); terminal->out().flush();
+            terminal->out() << fmt::format("\033[1;1H"); terminal->out().flush();
+            terminal->out() << fmt::format("\033]0;DECWriter\007"); terminal->out().flush();
+            pdp8.terminalManager.terminalQueue = terminal;
+        }
+
+        if (!printerFlag) {
+            terminal->out().put(static_cast<char>(printerBuffer & 0xFF));
+            if (printerBuffer == '\r')
+                terminal->out().put('\n');
+            terminal->out().flush();
+            printerFlag = true;
+        }
+
+        if (!keyboardFlag) {
+            nextChar();
+        }
+    }
+
+    int DECWriterTerminal::selected(bool selectedRead, bool selectedWrite) {
+        if (selectedRead) {
+            parseInput(true);
+            inputBufferChanged();
+        }
+        return 0;
+    }
+
+    void DECWriterTerminal::inputBufferChanged() {
+        if (!inputLineBuffer.empty()) {
+            if (inputWaiting) {
+                inputWaiting();
+            }
+        }
+    }
 } // pdp8

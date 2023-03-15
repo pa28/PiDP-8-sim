@@ -22,7 +22,7 @@ namespace pdp8 {
     class Pdp8Terminal : public TelnetTerminal {
     public:
 
-        PDP8 pdp8{};
+        PDP8 &pdp8;
 
         pdp8asm::Assembler assembler{};
 
@@ -30,7 +30,10 @@ namespace pdp8 {
 
         std::string lastCommand{};
 
+        bool initialized{false};
         bool runConsole{true};
+
+        void initialize();
 
         void inputBufferChanged() override;
 
@@ -39,7 +42,7 @@ namespace pdp8 {
         void windowSizeChanged() override {
             TelnetTerminal::windowSizeChanged();
             inputLine = termHeight;
-            ostrm << fmt::format("\033[2J");
+            *oStrm << fmt::format("\033[2J");
             printPanelSilk();
             printPanel();
             inputBufferChanged();
@@ -47,7 +50,7 @@ namespace pdp8 {
 
         std::vector<std::string> commandHistory{};
 
-        std::vector<TelnetTerminalSet> managedTerminals{};
+//        std::vector<TelnetTerminal> managedTerminals{};
 
         void printCommandHistory();
 
@@ -70,7 +73,7 @@ namespace pdp8 {
             for (auto idx = width; idx > 0; --idx) {
                 setCursorPosition(line, col);
                 auto lightIdx = value & (1 << (idx - 1)) ? 1 : 0;
-                ostrm << fmt::format("{} ", Light[lightIdx]);
+                *oStrm << fmt::format("{} ", Light[lightIdx]);
                 col += 2;
             }
             return {line, col};
@@ -81,22 +84,8 @@ namespace pdp8 {
         void printPanelFlag(U1 line, U2 col, bool flag) {
             using namespace TerminalConsts;
             setCursorPosition(line, col);
-            ostrm << fmt::format("{} ", Light[flag ? 1 : 0]);
+            *oStrm << fmt::format("{} ", Light[flag ? 1 : 0]);
         }
-
-        struct SelectAllResult {
-            int listIndex{-1};
-            int readFd{-1}, writeFd{-1};
-            bool selectRead{false};
-            bool selectWrite{false};
-
-            SelectAllResult() = default;
-            SelectAllResult(int idx, int read, int write, bool readSel, bool writeSel)
-                : listIndex(idx), readFd(read), writeFd(write), selectRead(readSel), selectWrite(writeSel) {}
-        };
-
-        std::tuple<std::chrono::microseconds, std::vector<SelectAllResult>>
-        selectOnAll(std::chrono::microseconds timeoutUs);
 
         void printPanelSilk();
 
@@ -106,14 +95,25 @@ namespace pdp8 {
 
         void loadForth();
 
+        void decWriter();
+
         void loadSourceStream(std::istream &sourceCode, const std::string &title);
 
     public:
-        Pdp8Terminal() = default;
+        Pdp8Terminal() = delete;
+        Pdp8Terminal(const Pdp8Terminal&) = delete;
+        Pdp8Terminal(Pdp8Terminal&&) = default;
+        Pdp8Terminal& operator=(const Pdp8Terminal&) = delete;
+        Pdp8Terminal& operator=(Pdp8Terminal&&) = delete;
 
         ~Pdp8Terminal() override = default;
 
-        explicit Pdp8Terminal(TerminalSocket &connection) : TelnetTerminal(connection) {}
+        explicit Pdp8Terminal(PDP8& pdp8) : pdp8(pdp8), TelnetTerminal() {
+            timerTick = [this]() -> bool {
+                console();
+                return runConsole;
+            };
+        }
 
         void console();
 

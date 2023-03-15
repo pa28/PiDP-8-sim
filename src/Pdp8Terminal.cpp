@@ -7,62 +7,36 @@
 
 #include <chrono>
 #include <thread>
+#include <assembler/NullStream.h>
 #include "Pdp8Terminal.h"
 
 namespace pdp8 {
 
-    void Pdp8Terminal::console() {
-        ostrm << fmt::format("\033c"); ostrm.flush();
-        ostrm << fmt::format("\033[1;1H"); ostrm.flush();
-        ostrm << fmt::format("\033]0;PiDP-8/I Console\007");
+    void Pdp8Terminal::initialize() {
+        *oStrm << fmt::format("\033c"); oStrm->flush();
+        *oStrm << fmt::format("\033[1;1H"); oStrm->flush();
+        *oStrm << fmt::format("\033]0;PiDP-8/I Console\007");
         setCharacterMode();
         negotiateAboutWindowSize();
 
         std::chrono::microseconds selectTimeout(10000);
         std::this_thread::sleep_for(selectTimeout);
+
         parseInput();
         commandHelp();
         inputBufferChanged();
+        initialized = true;
+    }
 
-        while (runConsole) {
-            setCursorPosition();
-            auto[timeoutRemainder, selectResults] = selectOnAll(selectTimeout);
-            for (auto const &selectResult: selectResults) {
-                if (selectResult.listIndex < 0) {
-                    if (selectResult.selectRead || selectResult.selectWrite) {
-                        selected(selectResult.selectRead, selectResult.selectWrite);
-                    }
-                } else {
-                    if (selectResult.selectRead) {
-                        if (selectResult.selectRead || selectResult.selectWrite) {
-                            auto c = managedTerminals[selectResult.listIndex].terminal->
-                                    selected(selectResult.selectRead, selectResult.selectWrite);
-                            if (c == EOF) {
-                                managedTerminals[selectResult.listIndex].disconnected = true;
-                            }
-                        }
-                    }
-                }
-            }
+    void Pdp8Terminal::console() {
+        if (!initialized)
+            initialize();
 
-            auto removeCount = std::count_if(managedTerminals.begin(), managedTerminals.end(),
-                                             [](const TelnetTerminalSet &t) {
-                                                 return t.disconnected;
-                                             });
+        setCursorPosition();
 
-            if (removeCount) {
-                managedTerminals.erase(std::remove_if(managedTerminals.begin(), managedTerminals.end(),
-                                                      [](const TelnetTerminalSet &t) {
-                                                          return t.disconnected;
-                                                      }), managedTerminals.end());
-            }
-
-            if (pdp8.run_flag) {
-                pdp8.instructionStep();
-                printPanel();
-            }
-
-            std::this_thread::sleep_for(timeoutRemainder);
+        if (pdp8.run_flag) {
+            pdp8.instructionStep();
+            printPanel();
         }
     }
 
@@ -91,6 +65,7 @@ namespace pdp8 {
         lastCommand.clear();
         if (!command.empty()) {
             if (command == "quit") {
+                pdp8.terminalManager.closeAll();
                 runConsole = false;
                 return;
             } else if (command == "PING PONG") {
@@ -104,6 +79,10 @@ namespace pdp8 {
             } else if (command == "RIM") {
                 pdp8.rimLoader();
                 printPanel();
+                return;
+            } else if (command == "DECW") {
+                decWriter();
+                commandHistory.emplace_back("Load DECWriter");
                 return;
             }
 
@@ -175,7 +154,7 @@ namespace pdp8 {
 
     void Pdp8Terminal::printPanel() {
         using namespace TerminalConsts;
-        ostrm << fmt::format("{}", color(Regular, Yellow));
+        *oStrm << fmt::format("{}", color(Regular, Yellow));
 
         size_t margin = 1;
         size_t line = 3, column = 2;
@@ -196,7 +175,7 @@ namespace pdp8 {
         printPanelFlag(12u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::JMP);
         printPanelFlag(14u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::IOT);
         printPanelFlag(16u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::OPR);
-        ostrm << fmt::format("  Managed terms: {:02}", managedTerminals.size());
+        *oStrm << fmt::format("  Managed terms: {:02}", pdp8.terminalManager.size());
 
         printPanelFlag(2u, 56u, pdp8.cycle_state == PDP8::CycleState::Fetch ||
                                 pdp8.cycle_state == PDP8::CycleState::Interrupt);
@@ -207,7 +186,7 @@ namespace pdp8 {
         printPanelFlag(4u, 66u, false);
         printPanelFlag(6u, 66u, pdp8.run_flag);
 
-        ostrm << fmt::format("{}", color(Regular));
+        *oStrm << fmt::format("{}", color(Regular));
         setCursorPosition();
 
         out().flush();
@@ -215,37 +194,37 @@ namespace pdp8 {
 
     void Pdp8Terminal::printPanelSilk() {
         using namespace TerminalConsts;
-        ostrm << fmt::format("\033[{};{}H{:^6}{:^6}{:^24}", 2u, 2u, "Data", "Inst", "Program Counter");
-        ostrm << fmt::format("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
-        ostrm << fmt::format("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
-        ostrm << fmt::format("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
-        ostrm << fmt::format("\033[{};{}H{:^10}", 14u, 2u, "Step Cnt");
-        ostrm << fmt::format("\033[{};{}H{:^24}", 14u, 14u, "Multiplier Quotient");
+        *oStrm << fmt::format("\033[{};{}H{:^6}{:^6}{:^24}", 2u, 2u, "Data", "Inst", "Program Counter");
+        *oStrm << fmt::format("\033[{};{}H{:^24}", 5u, 14u, "Memory Address");
+        *oStrm << fmt::format("\033[{};{}H{:^24}", 8u, 14u, "Memory Buffer");
+        *oStrm << fmt::format("\033[{};{}H{:^24}", 11u, 14u, "Link Accumulator");
+        *oStrm << fmt::format("\033[{};{}H{:^10}", 14u, 2u, "Step Cnt");
+        *oStrm << fmt::format("\033[{};{}H{:^24}", 14u, 14u, "Multiplier Quotient");
 
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 6u, 40u, "Isz", "Defer", "Run");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 8u, 40u, "Dca", "Wrd Cnt");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 10u, 40u, "Jms", "Cur Adr");
-        ostrm << fmt::format("\033[{};{}H{:<8}{:<12}", 12u, 40u, "Jmp", "Break");
-        ostrm << fmt::format("\033[{};{}H{:<8}", 14u, 40u, "Iot");
-        ostrm << fmt::format("\033[{};{}H{:<8}", 16u, 40u, "Opr");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 2u, 40u, "And", "Fetch", "Ion");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 4u, 40u, "Tad", "Execute", "Pause");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}{:<6}", 6u, 40u, "Isz", "Defer", "Run");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}", 8u, 40u, "Dca", "Wrd Cnt");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}", 10u, 40u, "Jms", "Cur Adr");
+        *oStrm << fmt::format("\033[{};{}H{:<8}{:<12}", 12u, 40u, "Jmp", "Break");
+        *oStrm << fmt::format("\033[{};{}H{:<8}", 14u, 40u, "Iot");
+        *oStrm << fmt::format("\033[{};{}H{:<8}", 16u, 40u, "Opr");
 
-        ostrm << fmt::format("{}", color(Regular, Yellow));
-        ostrm << fmt::format("\033[{};{}H{}", 4u, 2u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 4u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 4u, 26u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 7u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 7u, 26u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 10u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 10u, 26u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 13u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 13u, 26u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 16u, 6u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 16u, 14u, Bar);
-        ostrm << fmt::format("\033[{};{}H{}", 16u, 26u, Bar);
+        *oStrm << fmt::format("{}", color(Regular, Yellow));
+        *oStrm << fmt::format("\033[{};{}H{}", 4u, 2u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 4u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 4u, 26u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 7u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 7u, 26u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 10u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 10u, 26u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 13u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 13u, 26u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 16u, 6u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 16u, 14u, Bar);
+        *oStrm << fmt::format("\033[{};{}H{}", 16u, 26u, Bar);
 
-        ostrm << fmt::format("{}", color(Regular));
+        *oStrm << fmt::format("{}", color(Regular));
 
         setCursorPosition();
         out().flush();
@@ -255,19 +234,19 @@ namespace pdp8 {
         assembler.readProgram(sourceCode);
         assembler.pass1();
         std::stringstream binary;
-        std::ostream nullStrm(&nullStreamBuffer);
 
-        managedTerminals.emplace_back();
+        auto terminal = std::make_shared<TelnetTerminal>();
+        pdp8.terminalManager.terminalQueue = terminal;
 
-        managedTerminals.back().terminal->out() << fmt::format("\033c");
-        managedTerminals.back().terminal->out() << fmt::format("\033[1;1H");
-        managedTerminals.back().terminal->out() << fmt::format("\033]0;PiDP-8/I Source Listing {}\007", title);
-        managedTerminals.back().terminal->out() << std::flush;
+        terminal->out() << fmt::format("\033c");
+        terminal->out() << fmt::format("\033[1;1H");
+        terminal->out() << fmt::format("\033]0;PiDP-8/I Source Listing {}\007", title);
+        terminal->out() << std::flush;
 
-        assembler.pass2(binary, managedTerminals.back().terminal->out());
+        assembler.pass2(binary, terminal->out());
 
-        assembler.dumpSymbols(managedTerminals.back().terminal->out());
-        managedTerminals.back().terminal->out().flush();
+        assembler.dumpSymbols(terminal->out());
+        terminal->out().flush();
         auto startAddress = pdp8.readBinaryFormat(binary);
         printPanel();
     }
@@ -284,6 +263,11 @@ namespace pdp8 {
         loadSourceStream(sourceCode, "Fourth");
     }
 
+    void Pdp8Terminal::decWriter() {
+        assembler.clear();
+        std::stringstream sourceCode(std::string{pdp8asm::DecWriter});
+        loadSourceStream(sourceCode, "DECWriter");
+    }
 
     void Pdp8Terminal::printCommandHistory() {
         if (commandHistory.empty())
@@ -303,7 +287,7 @@ namespace pdp8 {
         }
 
         for (; itr != commandHistory.end(); ++itr, ++startLine) {
-            ostrm << fmt::format("\033[{};{}H{:<80}\n", startLine, 1, *itr);
+            *oStrm << fmt::format("\033[{};{}H{:<80}\n", startLine, 1, *itr);
         }
         setCursorPosition();
         out().flush();
@@ -328,53 +312,5 @@ namespace pdp8 {
             commandHistory.push_back(fmt::format("Error: argument out of range: {}", argument));
         }
         return std::nullopt;
-    }
-
-    std::tuple<std::chrono::microseconds, std::vector<Pdp8Terminal::SelectAllResult>>
-    Pdp8Terminal::selectOnAll(std::chrono::microseconds timeoutUs) {
-
-        fd_set readFds, writeFds, exceptFds;
-        FD_ZERO(&readFds);
-        FD_ZERO(&writeFds);
-        FD_ZERO(&exceptFds);
-        struct timeval timeout{};
-
-        timeout.tv_sec = 0;
-        timeout.tv_usec = timeoutUs.count();
-
-        std::vector<SelectAllResult> selectResults{};
-
-        selectResults.emplace_back(-1, ifd, ofd, false, false);
-
-        for (int i = 0; i < managedTerminals.size(); ++i) {
-            auto tifd = managedTerminals[i].terminal->getReadFd();
-            auto tofd = managedTerminals[i].terminal->getWriteFd();
-            selectResults.emplace_back(i, tifd, tofd, false, false);
-        }
-
-        for (auto const &selectResult: selectResults) {
-            if (selectResult.readFd >= 0) {
-                FD_SET(selectResult.readFd, &readFds);
-            }
-
-            if (selectResult.writeFd >= 0) {
-                FD_SET(selectResult.writeFd, &writeFds);
-            }
-        }
-
-        if (auto stat = ::select(FD_SETSIZE, &readFds, &writeFds, &exceptFds, &timeout); stat == -1) {
-            throw TerminalConnectionException("Call to select failed.");
-        } else if (stat > 0) {
-            for (auto &selectResult: selectResults) {
-                if (FD_ISSET(selectResult.readFd, &readFds))
-                    selectResult.selectRead = true;
-                if (FD_ISSET(selectResult.writeFd, &writeFds))
-                    selectResult.selectWrite = true;
-            }
-        }
-
-        std::chrono::microseconds timeoutRemainder{timeout.tv_usec};
-
-        return {timeoutRemainder, selectResults};
     }
 }
