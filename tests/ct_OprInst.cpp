@@ -66,10 +66,10 @@ std::ostream& operator<<(std::ostream& strm, const AccInstruction& acc) {
 }
 
 auto const suite = ct::Suite{"ACC Link", []{
-    "0"_test = [] { PDP8 pdp8{}; ct::expect(pdp8.accumulator.getAcc() == 0 and pdp8.accumulator.getLink() == 0); };
-    "1"_test = [] { TestAssembly t{testCode0}; ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getAcc() == 0); };
-    "2"_test = [] { TestAssembly t{testCode0}; ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getLink() == 1); };
-    "3"_test = [] { AccInstruction acc{01234u, "BSW"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getAcc() == 03412);
+    "0"_test = [] { PDP8 pdp8{}; ct::expect(pdp8.accumulator.getAcc() == 0_i and pdp8.accumulator.getLink() == 0_i); };
+    "1"_test = [] { TestAssembly t{testCode0}; ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getAcc() == 0_i); };
+    "2"_test = [] { TestAssembly t{testCode0}; ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getLink() == 1_i); };
+    "3"_test = [] { AccInstruction acc{01234u, "BSW"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getAcc() == 03412_i);
     };
 }};
 
