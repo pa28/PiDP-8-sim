@@ -117,15 +117,17 @@ namespace pdp8 {
                 memory.write();
                 memory.programCounter.setProgramCounter(memory.memoryAddress.getPageWordAddress() + 1);
                 break;
-            case OpCode::JMP:
+            case OpCode::JMP: {
+                bool short_jmp_flag = false;
                 if (!instructionReg.getIndirect()) {
-                    if ((memory.programCounter.getProgramCounter() -2) == memory.memoryAddress.getPageWordAddress()) {
+                    if ((memory.programCounter.getProgramCounter() - 2) == memory.memoryAddress.getPageWordAddress()) {
                         // JMP .-1
                         auto wait_inst = instructionReg.getWord();
                         if (std::ranges::find(WaitInstructions, wait_inst)) {
                             idle_flag = true; // idle loop detected
                         }
-                    } else if ((memory.programCounter.getProgramCounter() -1) == memory.memoryAddress.getPageWordAddress()) {
+                    } else if ((memory.programCounter.getProgramCounter() - 1) ==
+                               memory.memoryAddress.getPageWordAddress()) {
                         // JMP .
                         if (interrupt_enable || interrupt_delayed > 0) {
                             interrupt_enable = true;
@@ -136,13 +138,12 @@ namespace pdp8 {
                         }
                     }
                 }
-                if (short_jmp_flag) {
-                    short_jmp_flag = false;
-                } else {
+                if (!short_jmp_flag) {
                     memory.programCounter.setProgramCounter(memory.memoryAddress.getPageWordAddress());
                     interrupt_deferred = false;
                     memory.fieldRegister.setInstField(memory.fieldRegister.getInstBuffer());
                 }
+            }
                 break;
             case OpCode::IOT:
                 execute_iot();
