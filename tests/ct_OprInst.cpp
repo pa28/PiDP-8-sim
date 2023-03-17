@@ -6,6 +6,7 @@
 #include <assembler/Assembler.h>
 #include "libs/CodeFragmentTest.h"
 #include <clean-test/clean-test.h>
+#include <numeric>
 
 constexpr auto sum(auto... vs) { return (0 + ... + vs); }
 
@@ -28,13 +29,17 @@ struct TestAssembly {
     explicit TestAssembly(Str s) {
         std::stringstream testCode{std::string(s)};
         assembler.readProgram(testCode);
-        if (pass1 = assembler.pass1(); pass1) {
-            std::stringstream bin{};
-            std::stringstream list{};
-            if (pass2 = assembler.pass2(bin,list); pass2) {
-                pdp8.readBinaryFormat(bin);
-                pdp8.instructionCycle();
+        try {
+            if (pass1 = assembler.pass1(); pass1) {
+                std::stringstream bin{};
+                std::stringstream list{};
+                if (pass2 = assembler.pass2(bin, list); pass2) {
+                    pdp8.readBinaryFormat(bin);
+                    pdp8.instructionCycle();
+                }
             }
+        } catch (std::invalid_argument &ia) {
+            fmt::print("Assembly exception: {}\n", ia.what());
         }
     }
 
@@ -42,11 +47,21 @@ struct TestAssembly {
 
 static constexpr std::string_view  testCode0{"/ Simple test program.\nOCTAL\n*0200\nCLA CLL CMA IAC\nHLT\n*0200\n"};
 
+static constexpr std::string_view   autoIncCode{R"(
+                OCTAL
+                *0200
+                CLA CLL
+                DCA 010
+                TAD I 010
+                CLA CLL
+                TAD 010
+                HLT
+                *0200
+)"};
+
 struct AccInstruction {
     PDP8 pdp8{};
-
     bool opCode{false};
-
     explicit operator bool () const { return opCode; }
 
     template<class Str>
@@ -62,21 +77,42 @@ struct AccInstruction {
     }
 };
 
+struct AutoIncTest {
+    PDP8 pdp8{};
+    bool opCode{false};
+    bool result{false};
+
+    explicit operator bool () const { return opCode; }
+    explicit AutoIncTest(unsigned int addr) {
+        addr = addr & 07 | 010;
+        auto opStr = fmt::format("TAD I 0{:o}", addr);
+        if (auto op = pdp8asm::generateOpCode(opStr, 0u); op) {
+            opCode = op.has_value();
+            pdp8.instructionReg.value = op.value();
+            pdp8.defer();
+            result = pdp8.memory.read(0u, addr).getData() == 1u;
+        }
+    }
+};
+
 std::ostream& operator<<(std::ostream& strm, const AccInstruction& acc) {
     return strm << fmt::format("[{}, {}-{:o}]", acc.opCode, acc.pdp8.accumulator.getLink(), acc.pdp8.accumulator.getAcc());
 }
 
+#if 1
+
 auto const suite0 = ct::Suite{"ACC Link", []{
+    "CLA"_test = [] { AccInstruction acc{01234u, 0u, "CLA OSR"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getAcc() == 0_i); };
     "BSW"_test = [] { AccInstruction acc{01234u, 0u, "BSW"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getAcc() == 03412_i); };
     "RTR"_test = [] { AccInstruction acc{01236u, 0u, "RTR"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 010247_i); };
     "RAR"_test = [] { AccInstruction acc{01235u, 0u, "RAR"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 010516_i); };
-    "RTL"_test = [] { AccInstruction acc{01236u, 0u, "RTR"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 010247_i); };
-    "RAL"_test = [] { AccInstruction acc{01235u, 0u, "RAR"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 010516_i); };
+    "RTL"_test = [] { AccInstruction acc{01236u, 0u, "RTL"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 05170_i); };
+    "RAL"_test = [] { AccInstruction acc{01235u, 0u, "RAL"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 02472_i); };
     "BSW_L"_test = [] { AccInstruction acc{01234u, 1u, "BSW"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getAcc() == 03412_i); };
     "RTR_L"_test = [] { AccInstruction acc{01236u, 1u, "RTR"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 012247_i); };
     "RAR_L"_test = [] { AccInstruction acc{01235u, 1u, "RAR"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 014516_i); };
-    "RTL_L"_test = [] { AccInstruction acc{01236u, 1u, "RTR"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 012247_i); };
-    "RAL_L"_test = [] { AccInstruction acc{01235u, 1u, "RAR"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 014516_i); };
+    "RTL_L"_test = [] { AccInstruction acc{01236u, 1u, "RTL"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 05172_i); };
+    "RAL_L"_test = [] { AccInstruction acc{01235u, 1u, "RAL"}; ct::expect(ct::lift(acc) and acc.pdp8.accumulator.getArithmetic() == 02473_i); };
 }};
 
 auto const suite1 = ct::Suite{"Microcode", []{
@@ -85,3 +121,135 @@ auto const suite1 = ct::Suite{"Microcode", []{
     "2"_test = [] { TestAssembly t{testCode0}; ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getLink() == 1_i); };
 }};
 
+auto const suite2 = ct::Suite {"Auto Increment", []{
+    static auto const data = std::vector<unsigned>{0, 1, 2, 3, 4, 5, 6, 7};
+    ct::Test<const std::vector<unsigned>>{"addr", data} = [] (const unsigned a){
+        AutoIncTest t{a | 010}; ct::expect(t.opCode and t.result);
+    };
+}};
+
+auto const suite3 = ct::Suite {"Mem Inst", []{
+    "JMP"_test = [] {
+        TestAssembly t{"OCTAL\n*0200\nJMP 0202\nHLT\nNOP\nHLT\n*0200\n"};
+        ct::expect(t.pass1 and t.pass2 and t.pdp8.memory.programCounter.getProgramCounter() == 0204_i);
+    };
+    "JMP"_test = [] {
+        TestAssembly t{"OCTAL\n*0176\n00000\nJMP I 0176\nJMS 0176\nHLT\n*0200\n"};
+        ct::expect(t.pass1 and t.pass2 and t.pdp8.memory.programCounter.getProgramCounter() == 0202_i);
+    };
+    "JMS"_test = [] {
+        TestAssembly t{"OCTAL\n*0176\n00000\nHLT\nJMS 0176\nHLT\n*0200\n"};
+        ct::expect(t.pass1 and t.pass2 and t.pdp8.memory.programCounter.getProgramCounter() == 0200_i);
+    };
+    "DCA"_test = [] {
+        TestAssembly t{"OCTAL\n*0177\n00000\nCLA CMA\nDCA 0177\nHLT\n*0200\n"};
+        ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getAcc() == 0_i and
+            t.pdp8.memory.read(0u, 0177u).getData() == 07777u);
+    };
+    "ISZ"_test = [] {
+        TestAssembly t{"OCTAL\n*0177\n07777\nISZ 0177\nHLT\nHLT\n*0200\n"};
+        ct::expect(t.pass1 and t.pass2 and t.pdp8.memory.programCounter.getProgramCounter() == 00203_i);
+    };
+    "ISZ"_test = [] {
+        TestAssembly t{"OCTAL\n*0177\n07776\nISZ 0177\nHLT\nHLT\n*0200\n"};
+        ct::expect(t.pass1 and t.pass2 and t.pdp8.memory.programCounter.getProgramCounter() == 00202_i);
+    };
+    "AND"_test = [] {
+        TestAssembly t{"OCTAL\n*0177\n01234\nCLA CMA\nAND 0177\nHLT\n*0200\n"};
+        ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getAcc() == 01234_i);
+    };
+    "AND"_test = [] {
+        TestAssembly t{"OCTAL\n*0177\n01234\nCLA\nAND 0177\nHLT\n*0200\n"};
+        ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getAcc() == 0_i);
+    };
+    "TAD"_test = [] {
+        TestAssembly t{"OCTAL\n*0177\n00001\nCLA CMA CLL\nTAD 0177\nHLT\n*0200\n"};
+        ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getAcc() == 0_i and t.pdp8.accumulator.getLink() == 1_i);
+    };
+}};
+
+auto const suite4 = ct::Suite {"Cycle Function", []{
+    "Fetch"_test = [] {
+        PDP8 pdp8{}; ct::expect(!ct::lift(pdp8.fetch())); // Test for condition fetch() uninitialized memory.
+    };
+}};
+
+auto const suite5 = ct::Suite { "Special JMP", []{
+    "Jmp ."_test = [] {
+        PDP8 pdp8{};
+        pdp8.interrupt_enable = false;
+        pdp8.interrupt_delayed = 2;
+        if (auto op = pdp8asm::generateOpCode("JMP .", 0200u); op) {
+            // Simulate fetch from 0200
+            pdp8.memory.memoryAddress.setPageWordAddress(0200u);
+            pdp8.memory.programCounter.setProgramCounter(0201u);
+            pdp8.instructionReg.value = op.value();
+            pdp8.execute();
+            ct::expect(ct::lift(pdp8.idle_flag));
+        }
+    };
+    "Jmp ."_test = [] {
+        PDP8 pdp8{};
+        pdp8.interrupt_enable = false;
+        pdp8.interrupt_delayed = 0;
+        if (auto op = pdp8asm::generateOpCode("JMP .", 0200u); op) {
+            // Simulate fetch from 0200
+            pdp8.memory.memoryAddress.setPageWordAddress(0200u);
+            pdp8.memory.programCounter.setProgramCounter(0201u);
+            pdp8.instructionReg.value = op.value();
+            pdp8.execute();
+            ct::expect(ct::lift(pdp8.halt_flag));
+        }
+    };
+    "JMP .-1"_test = [] {
+        Assembler assembler{};
+        PDP8 pdp8{};
+        bool pass1{false}, pass2{false};
+
+        std::stringstream testCode{std::string("OCTAL\n*0200\nKSF\nJMP 0200\nHLT\n*0201\n")};
+        assembler.readProgram(testCode);
+        try {
+            if (pass1 = assembler.pass1(); pass1) {
+                std::stringstream bin{};
+                std::stringstream list{};
+                if (pass2 = assembler.pass2(bin, list); pass2) {
+                    pdp8.readBinaryFormat(bin);
+                    pdp8.fetch();
+                    pdp8.execute();
+                }
+            }
+        } catch (std::invalid_argument &ia) {
+            fmt::print("Assembly exception: {}\n", ia.what());
+        }
+
+        ct::expect(pass1 and pass2 and ct::lift(pdp8.idle_flag));
+    };
+}};
+
+#endif
+
+auto const suite6 = ct::Suite { "CPU", [] {
+    "reset"_test = [] {
+        PDP8 pdp8{};
+        pdp8.accumulator.setArithmetic(017777);
+        pdp8.interrupt_delayed = 2u;
+        pdp8.interrupt_enable = true;
+        pdp8.interrupt_deferred = true;
+        pdp8.interrupt_request = true;
+        pdp8.error_flag = true;
+        pdp8.cycle_state = PDP8::CycleState::Fetch;
+        pdp8.halt_flag = true;
+        pdp8.run_flag = true;
+
+        pdp8.reset();
+        ct::expect(pdp8.accumulator.getArithmetic() == 0_i and pdp8.interrupt_delayed == 0);
+        ct::expect(!pdp8.interrupt_enable);
+        ct::expect(!pdp8.interrupt_deferred);
+        ct::expect(!pdp8.interrupt_request);
+        ct::expect(!pdp8.error_flag);
+        ct::expect(!pdp8.halt_flag);
+        ct::expect(!pdp8.run_flag);
+        ct::expect(pdp8.cycle_state == PDP8::CycleState::Interrupt);
+    };
+
+}};
