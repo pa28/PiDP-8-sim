@@ -1,5 +1,6 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.22)
 project(PDP8)
+enable_testing()
 
 include_directories(fmt/include src tests ~/opt/include)
 link_directories(/usr/local/lib)
