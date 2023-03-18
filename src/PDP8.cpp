@@ -220,20 +220,20 @@ namespace pdp8 {
                     break;
                 case 4: //GTF
                     accumulator.setAcc(0);
-                    accumulator.set<registers::register_t<1,0,13>>(accumulator.getLink());
-                    accumulator.set<registers::register_t<1,1,13>>(greater_than_flag ? 1u : 0u);
-                    accumulator.set<registers::register_t<1,2,13>>(interrupt_request ? 1u : 0u);
-                    accumulator.set<registers::register_t<1,4,13>>(interrupt_enable ? 1u : 0u);
-                    accumulator.set<registers::register_t<3,6,13>>(memory.fieldRegister.getInstField());
-                    accumulator.set<registers::register_t<3,9,13>>(memory.fieldRegister.getDataField());
+                    accumulator.set<registers::register_t<1,0,12>>(accumulator.getLink());
+                    accumulator.set<registers::register_t<1,1,12>>(greater_than_flag ? 1u : 0u);
+                    accumulator.set<registers::register_t<1,2,12>>(interrupt_request ? 1u : 0u);
+                    accumulator.set<registers::register_t<1,4,12>>(interrupt_enable ? 1u : 0u);
+                    accumulator.set<registers::register_t<3,6,12>>(memory.fieldRegister.getInstField());
+                    accumulator.set<registers::register_t<3,9,12>>(memory.fieldRegister.getDataField());
                     break;
                 case 5: //RTF
-                    accumulator.setLink(accumulator.get<registers::register_t<1,0,13>>());
-                    greater_than_flag = accumulator.get<registers::register_t<1,1,13>>() != 0;
-                    interrupt_request = accumulator.get<registers::register_t<1,2,13>>() != 0;
-                    interrupt_enable = accumulator.get<registers::register_t<1,4,13>>() != 0;
-                    memory.fieldRegister.setInstBuffer(accumulator.get<registers::register_t<3,6,13>>());
-                    memory.fieldRegister.setDataField(accumulator.get<registers::register_t<3,9,13>>());
+                    accumulator.setLink(accumulator.get<registers::register_t<1,0,12>>());
+                    greater_than_flag = accumulator.get<registers::register_t<1,1,12>>() != 0;
+                    interrupt_request = accumulator.get<registers::register_t<1,2,12>>() != 0;
+                    interrupt_enable = accumulator.get<registers::register_t<1,4,12>>() != 0;
+                    memory.fieldRegister.setInstField(accumulator.get<registers::register_t<3,6,12>>());
+                    memory.fieldRegister.setDataField(accumulator.get<registers::register_t<3,9,12>>());
                     break;
                 case 6: // SGT
                     if (greater_than_flag)
