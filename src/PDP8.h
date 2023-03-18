@@ -37,12 +37,27 @@ namespace pdp8 {
     public:
 
         [[maybe_unused]] static constexpr uint16_t RIM_LOADER_START = 07756;
-        [[maybe_unused]] static constexpr std::array<uint16_t, 18> RIM_LOADER =
-                {
-                        06014, 06011, 05357, 06016, 07106, 07006,
-                        07510, 05357, 07006, 06011, 05367, 06016,
-                        07420, 03776, 03376, 05357, 0, 0
-                };
+
+        static constexpr std::array<std::pair<uint16_t,uint16_t>,18> RIM_LOADER = {{
+                                                                                       {07756, 06014},
+                                                                                       {07757, 06011},
+                                                                                       {07760, 05357},
+                                                                                       {07761, 06016},
+                                                                                       {07762, 07106},
+                                                                                       {07763, 07006},
+                                                                                       {07764, 07510},
+                                                                                       {07765, 05357},
+                                                                                       {07766, 07006},
+                                                                                       {07767, 06011},
+                                                                                       {07770, 05367},
+                                                                                       {07771, 06016},
+                                                                                       {07772, 07420},
+                                                                                       {07773, 03776},
+                                                                                       {07774, 03376},
+                                                                                       {07775, 05357},
+                                                                                       {07776, 0},
+                                                                                       {07777, 0}
+                                                                               }};
 
         static constexpr std::array<small_register_t,2> WaitInstructions = {
                 06031, // KSF

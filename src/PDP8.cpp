@@ -364,7 +364,7 @@ namespace pdp8 {
     void PDP8::rimLoader() {
         memory.programCounter.setProgramCounter(RIM_LOADER_START);
         for (auto &word: RIM_LOADER) {
-            memory.deposit(word);
+            memory.deposit(word.second);
         }
         memory.programCounter.setProgramCounter(RIM_LOADER_START);
     }

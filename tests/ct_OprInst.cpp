@@ -384,34 +384,12 @@ auto const suite8 = ct::Suite { "Bool Skip", [] {
 #endif
 
 auto const suite9 = ct::Suite{ "RIM Loader", [] {
-    static const std::vector<std::pair<uint16_t,uint16_t>> data{
-            {07756, 06014},
-            {07757, 06011},
-            {07760, 05357},
-            {07761, 06016},
-            {07762, 07106},
-            {07763, 07006},
-            {07764, 07510},
-            {07765, 05357},
-            {07766, 07006},
-            {07767, 06011},
-            {07770, 05367},
-            {07771, 06016},
-            {07772, 07420},
-            {07773, 03776},
-            {07774, 03376},
-            {07775, 05357},
-            {07776, 0},
-            {07777, 0}
-    };
-
-    ct::Test{"Code", data} = [](std::pair<uint16_t,uint16_t> const &n) {
+    ct::Test{"Code", PDP8::RIM_LOADER} = [](std::pair<uint16_t,uint16_t> const &n) {
         PDP8 pdp8{};
         pdp8.rimLoader();
         pdp8.memory.programCounter.setProgramCounter(n.first);
         auto e = pdp8.memory.examine().getData();
         auto d = n.second;
-        fmt::print("{:o} {:o} {:o}\n", n.first, e, d);
-        ct::expect(e == d);
+        ct::expect(ct::lift(e) == d);
     };
 }};
