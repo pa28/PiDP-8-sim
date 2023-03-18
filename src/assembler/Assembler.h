@@ -680,7 +680,7 @@ namespace pdp8asm {
                      // Group 2 Microcode OR group
                      {07500, "SMA", Gr2Or},
                      {07440, "SZA", Gr2Or},
-                     {07420, "SNZ", Gr2Or},
+                     {07420, "SNL", Gr2Or},
                      // Group 2 Microcode AND group
                      {07510, "SPA", Gr2And},
                      {07450, "SNA", Gr2And},
