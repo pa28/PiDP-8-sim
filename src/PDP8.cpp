@@ -198,7 +198,6 @@ namespace pdp8 {
                            (instructionReg.getZeroPage() ? 'Z' : ' '),
                            instructionReg.getAddress());
         }
-
     }
 
     void PDP8::execute_iot() {
@@ -230,9 +229,12 @@ namespace pdp8 {
                 case 5: //RTF
                     accumulator.setLink(accumulator.get<registers::register_t<1,0,12>>());
                     greater_than_flag = accumulator.get<registers::register_t<1,1,12>>() != 0;
-                    interrupt_request = accumulator.get<registers::register_t<1,2,12>>() != 0;
-                    interrupt_enable = accumulator.get<registers::register_t<1,4,12>>() != 0;
-                    memory.fieldRegister.setInstField(accumulator.get<registers::register_t<3,6,12>>());
+                    //interrupt_request = accumulator.get<registers::register_t<1,2,12>>() != 0;
+                    if (accumulator.get<registers::register_t<1,4,12>>() != 0) {
+                        interrupt_delayed = 2;
+                        interrupt_deferred = true;
+                    }
+                    memory.fieldRegister.setInstBuffer(accumulator.get<registers::register_t<3,6,12>>());
                     memory.fieldRegister.setDataField(accumulator.get<registers::register_t<3,9,12>>());
                     break;
                 case 6: // SGT
@@ -254,12 +256,12 @@ namespace pdp8 {
             if (instructionReg.getWord() & 2) {   // CIF
                 memory.fieldRegister.setInstBuffer(instructionReg.getFieldReg());
             }
-        }
-
-        auto deviceSel = instructionReg.getDeviceSel();
-        auto devOp = instructionReg.getDeviceOpr();
-        if (auto device = iotDevices.find(deviceSel); device != iotDevices.end()) {
-            device->second->operation(*this, deviceSel, devOp);
+        } else {
+            auto deviceSel = instructionReg.getDeviceSel();
+            auto devOp = instructionReg.getDeviceOpr();
+            if (auto device = iotDevices.find(deviceSel); device != iotDevices.end()) {
+                device->second->operation(*this, deviceSel, devOp);
+            }
         }
         // Other IOT instructions not supported yet.
     }
