@@ -59,6 +59,46 @@ static constexpr std::string_view   autoIncCode{R"(
                 *0200
 )"};
 
+struct Operate {
+    PDP8 pdp8{};
+    bool opCode{false};
+    std::function<void(Operate&)> setup{};
+    explicit operator bool () const { return opCode; }
+
+    template<class Str>
+    requires StringLike<Str>
+    void initialize(Str opStr, unsigned pc) {
+        if (setup)
+            setup(*this);
+
+        try {
+            if (auto op = pdp8asm::generateOpCode(opStr, pc); op) {
+                opCode = op.has_value();
+                pdp8.instructionReg.value = op.value();
+                pdp8.execute();
+            }
+        } catch (AssemblyException &ae) {
+            fmt::print("Assembly Exception: {}\n", ae.what());
+            throw;
+        } catch (std::invalid_argument &ia) {
+            fmt::print("{}\n", ia.what());
+            throw;
+        }
+    }
+
+    template<class Str>
+    requires StringLike<Str>
+    explicit Operate(Str opStr, unsigned pc = 0u) {
+        initialize(opStr, pc);
+    }
+
+    template<class Str>
+            requires StringLike<Str>
+    Operate(Str opStr, std::function<void(Operate&)> setup, unsigned pc = 0u) : setup(std::move(setup)) {
+        initialize(opStr, pc);
+    }
+};
+
 struct AccInstruction {
     PDP8 pdp8{};
     bool opCode{false};
@@ -226,8 +266,6 @@ auto const suite5 = ct::Suite { "Special JMP", []{
     };
 }};
 
-#endif
-
 auto const suite6 = ct::Suite { "CPU", [] {
     "reset"_test = [] {
         PDP8 pdp8{};
@@ -253,3 +291,20 @@ auto const suite6 = ct::Suite { "CPU", [] {
     };
 
 }};
+
+auto const suite7 = ct::Suite { "Interrupt", [] {
+    "SKON"_test = []{ Operate o("SKON"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
+    "SKON"_test = []{ Operate o("SKON", [](Operate& opr){
+        opr.pdp8.interrupt_enable = true;});
+        ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+    "SRQ"_test = []{ Operate o("SRQ"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
+    "SRQ"_test = []{ Operate o("SRQ", [](Operate& opr){
+        opr.pdp8.interrupt_request = true;});
+        ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+    "ION"_test = []{ Operate o("ION"); ct::expect(o.opCode and ct::lift(o.pdp8.interrupt_delayed == 2_i));};
+    "IOF"_test = []{ Operate o("IOF", [](Operate& opr){
+        opr.pdp8.interrupt_enable = true;
+    }); ct::expect(o.opCode and ct::lift(!o.pdp8.interrupt_enable)); };
+}};
+
+#endif
