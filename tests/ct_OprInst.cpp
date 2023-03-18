@@ -354,8 +354,6 @@ auto const suite7 = ct::Suite { "Interrupt", [] {
     "CIF"_test = []{ Operate o("CIF 070"); ct::expect(o.opCode and o.pdp8.memory.fieldRegister.getInstBuffer() == 07_i); };
 }};
 
-#endif
-
 auto const suite8 = ct::Suite { "Bool Skip", [] {
     "SPA_T"_test = [] { Operate o("SPA"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
     "SNA_F"_test = [] { Operate o("SNA"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
@@ -381,4 +379,39 @@ auto const suite8 = ct::Suite { "Bool Skip", [] {
     "SMA_T"_test = [] { Operate o("SMA", [](Operate& opr){
         opr.pdp8.accumulator.setAcc(04000u);
     }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+}};
+
+#endif
+
+auto const suite9 = ct::Suite{ "RIM Loader", [] {
+    static const std::vector<std::pair<uint16_t,uint16_t>> data{
+            {07756, 06014},
+            {07757, 06011},
+            {07760, 05357},
+            {07761, 06016},
+            {07762, 07106},
+            {07763, 07006},
+            {07764, 07510},
+            {07765, 05357},
+            {07766, 07006},
+            {07767, 06011},
+            {07770, 05367},
+            {07771, 06016},
+            {07772, 07420},
+            {07773, 03776},
+            {07774, 03376},
+            {07775, 05357},
+            {07776, 0},
+            {07777, 0}
+    };
+
+    ct::Test{"Code", data} = [](std::pair<uint16_t,uint16_t> const &n) {
+        PDP8 pdp8{};
+        pdp8.rimLoader();
+        pdp8.memory.programCounter.setProgramCounter(n.first);
+        auto e = pdp8.memory.examine().getData();
+        auto d = n.second;
+        fmt::print("{:o} {:o} {:o}\n", n.first, e, d);
+        ct::expect(e == d);
+    };
 }};
