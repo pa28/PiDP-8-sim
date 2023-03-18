@@ -340,6 +340,13 @@ namespace pdp8asm {
                                     } else
                                         throw std::invalid_argument("Invalid microcode combination:");
                                     break;
+                                case CombinationType::Iot:
+                                    if (restrict == CombinationType::Gr) {
+                                        code = op->second.opCode;
+                                        restrict = CombinationType::Iot;
+                                    } else
+                                        throw std::invalid_argument("IOT instructions do not combine:");
+                                    break;
                             }
                         }
                         break;

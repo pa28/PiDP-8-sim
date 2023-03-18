@@ -627,7 +627,7 @@ namespace pdp8asm {
      * @brief Methods for combining multiple Instructions in one instruction.
      */
     enum CombinationType {
-        Memory,    ///< Replace any pre-existing value (memory access operations).
+        Memory,     ///< Replace any pre-existing value (memory access operations).
         Flag,       ///< Logical Or with Memory value (Indirect Flag)
         Mask,       ///< Logical And with Memory value (Page Zero Flag).
         Gr,         ///< Group agnostic microcode Or with any Gr1, Gr2, Gr3.
@@ -636,6 +636,7 @@ namespace pdp8asm {
         Gr2Or,      ///< Group 2 OR microcode
         Gr2And,     ///< Group 2 AND microcode
         Gr3,        ///< Group 3 microcode
+        Iot,        ///< IOT Instructions
     };
 
     struct Instruction {
@@ -644,9 +645,9 @@ namespace pdp8asm {
         CombinationType orCombination;
     };
 
-    static constexpr std::array<Instruction, 69> InstructionSet =
+    static constexpr std::array<Instruction, 77> InstructionSet =
             {{
-                     // Instruction flags
+                     // Operate flags
                      {00400, "I", Flag},
                      {07577, "Z", Mask},
                      // Memory access functions, default to current page addressing
@@ -690,6 +691,15 @@ namespace pdp8asm {
                      {07501, "MQA", Gr3}, // Or Multiplier Quotient with Accumulator
                      {07421, "MQL", Gr3}, // Multiplier Quotient Load
                      {07521, "SWP", Gr3}, // Swap MQ and AC
+                     // Interrupt management
+                     {06000, "SKON", Iot}, // Skip on interrupt enabled
+                     {06001, "ION", Iot},  // Interrupt enable on
+                     {06002, "IOF", Iot},  // Interrupt enable off
+                     {06003, "SRQ", Iot},  // Skip on interrupt request
+                     {06004, "GTF", Iot},  // Get flags
+                     {06005, "RTF", Iot},  // Restore flags
+                     {06006, "SGT", Iot},  // Skip on Greater Than flag
+                     {06007, "CAF", Iot},  // Clear all flags.
                      // Memory management
                      {06201, "CDF", Memory},
                      {06202, "CIF", Memory},
@@ -1005,6 +1015,8 @@ namespace pdp8asm {
             if (first->tokenClass == OP_CODE) {
                 std::tie(codeValue, first) = assembler.evaluateOpCode(first, last);
                 return codeValue.value();
+            } else {
+                throw AssemblyException(fmt::format("{} is not a recognized opt code.", first->literal));
             }
         }
         return std::nullopt;
