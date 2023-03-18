@@ -292,8 +292,6 @@ auto const suite6 = ct::Suite { "CPU", [] {
 
 }};
 
-#endif
-
 auto const suite7 = ct::Suite { "Interrupt", [] {
     "SKON"_test = []{ Operate o("SKON"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
     "SKON"_test = []{ Operate o("SKON", [](Operate& opr){
@@ -356,3 +354,31 @@ auto const suite7 = ct::Suite { "Interrupt", [] {
     "CIF"_test = []{ Operate o("CIF 070"); ct::expect(o.opCode and o.pdp8.memory.fieldRegister.getInstBuffer() == 07_i); };
 }};
 
+#endif
+
+auto const suite8 = ct::Suite { "Bool Skip", [] {
+    "SPA_T"_test = [] { Operate o("SPA"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+    "SNA_F"_test = [] { Operate o("SNA"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
+    "SPA_F"_test = [] { Operate o("SPA", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(01000u);
+    }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+    "SNA_T"_test = [] { Operate o("SNA", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(01000u);
+    }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+    "SZL_T"_test = [] { Operate o("SZL"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+    "SZL_F"_test = [] { Operate o("SZL", [](Operate& opr){
+        opr.pdp8.accumulator.setLink(01u);
+    }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
+    "SZA_T"_test = [] { Operate o("SZA"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+    "SZA_F"_test = [] { Operate o("SZA", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(01u);
+    }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
+    "SNL_F"_test = [] { Operate o("SNL"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
+    "SNL_T"_test = [] { Operate o("SNL", [](Operate& opr){
+        opr.pdp8.accumulator.setLink(01u);
+    }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+    "SMA_F"_test = [] { Operate o("SMA"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
+    "SMA_T"_test = [] { Operate o("SMA", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(04000u);
+    }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
+}};
