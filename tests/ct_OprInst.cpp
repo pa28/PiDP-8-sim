@@ -292,6 +292,8 @@ auto const suite6 = ct::Suite { "CPU", [] {
 
 }};
 
+#endif
+
 auto const suite7 = ct::Suite { "Interrupt", [] {
     "SKON"_test = []{ Operate o("SKON"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i); };
     "SKON"_test = []{ Operate o("SKON", [](Operate& opr){
@@ -305,6 +307,52 @@ auto const suite7 = ct::Suite { "Interrupt", [] {
     "IOF"_test = []{ Operate o("IOF", [](Operate& opr){
         opr.pdp8.interrupt_enable = true;
     }); ct::expect(o.opCode and ct::lift(!o.pdp8.interrupt_enable)); };
+    // GTF - Get Flags
+    "GTF_L"_test = []{ Operate o("GTF", [](Operate& opr){
+        opr.pdp8.accumulator.setLink(1);
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.accumulator.getAcc() == 04000_i));};
+    "GTF_GT"_test = []{ Operate o("GTF", [](Operate& opr){
+        opr.pdp8.greater_than_flag = true;
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.accumulator.getAcc() == 02000_i));};
+    "GTF_IR"_test = []{ Operate o("GTF", [](Operate& opr){
+        opr.pdp8.interrupt_request = true;
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.accumulator.getAcc() == 01000_i));};
+    "GTF_GT"_test = []{ Operate o("GTF", [](Operate& opr){
+        opr.pdp8.interrupt_enable = true;
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.accumulator.getAcc() == 00200_i));};
+    "GTF_IF"_test = []{ Operate o("GTF", [](Operate& opr){
+        opr.pdp8.memory.fieldRegister.setInstField(07u);
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.accumulator.getAcc() == 00070_i));};
+    "GTF_DF"_test = []{ Operate o("GTF", [](Operate& opr){
+        opr.pdp8.memory.fieldRegister.setDataField(07u);
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.accumulator.getAcc() == 00007_i));};
+    // RTF - Restore Flags
+    "RTF_L"_test = []{ Operate o("RTF", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(04000u);
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.accumulator.getLink() == 1_i));};
+    "RTF_GT"_test = []{ Operate o("RTF", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(02000u);
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.greater_than_flag));};
+    "RTF_IR"_test = []{ Operate o("RTF", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(01000u);
+    }); ct::expect(o.opCode and ct::lift(!o.pdp8.interrupt_request));};
+    "RTF_IE"_test = []{ Operate o("RTF", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(00200u);
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.interrupt_deferred) and ct::lift(o.pdp8.interrupt_delayed) == 2u);};
+    "RTF_IF"_test = []{ Operate o("RTF", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(00070u);
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.memory.fieldRegister.getInstBuffer() == 07_i));};
+    "RTF_DF"_test = []{ Operate o("RTF", [](Operate& opr){
+        opr.pdp8.accumulator.setAcc(00007u);
+    }); ct::expect(o.opCode and ct::lift(o.pdp8.memory.fieldRegister.getDataField() == 00007_i));};
+    "SGT_T"_test = []{ Operate o("SGT", [](Operate& opr){
+        opr.pdp8.greater_than_flag = true;
+    }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i);};
+    "SGT_F"_test = []{ Operate o("SGT", [](Operate& opr){
+        opr.pdp8.greater_than_flag = false;
+    }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0200_i);};
+    "CAF"_test = []{ Operate o("CAF"); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0000_i); };
+    "CDF"_test = []{ Operate o("CDF 070"); ct::expect(o.opCode and o.pdp8.memory.fieldRegister.getDataField() == 07_i); };
+    "CIF"_test = []{ Operate o("CIF 070"); ct::expect(o.opCode and o.pdp8.memory.fieldRegister.getInstBuffer() == 07_i); };
 }};
 
-#endif
