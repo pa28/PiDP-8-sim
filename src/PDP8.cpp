@@ -207,6 +207,7 @@ namespace pdp8 {
                 case 0: //SKON
                     if (interrupt_enable)
                         ++memory.programCounter;
+                    break;
                 case 2: //IOF
                     interrupt_enable = false;
                     break;
@@ -240,7 +241,7 @@ namespace pdp8 {
                     break;
                 case 7: // CAF
                     memory.programCounter.setProgramCounter(0u);
-                    cycle_state = CycleState::Interrupt;
+                    reset();
                     break;
                 default:
                     throw std::logic_error("IOT 00 error."); // LCOV_EXCL_LINE
