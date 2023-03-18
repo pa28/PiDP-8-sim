@@ -35,6 +35,12 @@
 // https://www.toptal.com/c-plus-plus/creating-an-expression-parser-in-c-
 namespace pdp8asm {
 
+    class AssemblyException : public std::runtime_error {
+    public:
+        explicit AssemblyException(const char *whatArg) : std::runtime_error(whatArg) {}
+        explicit AssemblyException(const std::string& whatArg) : std::runtime_error(whatArg) {}
+    };
+
     using word_t = uint16_t;
 
     inline std::string sToUpper(const std::string& s) {
