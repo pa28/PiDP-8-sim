@@ -651,7 +651,7 @@ namespace pdp8asm {
         CombinationType orCombination;
     };
 
-    static constexpr std::array<Instruction, 77> InstructionSet =
+    static constexpr std::array<Instruction, 80> InstructionSet =
             {{
                      // Operate flags
                      {00400, "I", Flag},
@@ -765,63 +765,20 @@ namespace pdp8asm {
                      /*
                       * DK8-EA, DK8-EC
                       */
-//                      {06131, "CLEI", Memory}, // Enable clock interrupt.
-//                      {06132, "CLED", Memory}, // Disable clock interrupt.
-//                      {06133, "CLSK", Memory}, // Skip on clock interrupt and clear flag.
+                      {06131, "CLEI", Memory}, // Enable clock interrupt.
+                      {06132, "CLDI", Memory}, // Disable clock interrupt.
+                      {06133, "CLSK", Memory}, // Skip on clock interrupt and clear flag.
                      /*
-                      * DK8-EP, DK8-ES
+                      * DK8-EP, DK8-ES See DEC_8E-HR2B-D-DK8-EP manual in DEC Documents.
                       */
                      {06130, "CLZE", Memory}, // Clock set Flags - AC > Clock flags
                      {06131, "CLSK", Memory}, // Skip on clock interrupt.
-                     {06132, "CLOE", Memory}, // AC to Clock enable register.
+                     {06132, "CLDE", Memory}, // AC to Clock enable register.
                      {06133, "CLAB", Memory}, // AC to Clock buffer register.
                      {06134, "CLEN", Memory}, // Clock enable register to AC.
                      {06135, "CLSA", Memory}, // Clock status to AC.
                      {06136, "CLBA", Memory}, // Clock buffer to AC.
                      {06137, "CLCA", Memory}  // Clock counter to AC.
-                     /* CLZE 6130 Clear enable register per AC. Clears enable bits corresponding to bits set in AC
-                      * CLSK 6131 Skip on clock interrupt.
-                      * CLOE 6132 Transfer "1"s from the AC to clock enabling register.
-                      *           Bit 0 enable overflow
-                      *           Bit 1,2 mode control
-                      *           00 Counter runs at selected rate overflows at 4096 counts.
-                      *           01 Counter runs at selected rate, overflow causes the buffer register
-                      *           to transfer to the counter.
-                      *           10 Counter runs at selected rate, external trigger cause buffer to transfer
-                      *           to the counter.
-                      *           11 Counter runs at selected rate, external trigger cause the counter to transfer
-                      *           to the buffer. The counter will continue to run from 0.
-                      *           Bit 3,4,5 Count rate
-                      *           000 Stop
-                      *           001 External source
-                      *           010 100 Hz
-                      *           011 1 kHz
-                      *           100 10 kHz
-                      *           101 100 kHz
-                      *           110 1 MHz
-                      *           111 Stop
-                      *           Bit 6 When set 1 overflow causes external pulse.
-                      *           Bit 7 When set 1 the counter is inhibited from counting.
-                      *           Bit 8 When set 1 External signal causes interrupt.
-                      *           Bit 9,10,11 Enable external triggers
-                      *           100 Input 4
-                      *           010 Input 2
-                      *           001 Input 1
-                      *
-                      * CLAB 6133 Transfer AC to the clock then buffers and counter.
-                      * CLEN 6134 Transfer enable register to AC see CLOE
-                      *
-                      * CLSA 6135 Transfer clock status to AC then cleared from status
-                      * AC Bits     Functions
-                      * 0           Overflow
-                      * 1-8         Unused
-                      * 9           Input 4
-                      * 10          Input 2
-                      * 11          Input 1
-                      *
-                      * CLBA 6136 Transfer clock buffer to the AC
-                      * CLca 6137 Transfer clock counter through buffer to the AC
-                      */
              }};
 
     static constexpr std::array<PreDefinedSymbol, 8> PRE_DEFINED_SYMBOLS =
