@@ -40,7 +40,7 @@ namespace pdp8 {
         }
     }
 
-    int Pdp8Terminal::selected(bool selectedRead, bool selectedWrite) {
+    int Pdp8Terminal::selected(bool selectedRead, bool ) {
         if (selectedRead) {
             parseInput();
             inputBufferChanged();
@@ -101,14 +101,15 @@ namespace pdp8 {
                 case 'D': {
                     if (auto code = parseArgument(command.substr(1)); code) {
                         commandHistory.push_back(command);
-                        pdp8.memory.deposit(code.value());
+                        pdp8.memory.deposit(static_cast<Memory::base_type>(code.value()));
                     }
                     printPanel();
                 }
                     break;
                 case 'E': {
                     if (auto pc = parseArgument(command.substr(1)); pc) {
-                        auto word = pdp8.memory.read(pdp8.memory.fieldRegister.getInstField(), pc.value()).getData();
+                        auto word = pdp8.memory.read(static_cast<Memory::base_type>(pdp8.memory.fieldRegister.getInstField()),
+                                                     static_cast<Memory::base_type>(pc.value())).getData();
                         commandHistory.push_back(fmt::format("Examine {:04o} -> {:04o}", pc.value(), word));
                     }
                 }
@@ -156,16 +157,15 @@ namespace pdp8 {
         using namespace TerminalConsts;
         *oStrm << fmt::format("{}", color(Regular, Yellow));
 
-        size_t margin = 1;
         size_t line = 3, column = 2;
-        std::tie(line, column) = printPanelField(line, column, 3, pdp8.memory.fieldRegister.getDataField());
-        std::tie(line, column) = printPanelField(line, column, 3, pdp8.memory.fieldRegister.getInstField());
-        std::tie(line, column) = printPanelField(line, column, 12, pdp8.memory.programCounter.getProgramCounter());
-        std::tie(line, column) = printPanelField(line + 3u, 14u, 12, pdp8.memory.memoryAddress.getPageWordAddress());
-        std::tie(line, column) = printPanelField(line + 3u, 14u, 12, pdp8.memory.memoryBuffer.getData());
-        std::tie(line, column) = printPanelField(line + 3u, 12u, 13, pdp8.accumulator.getArithmetic());
-        std::tie(line, column) = printPanelField(line + 3u, 2u, 5, pdp8.stepCounter.value);
-        std::tie(line, column) = printPanelField(line, 14u, 12, pdp8.mulQuotient.getWord());
+        std::tie(line, column) = printPanelField(line, column, 3, static_cast<uint>(pdp8.memory.fieldRegister.getDataField()));
+        std::tie(line, column) = printPanelField(line, column, 3, static_cast<uint>(pdp8.memory.fieldRegister.getInstField()));
+        std::tie(line, column) = printPanelField(line, column, 12, static_cast<uint>(pdp8.memory.programCounter.getProgramCounter()));
+        std::tie(line, column) = printPanelField(line + 3u, 14u, 12, static_cast<uint>(pdp8.memory.memoryAddress.getPageWordAddress()));
+        std::tie(line, column) = printPanelField(line + 3u, 14u, 12, static_cast<uint>(pdp8.memory.memoryBuffer.getData()));
+        std::tie(line, column) = printPanelField(line + 3u, 12u, 13, static_cast<uint>(pdp8.accumulator.getArithmetic()));
+        std::tie(line, column) = printPanelField(line + 3u, 2u, 5, static_cast<uint>(pdp8.stepCounter.value));
+        std::tie(line, column) = printPanelField(line, 14u, 12, static_cast<uint>(pdp8.mulQuotient.getWord()));
 
         printPanelFlag(2u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::AND);
         printPanelFlag(4u, 44u, static_cast<OpCode>(pdp8.instructionReg.getOpCode()) == OpCode::TAD);
@@ -247,7 +247,6 @@ namespace pdp8 {
 
         assembler.dumpSymbols(terminal->out());
         terminal->out().flush();
-        auto startAddress = pdp8.readBinaryFormat(binary);
         printPanel();
     }
 
@@ -303,9 +302,9 @@ namespace pdp8 {
         try {
             char* pos;
             auto code = std::strtoul(argument.c_str(), &pos, 8);
-            if (pos - argument.c_str() == argument.length())
+            if (static_cast<size_t>(pos - argument.c_str()) == argument.length())
                 return code;
-            return pdp8asm::generateOpCode(argument, pdp8.memory.programCounter.getProgramCounter());
+            return pdp8asm::generateOpCode(argument, static_cast<unsigned int>(pdp8.memory.programCounter.getProgramCounter()));
         } catch (const std::invalid_argument &ia) {
             commandHistory.emplace_back(ia.what());
         } catch (const std::out_of_range &oor) {

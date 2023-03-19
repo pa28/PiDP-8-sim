@@ -217,7 +217,8 @@ namespace pdp8 {
         }
 
         void deposit(base_type data) {
-            write(fieldRegister.getInstField(), programCounter.getProgramCounter(), data, true);
+            write(static_cast<base_type>(fieldRegister.getInstField()),
+                  static_cast<base_type>(programCounter.getProgramCounter()), data, true);
             ++programCounter;
         }
 
@@ -237,7 +238,8 @@ namespace pdp8 {
         }
 
         MemoryBuffer examine() {
-            auto pc = read(fieldRegister.getInstField(), programCounter.getProgramCounter());
+            auto pc = read(static_cast<base_type>(fieldRegister.getInstField()),
+                           static_cast<base_type>(programCounter.getProgramCounter()));
             ++programCounter;
             return pc;
         }

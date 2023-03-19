@@ -1011,7 +1011,7 @@ namespace pdp8asm {
         std::stringstream strm{codeString};
         Assembler assembler;
         assembler.readProgram(strm);
-        assembler.programCounter = programCounter;
+        assembler.programCounter = static_cast<word_t>(programCounter);
         assembler.pass1();
         assembler.assemblerPass = Assembler::PASS_TWO;
         auto first = assembler.program.begin();

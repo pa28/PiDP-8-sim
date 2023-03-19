@@ -120,7 +120,7 @@ namespace pdp8asm {
             for (auto first = program.begin(); first != program.end(); ++first) {
                 auto next = first + 1;
                 if (next != program.end()) {
-                    if (first->tokenClass == LITERAL && next->tokenClass == LABEL_DEFINE ||
+                    if ((first->tokenClass == LITERAL && next->tokenClass == LABEL_DEFINE) ||
                         next->tokenClass == LABEL_ASSIGN) {
                         undefinedLabel(first->literal);
                         first->tokenClass = LABEL;
@@ -397,11 +397,11 @@ namespace pdp8asm {
             auto convert = literal.substr(p0, (p1 + 1) - p0);
             switch (radix) {
                 case Radix::OCTAL:
-                    return stoul(convert, nullptr, 8);
+                    return static_cast<word_t>(stoul(convert, nullptr, 8));
                 case Radix::DECIMAL:
-                    return stoul(convert, nullptr, 10);
+                    return static_cast<word_t>(stoul(convert, nullptr, 10));
                 case Radix::AUTOMATIC:
-                    return stoul(convert, nullptr, 0);
+                    return static_cast<word_t>(stoul(convert, nullptr, 0));
             }
             return 0;
         }

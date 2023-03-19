@@ -108,7 +108,7 @@ namespace pdp8 {
 
         ~Pdp8Terminal() override = default;
 
-        explicit Pdp8Terminal(PDP8& pdp8) : pdp8(pdp8), TelnetTerminal() {
+        explicit Pdp8Terminal(PDP8& pdp8) : TelnetTerminal(), pdp8(pdp8) {
             timerTick = [this]() -> bool {
                 console();
                 return runConsole;

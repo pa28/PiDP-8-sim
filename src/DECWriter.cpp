@@ -59,7 +59,7 @@ namespace pdp8 {
                     performInputOutput(pdp8);
                     break;
                 case 4: // TPC
-                    printerBuffer = pdp8.accumulator.getAscii();
+                    printerBuffer = static_cast<unsigned int>(pdp8.accumulator.getAscii());
                     break;
                 case 5: // TSK
                     if (printerFlag || keyboardFlag)
@@ -67,7 +67,7 @@ namespace pdp8 {
                     break;
                 case 6: // TLS
                     printerFlag = false;
-                    printerBuffer = pdp8.accumulator.getAscii();
+                    printerBuffer = static_cast<unsigned int>(pdp8.accumulator.getAscii());
                     performInputOutput(pdp8);
                     break;
                 default:
@@ -127,7 +127,7 @@ namespace pdp8 {
         }
     }
 
-    int DECWriterTerminal::selected(bool selectedRead, bool selectedWrite) {
+    int DECWriterTerminal::selected(bool selectedRead, bool ) {
         if (selectedRead) {
             parseInput(true);
             inputBufferChanged();

@@ -108,12 +108,12 @@ namespace pdp8 {
                     ++memory.programCounter;
                 break;
             case OpCode::DCA:
-                memory.memoryBuffer.setData(accumulator.getAcc());
+                memory.memoryBuffer.setData(static_cast<unsigned short>(accumulator.getAcc()));
                 memory.write();
                 accumulator.setAcc(0);
                 break;
             case OpCode::JMS:
-                memory.memoryBuffer.setData(memory.programCounter.getProgramCounter());
+                memory.memoryBuffer.setData(static_cast<unsigned short>(memory.programCounter.getProgramCounter()));
                 memory.write();
                 memory.programCounter.setProgramCounter(memory.memoryAddress.getPageWordAddress() + 1);
                 break;
@@ -187,7 +187,7 @@ namespace pdp8 {
         }
     }
 
-    void PDP8::decodeInstruction() const {
+    void PDP8::decodeInstruction() const {    // GCOVR_EXCL_START
         switch (static_cast<OpCode>(instructionReg.getOpCode())) {
             case pdp8::OpCode::IOT:
             case pdp8::OpCode::OPR:
@@ -198,7 +198,7 @@ namespace pdp8 {
                            (instructionReg.getZeroPage() ? 'Z' : ' '),
                            instructionReg.getAddress());
         }
-    }
+    }    // GCOVR_EXCL_STOP
 
     void PDP8::execute_iot() {
         if (instructionReg.getDeviceSel() == 0u) {
@@ -246,7 +246,7 @@ namespace pdp8 {
                     reset();
                     break;
                 default:
-                    throw std::logic_error("IOT 00 error."); // LCOV_EXCL_LINE
+                    throw std::logic_error("IOT 00 error."); // GCOV_EXCL_LINE
             }
         } else if ((instructionReg.getWord() & 06200) == 06200) {
             if (instructionReg.getWord() & 1) {   // CDF
@@ -259,8 +259,8 @@ namespace pdp8 {
         } else {
             auto deviceSel = instructionReg.getDeviceSel();
             auto devOp = instructionReg.getDeviceOpr();
-            if (auto device = iotDevices.find(deviceSel); device != iotDevices.end()) {
-                device->second->operation(*this, deviceSel, devOp);
+            if (auto device = iotDevices.find(static_cast<unsigned int>(deviceSel)); device != iotDevices.end()) {
+                device->second->operation(*this, static_cast<unsigned int>(deviceSel), static_cast<unsigned int>(devOp));
             }
         }
         // Other IOT instructions not supported yet.
@@ -287,19 +287,21 @@ namespace pdp8 {
                     break;
                 case 012: // RTR
                     accumulator.setArithmetic((accumulator.getLeastSig() << 12) | (accumulator.getArithmetic() >> 1));
+                    [[fallthrough]];
                 case 010: // RAR
                     accumulator.setArithmetic((accumulator.getLeastSig() << 12) | (accumulator.getArithmetic() >> 1));
                     break;
                 case 006: // RTL
                     accumulator.setArithmetic((accumulator.getArithmetic() << 1) | accumulator.getLink());
+                    [[fallthrough]];
                 case 004: // RAL
                     accumulator.setArithmetic((accumulator.getArithmetic() << 1) | accumulator.getLink());
                     break;
                 case 002: // BSW
                     accumulator.setAcc((accumulator.getLowerNibble() << 6) | accumulator.getUpperNibble());
                     break;
-                default: // LCOV_EXCL_LINE
-                    throw std::logic_error("Group 1 OPR error."); // LCOV_EXCL_LINE
+                default:
+                    throw std::logic_error("Group 1 OPR error.");
             }
         } else if ((bits & 0401) == 0400) { // Group 2
             bool skip;
@@ -342,8 +344,9 @@ namespace pdp8 {
                     accumulator.setAcc(0);
                     mulQuotient.setWord(0);
                     break;
-                case 0701:
+                case 0701:  // CLA MQA
                     accumulator.setAcc(0);
+                    [[fallthrough]];
                 case 0501: // MQA
                     accumulator.setAcc(accumulator.getAcc() | mulQuotient.getWord());
                     break;

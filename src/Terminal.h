@@ -340,7 +340,7 @@ namespace pdp8 {
 
         std::chrono::microseconds selectTimeout{1000};
         struct SelectAllResult {
-            int listIndex{-1};
+            unsigned long listIndex{static_cast<unsigned long>(-1)};
             int readFd{-1}, writeFd{-1};
             bool selectRead{false};
             bool selectWrite{false};

@@ -82,7 +82,7 @@ namespace pdp8 {
 
         sock_address->sin_family = AF_INET;
         sock_address->sin_addr.s_addr = inet_addr("127.0.0.1");
-        sock_address->sin_port = htons(listenPort);
+        sock_address->sin_port = htons(static_cast<uint16_t>(listenPort));
 
         if (bind(*socket, (struct sockaddr *) &sock_address, sizeof(sock_address)) == -1) {
             perror("bind");
@@ -94,7 +94,7 @@ namespace pdp8 {
 
         socklen_t len = sizeof(sock_address);
         getsockname(*socket, (struct sockaddr *) sock_address.get(), &len);
-        auto port = ntohs(sock_address->sin_port);
+        [[maybe_unused]] auto port = ntohs(sock_address->sin_port);
 
         if ((*terminalFd = accept(*socket, (struct sockaddr *) &client_address, (socklen_t *) &client_addr_len)) ==
             -1)
@@ -137,7 +137,7 @@ namespace pdp8 {
         return {readSelect, writeSelect, timeout.tv_usec};
     }
 
-    int Terminal::selected(bool selectedRead, bool selectedWrite) {
+    int Terminal::selected(bool selectedRead, bool) {
         if (selectedRead) {
             return iStrm->get();
         }
@@ -276,7 +276,7 @@ namespace pdp8 {
                 }
             }
             if (!disconnected && (selectResult.selectRead || selectResult.selectWrite)) {
-                auto c = at(selectResult.listIndex)->selected(selectResult.selectRead, selectResult.selectWrite);
+                [[maybe_unused]] auto c = at(static_cast<unsigned long>(selectResult.listIndex))->selected(selectResult.selectRead, selectResult.selectWrite);
             }
         }
 
@@ -308,7 +308,7 @@ namespace pdp8 {
 
         std::vector<SelectAllResult> selectResults{};
 
-        for (int i = 0; i < size(); ++i) {
+        for (unsigned i = 0; i < size(); ++i) {
             auto readFd = at(i)->getReadFd();
             auto writeFd = at(i)->getWriteFd();
             selectResults.emplace_back(i, readFd, writeFd, false, false, false);
