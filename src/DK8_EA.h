@@ -33,7 +33,7 @@ namespace pdp8 {
     public:
         bool enable_interrupt{false};
 
-        DK8_EA();
+        explicit DK8_EA(bool runClock = true);
 
         DK8_EA(const DK8_EA&) = delete;
         DK8_EA(DK8_EA&&) = delete;

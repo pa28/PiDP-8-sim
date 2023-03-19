@@ -50,10 +50,13 @@ namespace pdp8 {
         clock_flag = flag;
     }
 
-    DK8_EA::DK8_EA() {
-        clock_thread = std::jthread([this](){
-            std::this_thread::sleep_for(16667us);
-            this->setClockFlag(true);
-        });
+    DK8_EA::DK8_EA(bool runClock) {
+        if (runClock)
+            clock_thread = std::jthread([this](std::stop_token stopToken){
+                while (!stopToken.stop_requested()) {
+                    std::this_thread::sleep_for(16667us);
+                    this->setClockFlag(true);
+                }
+            });
     }
 }
