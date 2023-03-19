@@ -93,6 +93,11 @@ struct Operate {
         initialize(opStr, pc);
     }
 
+    explicit Operate(uint16_t op) {
+        pdp8.instructionReg.value = op;
+        pdp8.execute();
+    }
+
     template<class Str>
             requires StringLike<Str>
     Operate(Str opStr, std::function<void(Operate&)> setup, unsigned pc = 0u) : setup(std::move(setup)) {
@@ -125,13 +130,13 @@ struct AutoIncTest {
 
     explicit operator bool () const { return opCode; }
     explicit AutoIncTest(unsigned int addr) {
-        addr = addr & 07 | 010;
+        addr = (addr & 07) | 010;
         auto opStr = fmt::format("TAD I 0{:o}", addr);
         if (auto op = pdp8asm::generateOpCode(opStr, 0u); op) {
             opCode = op.has_value();
             pdp8.instructionReg.value = op.value();
             pdp8.defer();
-            result = pdp8.memory.read(0u, addr).getData() == 1u;
+            result = pdp8.memory.read(0u, static_cast<Memory::base_type>(addr)).getData() == 1u;
         }
     }
 };
@@ -160,6 +165,14 @@ auto const suite1 = ct::Suite{"Microcode", []{
     "0"_test = [] { PDP8 pdp8{}; ct::expect(pdp8.accumulator.getAcc() == 0_i and pdp8.accumulator.getLink() == 0_i); };
     "1"_test = [] { TestAssembly t{testCode0}; ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getAcc() == 0_i); };
     "2"_test = [] { TestAssembly t{testCode0}; ct::expect(t.pass1 and t.pass2 and t.pdp8.accumulator.getLink() == 1_i); };
+    "E"_test = [] {
+        try {
+            Operate o{07016};   // Test an illegal microcode
+            ct::expect(false);
+        } catch (std::logic_error &le) {
+            ct::expect(true);
+        }
+    };
 }};
 
 auto const suite2 = ct::Suite {"Auto Increment", []{
@@ -382,8 +395,6 @@ auto const suite8 = ct::Suite { "Bool Skip", [] {
     }); ct::expect(o.opCode and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i); };
 }};
 
-#endif
-
 auto const suite9 = ct::Suite{ "RIM Loader", [] {
     ct::Test{"Code", PDP8::RIM_LOADER} = [](std::pair<uint16_t,uint16_t> const &n) {
         PDP8 pdp8{};
@@ -392,5 +403,75 @@ auto const suite9 = ct::Suite{ "RIM Loader", [] {
         auto e = pdp8.memory.examine().getData();
         auto d = n.second;
         ct::expect(ct::lift(e) == d);
+    };
+}};
+
+auto const suite10 = ct::Suite { "DK8-EA", [] {
+    "CLEI"_test = [] { Operate o("CLEI", [](Operate &opr){
+        auto dk8ea = std::make_shared<pdp8::DK8_EA>();
+        opr.pdp8.iotDevices[013] = dk8ea;
+    });
+        auto dk8ea = std::dynamic_pointer_cast<DK8_EA>(o.pdp8.iotDevices[013]);
+        ct::expect(o.opCode and ct::lift(dk8ea != nullptr) and dk8ea->enable_interrupt);
+    };
+    "CLDI"_test = [] { Operate o("CLDI", [](Operate &opr){
+        auto dk8ea = std::make_shared<pdp8::DK8_EA>();
+        dk8ea->enable_interrupt = true;
+        opr.pdp8.iotDevices[013] = dk8ea;
+    });
+        auto dk8ea = std::dynamic_pointer_cast<DK8_EA>(o.pdp8.iotDevices[013]);
+        ct::expect(o.opCode and ct::lift(dk8ea != nullptr) and !dk8ea->enable_interrupt);
+    };
+    "CLSK"_test = [] { Operate o("CLSK", [](Operate &opr){
+        auto dk8ea = std::make_shared<pdp8::DK8_EA>();
+        dk8ea->clock_flag = true;
+        opr.pdp8.iotDevices[013] = dk8ea;
+    });
+        auto dk8ea = std::dynamic_pointer_cast<DK8_EA>(o.pdp8.iotDevices[013]);
+        ct::expect(o.opCode and ct::lift(dk8ea != nullptr) and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i);
+    };
+    "Int_F"_test = [] {
+        auto dk8ea = std::make_shared<pdp8::DK8_EA>();
+        ct::expect(ct::lift(!dk8ea->getInterruptRequest()));
+    };
+    "Int_T"_test = [] {
+        auto dk8ea = std::make_shared<pdp8::DK8_EA>();
+        dk8ea->clock_flag = dk8ea->enable_interrupt = true;
+        ct::expect(ct::lift(dk8ea->getInterruptRequest()));
+    };
+}};
+
+#endif
+
+auto const suite11 = ct::Suite { "DK8-EA", [] {
+    "CAM"_test = [] { Operate o("CAM", [](Operate &opr){
+        opr.pdp8.accumulator.setAcc(07777);
+        opr.pdp8.mulQuotient.setWord(07777);
+    });
+        ct::expect(o.opCode and o.pdp8.accumulator.getAcc() == 0_i and o.pdp8.mulQuotient.getWord() == 0_i);
+    };
+    "MQA"_test = [] { Operate o("MQA", [](Operate &opr){
+        opr.pdp8.accumulator.setAcc(05555);
+        opr.pdp8.mulQuotient.setWord(02222);
+    });
+        ct::expect(o.opCode and o.pdp8.accumulator.getAcc() == 07777_i and o.pdp8.mulQuotient.getWord() == 02222_i);
+    };
+    "CLA MQA"_test = [] { Operate o("CLA MQA", [](Operate &opr){
+        opr.pdp8.accumulator.setAcc(05555);
+        opr.pdp8.mulQuotient.setWord(02222);
+    });
+        ct::expect(o.opCode and o.pdp8.accumulator.getAcc() == 02222_i and o.pdp8.mulQuotient.getWord() == 02222_i);
+    };
+    "MQL"_test = [] { Operate o("MQL", [](Operate &opr){
+        opr.pdp8.accumulator.setAcc(05555);
+        opr.pdp8.mulQuotient.setWord(02222);
+    });
+        ct::expect(o.opCode and o.pdp8.accumulator.getAcc() == 0_i and o.pdp8.mulQuotient.getWord() == 05555_i);
+    };
+    "SWP"_test = [] { Operate o("SWP", [](Operate &opr){
+        opr.pdp8.accumulator.setAcc(05555);
+        opr.pdp8.mulQuotient.setWord(02222);
+    });
+        ct::expect(o.opCode and o.pdp8.accumulator.getAcc() == 02222_i and o.pdp8.mulQuotient.getWord() == 05555_i);
     };
 }};
