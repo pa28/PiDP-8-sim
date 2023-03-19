@@ -14,7 +14,9 @@
  */
 
 #include "DK8_EA.h"
-#include "Memory.h"
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 namespace pdp8 {
 
@@ -27,7 +29,7 @@ namespace pdp8 {
                 enable_interrupt = false;
                 break;
             case 3: // CLSK
-                if (clock_flag)
+                if (getClockFlag())
                     ++pdp8.memory.programCounter;
                 setClockFlag(false);
                 break;
@@ -37,6 +39,21 @@ namespace pdp8 {
     }
 
     bool DK8_EA::getInterruptRequest() {
-        return clock_flag && enable_interrupt;
+        return getClockFlag() && enable_interrupt;
+    }
+
+    bool DK8_EA::getClockFlag() {
+        return clock_flag;
+    }
+
+    void DK8_EA::setClockFlag(bool flag) {
+        clock_flag = flag;
+    }
+
+    DK8_EA::DK8_EA() {
+        clock_thread = std::jthread([this](){
+            std::this_thread::sleep_for(16667us);
+            this->setClockFlag(true);
+        });
     }
 }
