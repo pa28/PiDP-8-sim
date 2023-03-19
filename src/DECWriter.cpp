@@ -16,7 +16,6 @@
 #include "DECWriter.h"
 #include <stdexcept>
 #include <fmt/format.h>
-#include <thread>
 #include <PDP8.h>
 
 namespace pdp8 {
@@ -78,8 +77,12 @@ namespace pdp8 {
                                         device, keyboardDevice, printerDevice));
     }
 
-    bool DECWriter::getInterruptRequest() {
-        return printerFlag || keyboardFlag;
+    bool DECWriter::getInterruptRequest(unsigned long deviceSel) {
+        if (deviceSel == printerDevice)
+            return printerFlag;
+        else if (deviceSel == keyboardDevice)
+            return keyboardFlag;
+        return false;
     }
 
     void DECWriter::nextChar() {
@@ -125,6 +128,21 @@ namespace pdp8 {
         if (!keyboardFlag) {
             nextChar();
         }
+    }
+
+    bool DECWriter::getServiceRequest(unsigned long deviceSel) {
+        if (deviceSel == keyboardDevice)
+            return keyboardFlag;
+        else if (deviceSel == printerDevice)
+            return printerFlag;
+        return false;
+    }
+
+    void DECWriter::setServiceRequest(unsigned long deviceSel) {
+        if (deviceSel == keyboardDevice)
+            keyboardFlag = true;
+        else if (deviceSel == printerDevice)
+            printerFlag = true;
     }
 
     int DECWriterTerminal::selected(bool selectedRead, bool ) {

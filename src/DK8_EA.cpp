@@ -38,7 +38,7 @@ namespace pdp8 {
         }
     }
 
-    bool DK8_EA::getInterruptRequest() {
+    bool DK8_EA::getInterruptRequest(unsigned long ) {
         return getClockFlag() && enable_interrupt;
     }
 
@@ -60,11 +60,11 @@ namespace pdp8 {
             });
     }
 
-    bool DK8_EA::getServiceRequest() {
+    bool DK8_EA::getServiceRequest(unsigned long ) {
         return getClockFlag();
     }
 
-    void DK8_EA::setServiceRequest() {
+    void DK8_EA::setServiceRequest(unsigned long ) {
         setClockFlag(true);
     }
 }

@@ -69,9 +69,13 @@ namespace pdp8 {
 
         void operation(PDP8 &pdp8, unsigned int device, unsigned int opCode) override;
 
-        bool getInterruptRequest() override;
+        bool getInterruptRequest(unsigned long deviceSel) override;
 
         void performInputOutput(PDP8 &pdp8);
+
+        bool getServiceRequest(unsigned long deviceSel) override;
+
+        void setServiceRequest(unsigned long deviceSel) override;
 
         void nextChar();
     };

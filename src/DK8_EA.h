@@ -44,11 +44,11 @@ namespace pdp8 {
 
         void operation(PDP8 &pdp8, unsigned int device, unsigned int opCode) override;
 
-        bool getInterruptRequest() override;
+        bool getInterruptRequest(unsigned long deviceSel) override;
 
-        bool getServiceRequest() override;
+        bool getServiceRequest(unsigned long deviceSel) override;
 
-        void setServiceRequest() override;
+        void setServiceRequest(unsigned long deviceSel) override;
 
         bool getClockFlag();
 
