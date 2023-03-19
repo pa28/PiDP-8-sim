@@ -8,6 +8,7 @@
 #include "libs/CodeFragmentTest.h"
 #include <clean-test/clean-test.h>
 #include <numeric>
+#include <chrono>
 
 constexpr auto sum(auto... vs) { return (0 + ... + vs); }
 
@@ -406,29 +407,37 @@ auto const suite9 = ct::Suite{ "RIM Loader", [] {
     };
 }};
 
-auto const suite10 = ct::Suite { "DK8-EA", [] {
-    "CLEI"_test = [] { Operate o("CLEI", [](Operate &opr){
-        auto dk8ea = std::make_shared<pdp8::DK8_EA>();
-        opr.pdp8.iotDevices[013] = dk8ea;
-    });
+using namespace std::chrono_literals;
+
+auto const suite10 = ct::Suite{"DK8-EA", [] {
+    "CLEI"_test = [] {
+        Operate o("CLEI", [](Operate &opr) {
+            auto dk8ea = std::make_shared<pdp8::DK8_EA>();
+            opr.pdp8.iotDevices[013] = dk8ea;
+        });
         auto dk8ea = std::dynamic_pointer_cast<DK8_EA>(o.pdp8.iotDevices[013]);
         ct::expect(o.opCode and ct::lift(dk8ea != nullptr) and dk8ea->enable_interrupt);
     };
-    "CLDI"_test = [] { Operate o("CLDI", [](Operate &opr){
-        auto dk8ea = std::make_shared<pdp8::DK8_EA>();
-        dk8ea->enable_interrupt = true;
-        opr.pdp8.iotDevices[013] = dk8ea;
-    });
+    "CLDI"_test = [] {
+        Operate o("CLDI", [](Operate &opr) {
+            auto dk8ea = std::make_shared<pdp8::DK8_EA>();
+            dk8ea->enable_interrupt = true;
+            opr.pdp8.iotDevices[013] = dk8ea;
+        });
         auto dk8ea = std::dynamic_pointer_cast<DK8_EA>(o.pdp8.iotDevices[013]);
         ct::expect(o.opCode and ct::lift(dk8ea != nullptr) and !dk8ea->enable_interrupt);
     };
-    "CLSK"_test = [] { Operate o("CLSK", [](Operate &opr){
-        auto dk8ea = std::make_shared<pdp8::DK8_EA>();
-        dk8ea->clock_flag = true;
-        opr.pdp8.iotDevices[013] = dk8ea;
-    });
+    "CLSK"_test = [] {
+        Operate o("CLSK", [](Operate &opr) {
+            auto dk8ea = std::make_shared<pdp8::DK8_EA>();
+            std::this_thread::sleep_for(20ms);              // Wait enough time for the flag to be raised.
+            opr.pdp8.iotDevices[013] = dk8ea;
+        });
         auto dk8ea = std::dynamic_pointer_cast<DK8_EA>(o.pdp8.iotDevices[013]);
-        ct::expect(o.opCode and ct::lift(dk8ea != nullptr) and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i);
+        ct::expect(
+                o.opCode and ct::lift(dk8ea != nullptr)
+                    and ct::lift(!dk8ea->getClockFlag())
+                    and o.pdp8.memory.programCounter.getProgramCounter() == 0201_i);
     };
     "Int_F"_test = [] {
         auto dk8ea = std::make_shared<pdp8::DK8_EA>();
@@ -436,14 +445,22 @@ auto const suite10 = ct::Suite { "DK8-EA", [] {
     };
     "Int_T"_test = [] {
         auto dk8ea = std::make_shared<pdp8::DK8_EA>();
-        dk8ea->clock_flag = dk8ea->enable_interrupt = true;
+        dk8ea->setClockFlag(true);
+        dk8ea->enable_interrupt = true;
         ct::expect(ct::lift(dk8ea->getInterruptRequest()));
+    };
+    "Time"_test = [] {
+        auto dk8ea = std::make_shared<pdp8::DK8_EA>();
+        auto s0 = dk8ea->getClockFlag();
+        std::this_thread::sleep_for(20ms);
+        auto s1 = dk8ea->getClockFlag();
+        ct::expect(ct::lift(!s0) and ct::lift(s1));
     };
 }};
 
 #endif
 
-auto const suite11 = ct::Suite { "DK8-EA", [] {
+auto const suite11 = ct::Suite { "Multiplier", [] {
     "CAM"_test = [] { Operate o("CAM", [](Operate &opr){
         opr.pdp8.accumulator.setAcc(07777);
         opr.pdp8.mulQuotient.setWord(07777);
