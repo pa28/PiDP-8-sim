@@ -30,7 +30,7 @@ namespace registers {
         static constexpr uint16_t offset = (DecBitOrder ? SigBits - width - Offset : Offset);
         static constexpr base_type base_mask = ((1u<<Width) - 1u);
         static constexpr base_type mask = base_mask << offset;
-        static constexpr base_type clear = ~mask;
+        static constexpr base_type clear = static_cast<const unsigned short>(~mask);
         [[maybe_unused]] static constexpr std::size_t max = std::numeric_limits<RegBase>::max();
         [[maybe_unused]] static constexpr std::size_t digits = std::numeric_limits<RegBase>::digits;
     };
@@ -66,7 +66,7 @@ namespace registers {
 
         template<class Access = Slice>
         Register<Slice> set(Slice::base_type s) {
-            value = (value & Access::clear) | ((s & Access::base_mask) << Access::offset);
+            value = static_cast<unsigned short>((value & Access::clear) | ((s & Access::base_mask) << Access::offset));
             return *this;
         }
     };
