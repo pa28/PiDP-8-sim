@@ -106,7 +106,7 @@ namespace pdp8 {
         StepCounter stepCounter{};
         TerminalManager terminalManager{};
 
-        std::map<unsigned int, std::shared_ptr<IOTDevice>> iotDevices{};
+        std::map<unsigned long, std::shared_ptr<IOTDevice>> iotDevices{};
 
         void instructionCycle();
 
