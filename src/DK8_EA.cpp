@@ -59,4 +59,12 @@ namespace pdp8 {
                 }
             });
     }
+
+    bool DK8_EA::getServiceRequest() {
+        return getClockFlag();
+    }
+
+    void DK8_EA::setServiceRequest() {
+        setClockFlag(true);
+    }
 }

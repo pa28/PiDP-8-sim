@@ -46,6 +46,10 @@ namespace pdp8 {
 
         bool getInterruptRequest() override;
 
+        bool getServiceRequest() override;
+
+        void setServiceRequest() override;
+
         bool getClockFlag();
 
         void setClockFlag(bool flag);

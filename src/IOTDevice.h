@@ -35,6 +35,10 @@ namespace pdp8 {
         virtual void operation(PDP8 &pdp8, unsigned int device, unsigned int opCode) = 0;
 
         virtual bool getInterruptRequest() = 0;
+
+        virtual bool getServiceRequest() = 0;
+
+        virtual void setServiceRequest() = 0;
     };
 
 } // pdp8
