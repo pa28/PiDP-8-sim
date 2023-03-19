@@ -16,6 +16,9 @@
 
 #include <IOTDevice.h>
 #include <PDP8.h>
+#include <SysClock.h>
+#include <thread>
+#include <mutex>
 
 namespace pdp8 {
     /**
@@ -23,16 +26,19 @@ namespace pdp8 {
      * @brief DK8-EA Real Time Clock (Line Frequency)
      */
     class DK8_EA : public IOTDevice {
+    protected:
+        std::atomic_bool clock_flag{false};
+        std::jthread clock_thread;
+
     public:
-        bool clock_flag{false};
         bool enable_interrupt{false};
 
-        DK8_EA() = default;
+        DK8_EA();
 
         DK8_EA(const DK8_EA&) = delete;
-        DK8_EA(DK8_EA&&) = default;
+        DK8_EA(DK8_EA&&) = delete;
         DK8_EA& operator=(const DK8_EA&) = delete;
-        DK8_EA& operator=(DK8_EA&&) = default;
+        DK8_EA& operator=(DK8_EA&&) = delete;
 
         ~DK8_EA() override = default;
 
