@@ -11,7 +11,10 @@
 
 #include <fmt/format.h>
 #include <ranges>
+#include <chrono>
 #include "PDP8.h"
+
+using namespace std::chrono_literals;
 
 namespace pdp8 {
 
@@ -122,8 +125,8 @@ namespace pdp8 {
                 if (!instructionReg.getIndirect()) {
                     if ((memory.programCounter.getProgramCounter() - 2) == memory.memoryAddress.getPageWordAddress()) {
                         // JMP .-1
-                        auto wait_inst = instructionReg.getWord();
-                        if (std::ranges::find(WaitInstructions, wait_inst)) {
+                        wait_instruction.set(memory.read().getData());
+                        if (std::ranges::find(WaitInstructions, wait_instruction.getWord())) {
                             idle_flag = true; // idle loop detected
                         }
                     } else if ((memory.programCounter.getProgramCounter() - 1) ==
@@ -157,6 +160,28 @@ namespace pdp8 {
     void PDP8::instructionStep() {
         switch (cycle_state) {
             case CycleState::Interrupt:
+                interrupt_request = false;
+                for (auto & device : iotDevices) {
+                    interrupt_request |= device.second->getInterruptRequest();
+                }
+                if (interrupt_enable && interrupt_request) {
+                    interrupt_request = false;
+                } else if (idle_flag) {
+                    unsigned long deviceSel = wait_instruction.getDeviceSel();
+                    if (auto device = iotDevices.find(deviceSel); device != iotDevices.end()) {
+                        if (device->second->getServiceRequest()) {
+                            cycle_state = CycleState::Fetch;
+                        } else {
+                            std::this_thread::sleep_for(10us);
+                        }
+                    } else {
+                        throw std::runtime_error(fmt::format("Waiting on unconnected device {:o} at {:04o}",
+                                                             deviceSel, memory.programCounter.getProgramCounter()));
+                    }
+                } else {
+                    cycle_state = CycleState::Fetch;
+                }
+                break;
             case CycleState::Fetch:
                 fetch();
                 if (instructionReg.isIndirectInstruction())
@@ -170,20 +195,21 @@ namespace pdp8 {
                 break;
             case CycleState::Execute:
                 execute();
-                cycle_state = CycleState::Fetch;
+                cycle_state = CycleState::Interrupt;
                 break;
             case CycleState::Pause:
-                run_flag = false;
+                break;
         }
     }
 
     void PDP8::instructionCycle() {
         while (!halt_flag) {
-            fetch();
-            if (instructionReg.getIndirect()) {
-                defer();
-            }
-            execute();
+            instructionStep();
+//            fetch();
+//            if (instructionReg.getIndirect()) {
+//                defer();
+//            }
+//            execute();
         }
     }
 

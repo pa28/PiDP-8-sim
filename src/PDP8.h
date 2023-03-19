@@ -59,16 +59,17 @@ namespace pdp8 {
                                                                                        {07777, 0}
                                                                                }};
 
-        static constexpr std::array<small_register_t,2> WaitInstructions = {
+        static constexpr std::array<small_register_t,3> WaitInstructions = {
                 06031, // KSF
                 06053, // CLSC
+                06133, // CLSK
         };
 
         enum class CycleState {
             Interrupt, Fetch, Defer, Execute, Pause
         };
 
-        CycleState cycle_state{CycleState::Fetch};
+        CycleState cycle_state{CycleState::Interrupt};
 
         bool idle_flag{false};
         bool interrupt_enable{false};
@@ -80,6 +81,7 @@ namespace pdp8 {
         bool halt_flag{false};
         bool run_flag{false};
         bool greater_than_flag{false};
+        InstructionReg wait_instruction{0u};
 
         small_register_t switch_register{0};
 
