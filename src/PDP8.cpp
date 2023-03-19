@@ -162,14 +162,14 @@ namespace pdp8 {
             case CycleState::Interrupt:
                 interrupt_request = false;
                 for (auto & device : iotDevices) {
-                    interrupt_request |= device.second->getInterruptRequest();
+                    interrupt_request |= device.second->getInterruptRequest(device.first);
                 }
                 if (interrupt_enable && interrupt_request) {
                     interrupt_request = false;
                 } else if (idle_flag) {
                     unsigned long deviceSel = wait_instruction.getDeviceSel();
                     if (auto device = iotDevices.find(deviceSel); device != iotDevices.end()) {
-                        if (device->second->getServiceRequest()) {
+                        if (device->second->getServiceRequest(deviceSel)) {
                             cycle_state = CycleState::Fetch;
                         } else {
                             std::this_thread::sleep_for(10us);
