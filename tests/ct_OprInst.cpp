@@ -9,6 +9,7 @@
 #include <clean-test/clean-test.h>
 #include <numeric>
 #include <chrono>
+#include <utility>
 
 constexpr auto sum(auto... vs) { return (0 + ... + vs); }
 
@@ -45,6 +46,37 @@ struct TestAssembly {
         }
     }
 
+};
+
+struct TestProgram {
+    PDP8 pdp8{};
+    Assembler assembler{};
+    bool pass1{false};
+    bool pass2{false};
+    std::function<void(TestProgram&)> setup{};
+
+    template<typename Str>
+    requires StringLike<Str>
+    explicit TestProgram(Str s, std::function<void(TestProgram&)> setupPrg) : setup(std::move(setupPrg)) {
+        if (setup)
+            setup(*this);
+
+        std::stringstream testCode{std::string(s)};
+        assembler.readProgram(testCode);
+        try {
+            if (pass1 = assembler.pass1(); pass1) {
+                std::stringstream bin{};
+                std::stringstream list{};
+                if (pass2 = assembler.pass2(bin, list); pass2) {
+                    pdp8.readBinaryFormat(bin);
+                    while (!pdp8.halt_flag)
+                        pdp8.instructionStep();
+                }
+            }
+        } catch (std::invalid_argument &ia) {
+            fmt::print("Assembly exception: {}\n", ia.what());
+        }
+    }
 };
 
 static constexpr std::string_view  testCode0{"/ Simple test program.\nOCTAL\n*0200\nCLA CLL CMA IAC\nHLT\n*0200\n"};
@@ -458,8 +490,6 @@ auto const suite10 = ct::Suite{"DK8-EA", [] {
     };
 }};
 
-#endif
-
 auto const suite11 = ct::Suite { "Multiplier", [] {
     "CAM"_test = [] { Operate o("CAM", [](Operate &opr){
         opr.pdp8.accumulator.setAcc(07777);
@@ -490,5 +520,16 @@ auto const suite11 = ct::Suite { "Multiplier", [] {
         opr.pdp8.mulQuotient.setWord(02222);
     });
         ct::expect(o.opCode and o.pdp8.accumulator.getAcc() == 02222_i and o.pdp8.mulQuotient.getWord() == 05555_i);
+    };
+}};
+
+#endif
+
+auto const suite12 = ct::Suite { "Inst Cycle", [] {
+    "DK8_E"_test = [] { TestProgram t("OCTAL\n*0200\nCLSK\nJMP 0200\nHLT\n*0200",
+          [](TestProgram& t){
+              t.pdp8.iotDevices[013] = std::make_shared<DK8_EA>();
+    });
+        ct::expect(t.pass1 and ct::lift(t.pass2));
     };
 }};
