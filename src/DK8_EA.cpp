@@ -29,6 +29,7 @@ namespace pdp8 {
             case 3: // CLSK
                 if (clock_flag)
                     ++pdp8.memory.programCounter;
+                setClockFlag(false);
                 break;
             default:
                 break;
