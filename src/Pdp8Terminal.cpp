@@ -247,6 +247,7 @@ namespace pdp8 {
 
         assembler.dumpSymbols(terminal->out());
         terminal->out().flush();
+        pdp8.readBinaryFormat(binary);
         printPanel();
     }
 
