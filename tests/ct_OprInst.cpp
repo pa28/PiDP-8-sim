@@ -3,6 +3,7 @@
 //
 
 #include <PDP8.h>
+#include <DK8_EA.h>
 #include <assembler/Assembler.h>
 #include "libs/CodeFragmentTest.h"
 #include <clean-test/clean-test.h>
