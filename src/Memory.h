@@ -172,7 +172,7 @@ namespace pdp8 {
         }
 
         void setData(base_type data) {
-            set<word_t>(data);
+            set<word_t>(static_cast<unsigned short>(data));
         }
 
         void setInit(bool initialized) {
