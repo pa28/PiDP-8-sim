@@ -473,13 +473,13 @@ auto const suite10 = ct::Suite{"DK8-EA", [] {
     };
     "Int_F"_test = [] {
         auto dk8ea = std::make_shared<pdp8::DK8_EA>();
-        ct::expect(ct::lift(!dk8ea->getInterruptRequest()));
+        ct::expect(ct::lift(!dk8ea->getInterruptRequest(0)));
     };
     "Int_T"_test = [] {
         auto dk8ea = std::make_shared<pdp8::DK8_EA>();
         dk8ea->setClockFlag(true);
         dk8ea->enable_interrupt = true;
-        ct::expect(ct::lift(dk8ea->getInterruptRequest()));
+        ct::expect(ct::lift(dk8ea->getInterruptRequest(0)));
     };
     "Time"_test = [] {
         auto dk8ea = std::make_shared<pdp8::DK8_EA>();
