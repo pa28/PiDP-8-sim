@@ -39,6 +39,7 @@ OuterLoop,      TAD SemiCycle           / Init semi cycle count
                 DCA Counter
                 TAD Accumulator         / Accumulator display
 Loop1,          RAL
+                JMS Delay               / Wait
                 ISZ Counter             / Increment count
                 JMP Loop1               / First semi cycle loop ends
                 DCA Accumulator         / Save ACC
@@ -46,14 +47,28 @@ Loop1,          RAL
                 DCA Counter
                 TAD Accumulator         / Accumulator Display
 Loop2,          RAR
+                JMS Delay               / Wait
                 ISZ Counter             / Increment count
                 JMP Loop2               / Second semi cycle loop ends
                 DCA Accumulator         / Save Acc
                 JMP OuterLoop           / Outer loop ends.
-BufferSize      = 10
-Buffer,
-                *.+BufferSize-1
-BufferEnd,
+/
+/ Delay Loop
+/
+DelayN,         60
+DelayCount,     0
+DelayAcc,       0
+Delay,          0
+                DCA DelayAcc
+                TAD DelayN
+                CMA IAC
+                DCA DelayCount
+                TAD DelayAcc
+DelayLoop,      CLSK
+                JMP .-1
+                ISZ DelayCount
+                JMP DelayLoop
+                JMP I Delay
 *Initialize
 )";
 
