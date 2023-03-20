@@ -38,14 +38,15 @@ struct TestAssembly {
                 std::stringstream list{};
                 if (pass2 = assembler.pass2(bin, list); pass2) {
                     pdp8.readBinaryFormat(bin);
-                    pdp8.instructionCycle();
+                    pdp8.run_flag = true;
+                    while (pdp8.run_flag)
+                        pdp8.instructionStep();
                 }
             }
         } catch (std::invalid_argument &ia) {
             fmt::print("Assembly exception: {}\n", ia.what());
         }
     }
-
 };
 
 struct TestProgram {
@@ -69,7 +70,8 @@ struct TestProgram {
                 std::stringstream list{};
                 if (pass2 = assembler.pass2(bin, list); pass2) {
                     pdp8.readBinaryFormat(bin);
-                    while (!pdp8.halt_flag)
+                    pdp8.run_flag = true;
+                    while (pdp8.run_flag)
                         pdp8.instructionStep();
                 }
             }
@@ -285,7 +287,7 @@ auto const suite5 = ct::Suite { "Special JMP", []{
             pdp8.memory.programCounter.setProgramCounter(0201u);
             pdp8.instructionReg.value = op.value();
             pdp8.execute();
-            ct::expect(ct::lift(pdp8.halt_flag));
+            ct::expect(ct::lift(!pdp8.run_flag));
         }
     };
     "JMP .-1"_test = [] {
@@ -323,7 +325,6 @@ auto const suite6 = ct::Suite { "CPU", [] {
         pdp8.interrupt_request = true;
         pdp8.error_flag = true;
         pdp8.cycle_state = PDP8::CycleState::Fetch;
-        pdp8.halt_flag = true;
         pdp8.run_flag = true;
 
         pdp8.reset();
@@ -332,7 +333,6 @@ auto const suite6 = ct::Suite { "CPU", [] {
         ct::expect(!pdp8.interrupt_deferred);
         ct::expect(!pdp8.interrupt_request);
         ct::expect(!pdp8.error_flag);
-        ct::expect(!pdp8.halt_flag);
         ct::expect(!pdp8.run_flag);
         ct::expect(pdp8.cycle_state == PDP8::CycleState::Interrupt);
     };

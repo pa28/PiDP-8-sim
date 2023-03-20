@@ -123,15 +123,21 @@ namespace pdp8 {
                     lastCommand = command;
                     break;
                 case 'c':
+                    pdp8.step_flag = true;
                     commandHistory.push_back(fmt::format("1 Cycle @ {:04o}", pdp8.memory.programCounter.getProgramCounter()));
-                    pdp8.instructionStep();
-                    printPanel();
+                    while (pdp8.step_flag) {
+                        pdp8.instructionStep();
+                        printPanel();
+                    }
                     lastCommand = command;
                     break;
                 case 's':
+                    pdp8.instruction_flag = true;
                     commandHistory.push_back(fmt::format("1 Instruction @ {:04o}", pdp8.memory.programCounter.getProgramCounter()));
-                    pdp8.instructionStep();
-                    printPanel();
+                    while (pdp8.instruction_flag) {
+                        pdp8.instructionStep();
+                        printPanel();
+                    }
                     lastCommand = command;
                     break;
                 case 'C':

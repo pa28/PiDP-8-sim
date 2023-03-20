@@ -89,7 +89,8 @@ namespace pdp8 {
                 if (assembler.pass2(bin, list)) {
                     PDP8 pdp8{};
                     if (pdp8.readBinaryFormat(bin)) {
-                        pdp8.instructionCycle();
+                        while (pdp8.run_flag)
+                            pdp8.instructionStep();
                         gatherResults(pdp8, name, tests...);
                     } else {
                         fmt::print("Binary would not load.\n");

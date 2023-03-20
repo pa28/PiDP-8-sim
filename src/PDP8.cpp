@@ -137,7 +137,7 @@ namespace pdp8 {
                             interrupt_delayed = 0;
                             idle_flag = short_jmp_flag = true;
                         } else {
-                            halt_flag = true; // endless loop;
+                            run_flag = false; // endless loop;
                         }
                     }
                 }
@@ -158,58 +158,53 @@ namespace pdp8 {
     }
 
     void PDP8::instructionStep() {
-        switch (cycle_state) {
-            case CycleState::Interrupt:
-                interrupt_request = false;
-                for (auto & device : iotDevices) {
-                    interrupt_request |= device.second->getInterruptRequest(device.first);
-                }
-                if (interrupt_enable && interrupt_request) {
+        if (run_flag || step_flag || instruction_flag) {
+            switch (cycle_state) {
+                case CycleState::Interrupt:
                     interrupt_request = false;
-                } else if (idle_flag) {
-                    unsigned long deviceSel = wait_instruction.getDeviceSel();
-                    if (auto device = iotDevices.find(deviceSel); device != iotDevices.end()) {
-                        if (device->second->getServiceRequest(deviceSel)) {
-                            cycle_state = CycleState::Fetch;
+                    for (auto &device: iotDevices) {
+                        interrupt_request |= device.second->getInterruptRequest(device.first);
+                    }
+                    if (interrupt_enable && interrupt_request) {
+                        interrupt_request = false;
+                    } else if (idle_flag) {
+                        unsigned long deviceSel = wait_instruction.getDeviceSel();
+                        if (auto device = iotDevices.find(deviceSel); device != iotDevices.end()) {
+                            if (device->second->getServiceRequest(deviceSel)) {
+                                cycle_state = CycleState::Fetch;
+                            } else {
+                                std::this_thread::sleep_for(10us);
+                            }
                         } else {
-                            std::this_thread::sleep_for(10us);
+                            throw std::runtime_error(fmt::format("Waiting on unconnected device {:o} at {:04o}",
+                                                                 deviceSel, memory.programCounter.getProgramCounter()));
                         }
                     } else {
-                        throw std::runtime_error(fmt::format("Waiting on unconnected device {:o} at {:04o}",
-                                                             deviceSel, memory.programCounter.getProgramCounter()));
+                        cycle_state = CycleState::Fetch;
                     }
-                } else {
-                    cycle_state = CycleState::Fetch;
-                }
-                break;
-            case CycleState::Fetch:
-                fetch();
-                if (instructionReg.isIndirectInstruction())
-                    cycle_state = CycleState::Defer;
-                else
+                    break;
+                case CycleState::Fetch:
+                    fetch();
+                    if (instructionReg.isIndirectInstruction())
+                        cycle_state = CycleState::Defer;
+                    else
+                        cycle_state = CycleState::Execute;
+                    step_flag = false;
+                    break;
+                case CycleState::Defer:
+                    defer();
                     cycle_state = CycleState::Execute;
-                break;
-            case CycleState::Defer:
-                defer();
-                cycle_state = CycleState::Execute;
-                break;
-            case CycleState::Execute:
-                execute();
-                cycle_state = CycleState::Interrupt;
-                break;
-            case CycleState::Pause:
-                break;
-        }
-    }
-
-    void PDP8::instructionCycle() {
-        while (!halt_flag) {
-            instructionStep();
-//            fetch();
-//            if (instructionReg.getIndirect()) {
-//                defer();
-//            }
-//            execute();
+                    step_flag = false;
+                    break;
+                case CycleState::Execute:
+                    execute();
+                    cycle_state = CycleState::Interrupt;
+                    instruction_flag = false;
+                    step_flag = false;
+                    break;
+                case CycleState::Pause:
+                    break;
+            }
         }
     }
 
@@ -359,7 +354,6 @@ namespace pdp8 {
                 accumulator.setAcc(accumulator.getAcc() | opSxReg.value);
             // Seq 4
             if (bits & 02) {    // HLT
-                halt_flag = true;
                 run_flag = false;
             }
             if (skip)
@@ -406,7 +400,6 @@ namespace pdp8 {
         interrupt_request = false;
         error_flag = false;
         cycle_state = CycleState::Interrupt;
-        halt_flag = false;
         run_flag = false;
     }
 } // pdp8

@@ -78,8 +78,9 @@ namespace pdp8 {
         bool interrupt_deferred{false};
         int interrupt_delayed{0};
 //        bool short_jmp_flag{false};
-        bool halt_flag{false};
         bool run_flag{false};
+        bool instruction_flag{false};
+        bool step_flag{false};
         bool greater_than_flag{false};
         InstructionReg wait_instruction{0u};
 
@@ -107,8 +108,6 @@ namespace pdp8 {
         TerminalManager terminalManager{};
 
         std::map<unsigned long, std::shared_ptr<IOTDevice>> iotDevices{};
-
-        void instructionCycle();
 
         void instructionStep();
 
