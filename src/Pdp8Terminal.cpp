@@ -123,7 +123,7 @@ namespace pdp8 {
                     lastCommand = command;
                     break;
                 case 'c':
-                    pdp8.set_step_flag(true);;
+                    pdp8.set_step_flag(true);
                     commandHistory.push_back(fmt::format("1 Cycle @ {:04o}", pdp8.memory.programCounter.getProgramCounter()));
                     while (pdp8.get_step_flag()) {
                         pdp8.instructionStep();
