@@ -27,6 +27,7 @@
 #include <IOTDevice.h>
 #include <Terminal.h>
 #include <map>
+#include <mutex>
 
 namespace pdp8 {
 
@@ -34,7 +35,43 @@ namespace pdp8 {
      * @class PDP8
      */
     class PDP8 {
+    private:
+        std::mutex lock{};
+        bool run_flag{false};
+        bool instruction_flag{false};
+        bool step_flag{false};
+
     public:
+
+        void set_run_flag(bool flag) {
+            std::lock_guard guard{lock};
+            run_flag = flag;
+        }
+
+        bool get_run_flag() {
+            std::lock_guard guard{lock};
+            return run_flag;
+        }
+
+        void set_instruction_flag(bool flag) {
+            std::lock_guard guard{lock};
+            instruction_flag = flag;
+        }
+
+        bool get_instruction_flag() {
+            std::lock_guard guard{lock};
+            return instruction_flag;
+        }
+
+        void set_step_flag(bool flag) {
+            std::lock_guard guard{lock};
+            step_flag = flag;
+        }
+
+        bool get_step_flag() {
+            std::lock_guard guard{lock};
+            return step_flag;
+        }
 
         [[maybe_unused]] static constexpr uint16_t RIM_LOADER_START = 07756;
 
@@ -77,10 +114,6 @@ namespace pdp8 {
         bool error_flag{false};
         bool interrupt_deferred{false};
         int interrupt_delayed{0};
-//        bool short_jmp_flag{false};
-        bool run_flag{false};
-        bool instruction_flag{false};
-        bool step_flag{false};
         bool greater_than_flag{false};
         InstructionReg wait_instruction{0u};
 
@@ -95,9 +128,9 @@ namespace pdp8 {
         }
 
         PDP8(const PDP8&) = delete;
-        PDP8(PDP8&&) = default;
+        PDP8(PDP8&&) = delete;
         PDP8& operator = (const PDP8&) = delete;
-        PDP8& operator = (PDP8&&) = default;
+        PDP8& operator = (PDP8&&) = delete;
 
         Memory memory{};
         InstructionReg instructionReg{};

@@ -34,7 +34,7 @@ namespace pdp8 {
 
         setCursorPosition();
 
-        if (pdp8.run_flag) {
+        if (pdp8.get_run_flag()) {
             pdp8.instructionStep();
             printPanel();
         }
@@ -123,29 +123,28 @@ namespace pdp8 {
                     lastCommand = command;
                     break;
                 case 'c':
-                    pdp8.step_flag = true;
+                    pdp8.set_step_flag(true);;
                     commandHistory.push_back(fmt::format("1 Cycle @ {:04o}", pdp8.memory.programCounter.getProgramCounter()));
-                    while (pdp8.step_flag) {
+                    while (pdp8.get_step_flag()) {
                         pdp8.instructionStep();
                         printPanel();
                     }
                     lastCommand = command;
                     break;
                 case 's':
-                    pdp8.instruction_flag = true;
+                    pdp8.set_instruction_flag(true);
                     commandHistory.push_back(fmt::format("1 Instruction @ {:04o}", pdp8.memory.programCounter.getProgramCounter()));
-                    while (pdp8.instruction_flag) {
+                    while (pdp8.get_instruction_flag()) {
                         pdp8.instructionStep();
                         printPanel();
                     }
                     lastCommand = command;
                     break;
                 case 'C':
-                    pdp8.run_flag = true;
-                    printPanel();
+                    pdp8.set_run_flag(true);
                     break;
                 case 'S':
-                    pdp8.run_flag = false;
+                    pdp8.set_run_flag(false);
                     printPanel();
                     break;
                 case '?':
@@ -190,7 +189,7 @@ namespace pdp8 {
 
         printPanelFlag(2u, 66u, pdp8.interrupt_enable);
         printPanelFlag(4u, 66u, false);
-        printPanelFlag(6u, 66u, pdp8.run_flag);
+        printPanelFlag(6u, 66u, pdp8.get_run_flag());
 
         *oStrm << fmt::format("{}", color(Regular));
         setCursorPosition();

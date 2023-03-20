@@ -158,6 +158,7 @@ namespace pdp8 {
     }
 
     void PDP8::instructionStep() {
+        std::lock_guard guard{lock};
         if (run_flag || step_flag || instruction_flag) {
             switch (cycle_state) {
                 case CycleState::Interrupt:
