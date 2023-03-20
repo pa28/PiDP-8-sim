@@ -54,7 +54,7 @@ namespace pdp8 {
         if (runClock)
             clock_thread = std::jthread([this](const std::stop_token& stopToken){
                 while (!stopToken.stop_requested()) {
-                    std::this_thread::sleep_for(16667us);
+                    std::this_thread::sleep_for(8333500ns);
                     this->setClockFlag(true);
                 }
             });
